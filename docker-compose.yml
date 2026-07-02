@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clubos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clubos
+      POSTGRES_PASSWORD: clubos
+      POSTGRES_DB: clubos
+    ports:
+      - "5432:5432"
+    volumes:
+      - clubos-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clubos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: clubos-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - clubos-redis:/data
+
+  # S3-compatible storage for local dev (files, fotos, documentos)
+  minio:
+    image: minio/minio:latest
+    container_name: clubos-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: clubos
+      MINIO_ROOT_PASSWORD: clubos-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - clubos-minio:/data
+
+volumes:
+  clubos-postgres:
+  clubos-redis:
+  clubos-minio:

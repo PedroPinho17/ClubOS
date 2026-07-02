@@ -1,0 +1,397 @@
+// ---------------------------------------------------------------------------
+// ClubOS - Prisma schema
+// Plataforma SaaS modular multi-tenant.
+//
+// Autenticacao: Better Auth (email+password, passkey/WebAuthn, admin/roles).
+// As tabelas User/Session/Account/Verification/Passkey sao geridas pelo
+// Better Auth. Multi-tenancy por linha via `organizationId`.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================================================
+// AUTH (Better Auth)
+// ===========================================================================
+
+/// Utilizador do sistema (login). Gerido pelo Better Auth.
+/// `role` (admin plugin): imperador | administrador | tesoureiro | socio.
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+
+  // admin plugin
+  role       String?   @default("socio")
+  banned     Boolean?  @default(false)
+  banReason  String?
+  banExpires DateTime?
+
+  // Multi-tenant: organizacao a que o utilizador pertence (campo adicional).
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  // Ligacao opcional ao socio correspondente (Member Portal).
+  member Member?
+
+  sessions  Session[]
+  accounts  Account[]
+  passkeys  Passkey[]
+  auditLogs AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // admin plugin (impersonation)
+  impersonatedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@index([identifier])
+}
+
+/// WebAuthn / passkeys (passkey plugin).
+model Passkey {
+  id           String   @id
+  name         String?
+  publicKey    String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  aaguid       String?
+
+  createdAt DateTime? @default(now())
+
+  @@index([userId])
+}
+
+// ===========================================================================
+// CORE
+// ===========================================================================
+
+enum OrganizationStatus {
+  ACTIVE
+  TRIAL
+  SUSPENDED
+  INACTIVE
+}
+
+enum OrganizationPlan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+/// Tenant. Cada clube/academia/associacao e uma Organization.
+model Organization {
+  id           String             @id @default(cuid())
+  name         String
+  slug         String             @unique
+  domain       String?            @unique
+  logoKey      String?
+  faviconKey   String?
+  primaryColor String             @default("#2563eb")
+  plan         OrganizationPlan   @default(FREE)
+  status       OrganizationStatus @default(TRIAL)
+  locale       String             @default("pt-PT")
+  timezone     String             @default("Europe/Lisbon")
+
+  users      User[]
+  modules    OrganizationModule[]
+  settings   OrganizationSetting[]
+  members    Member[]
+  quotaPlans QuotaPlan[]
+  payments       Payment[]
+  communications Communication[]
+  auditLogs      AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+/// Configuracoes dinamicas por organizacao (key/value) sem alterar o schema.
+model OrganizationSetting {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String
+  value          Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+}
+
+enum ModuleCategory {
+  CORE
+  BASE
+  PLUGIN
+}
+
+/// Catalogo global de modulos disponiveis na plataforma.
+model Module {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  name        String
+  description String?
+  category    ModuleCategory @default(BASE)
+  isCore      Boolean        @default(false)
+  sortOrder   Int            @default(0)
+
+  organizations OrganizationModule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+/// Ativacao de modulos por organizacao.
+model OrganizationModule {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  moduleId       String
+  module         Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  enabled        Boolean      @default(true)
+  settings       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, moduleId])
+  @@index([organizationId])
+}
+
+/// Registo de auditoria.
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String
+  entity         String?
+  entityId       String?
+  meta           Json?
+  ip             String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([entity, entityId])
+}
+
+// ===========================================================================
+// MODULO BASE: MEMBERS (socios)
+// ===========================================================================
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Periodicity {
+  MONTHLY
+  QUARTERLY
+  BIANNUAL
+  ANNUAL
+  ONCE
+}
+
+model Member {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number         String
+  name           String
+  email          String?
+  phone          String?
+  joinedAt       DateTime     @default(now())
+  status         MemberStatus @default(ACTIVE)
+  photoKey       String?
+  notes          String?
+
+  // Cargo apresentado no cartao (ex.: Presidente, Socio).
+  cardRole String?
+  // Validade manual do cartao (sobrepoe o calculo por quota).
+  cardValidUntil DateTime?
+
+  // Conta de acesso ao portal (opcional, 1:1 com User).
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  quotaPlanId String?
+  quotaPlan   QuotaPlan? @relation(fields: [quotaPlanId], references: [id], onDelete: SetNull)
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, number])
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model QuotaPlan {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  amount         Decimal      @db.Decimal(10, 2)
+  periodicity    Periodicity  @default(MONTHLY)
+  active         Boolean      @default(true)
+
+  members  Member[]
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+// ===========================================================================
+// MODULO BASE: PAYMENTS
+// ===========================================================================
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  CARD
+  MBWAY
+  OTHER
+}
+
+model Payment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  quotaPlanId    String?
+  quotaPlan      QuotaPlan?   @relation(fields: [quotaPlanId], references: [id], onDelete: SetNull)
+
+  amount     Decimal       @db.Decimal(10, 2)
+  method     PaymentMethod @default(CASH)
+  status     PaymentStatus @default(PENDING)
+  reference  String?
+  receiptKey String?
+  paidAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, memberId])
+  @@index([organizationId, status])
+}
+
+// ===========================================================================
+// MODULO BASE: COMMUNICATIONS
+// ===========================================================================
+
+enum CommunicationAudience {
+  ALL
+  ACTIVE
+  OVERDUE
+  PLAN
+}
+
+enum CommunicationStatus {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+}
+
+model Communication {
+  id              String                @id @default(cuid())
+  organizationId  String
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subject         String
+  body            String
+  audience        CommunicationAudience
+  planId          String?
+  totalRecipients Int
+  sentCount       Int                   @default(0)
+  failedCount     Int                   @default(0)
+  status          CommunicationStatus   @default(SENDING)
+  createdById     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
