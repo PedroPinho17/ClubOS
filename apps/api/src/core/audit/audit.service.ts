@@ -15,6 +15,15 @@ export interface AuditEntry {
 export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
+  list(organizationId: string, limit = 100) {
+    return this.prisma.auditLog.findMany({
+      where: { organizationId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(limit, 500),
+    });
+  }
+
   async log(entry: AuditEntry): Promise<void> {
     await this.prisma.auditLog.create({
       data: {

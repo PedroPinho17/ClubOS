@@ -3,6 +3,8 @@ import {
   ModuleCategory,
   OrganizationPlan,
   OrganizationStatus,
+  PaymentMethod,
+  PaymentStatus,
   Periodicity,
 } from '@prisma/client';
 
@@ -115,7 +117,79 @@ async function main() {
     });
   }
 
-  console.log('Catalogo/org/socios prontos. (Utilizadores: correr o seed do Better Auth na API.)');
+  // Pagamentos demo (portal do socio: Joao Silva com historico).
+  const members = await prisma.member.findMany({ where: { organizationId: org.id } });
+  const joao = members.find((m) => m.number === '1');
+  const maria = members.find((m) => m.number === '2');
+
+  const now = new Date();
+  const lastMonth = new Date(now);
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+  const twoMonthsAgo = new Date(now);
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+  const demoPayments = [
+    ...(joao
+      ? [
+          {
+            id: `${org.id}-demo-pay-joao-1`,
+            memberId: joao.id,
+            amount: 10,
+            method: PaymentMethod.CASH,
+            paidAt: twoMonthsAgo,
+            reference: 'DEMO-001',
+          },
+          {
+            id: `${org.id}-demo-pay-joao-2`,
+            memberId: joao.id,
+            amount: 10,
+            method: PaymentMethod.MBWAY,
+            paidAt: lastMonth,
+            reference: 'DEMO-002',
+          },
+          {
+            id: `${org.id}-demo-pay-joao-3`,
+            memberId: joao.id,
+            amount: 10,
+            method: PaymentMethod.TRANSFER,
+            paidAt: now,
+            reference: 'DEMO-003',
+          },
+        ]
+      : []),
+    ...(maria
+      ? [
+          {
+            id: `${org.id}-demo-pay-maria-1`,
+            memberId: maria.id,
+            amount: 10,
+            method: PaymentMethod.CARD,
+            paidAt: lastMonth,
+            reference: 'DEMO-004',
+          },
+        ]
+      : []),
+  ];
+
+  for (const p of demoPayments) {
+    await prisma.payment.upsert({
+      where: { id: p.id },
+      update: {},
+      create: {
+        id: p.id,
+        organizationId: org.id,
+        memberId: p.memberId,
+        quotaPlanId: quotaPlan.id,
+        amount: p.amount,
+        method: p.method,
+        status: PaymentStatus.PAID,
+        paidAt: p.paidAt,
+        reference: p.reference,
+      },
+    });
+  }
+
+  console.log('Catalogo/org/socios/pagamentos prontos. (Utilizadores: pnpm db:seed ou seed:users na API.)');
 }
 
 main()

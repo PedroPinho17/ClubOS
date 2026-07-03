@@ -18,7 +18,8 @@
     "db:seed": "pnpm --filter @clubos/database seed && pnpm --filter @clubos/api seed:users",
     "db:studio": "pnpm --filter @clubos/database studio",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

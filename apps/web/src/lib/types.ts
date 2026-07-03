@@ -14,6 +14,31 @@ export interface Organization {
   primaryColor: string;
   plan: string;
   status: string;
+  logoUrl?: string | null;
+  locale?: string | null;
+  timezone?: string | null;
+}
+
+export type StaffRole = 'imperador' | 'administrador' | 'tesoureiro';
+
+export interface StaffUser {
+  id: string;
+  name: string;
+  email: string;
+  role: StaffRole | string | null;
+  emailVerified: boolean;
+  createdAt: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  entity: string | null;
+  entityId: string | null;
+  meta: Record<string, unknown> | null;
+  ip: string | null;
+  createdAt: string;
+  user: { id: string; name: string; email: string } | null;
 }
 
 export interface PlatformModule {
@@ -55,6 +80,8 @@ export interface Member {
   status: 'ACTIVE' | 'INACTIVE';
   userId?: string | null;
   photoUrl?: string | null;
+  cardRole?: string | null;
+  notes?: string | null;
   quotaPlan: { id: string; name: string; amount: string } | null;
   quotaSituation?: QuotaSituation;
   createdAt: string;

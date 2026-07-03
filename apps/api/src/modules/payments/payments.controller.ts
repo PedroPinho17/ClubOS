@@ -1,8 +1,10 @@
 import { Body, Controller, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { Roles } from '@thallesp/nestjs-better-auth';
 import type { Response } from 'express';
-import { OrgId, RequireModule } from '../../common/decorators';
+import { CurrentUser, OrgId, RequireModule } from '../../common/decorators';
+import type { AuthUser } from '../../common/types';
 import { ModuleGuard } from '../../common/guards/module.guard';
+import { AuditService } from '../../core/audit/audit.service';
 import { CreatePaymentDto } from './dto';
 import { PaymentsService } from './payments.service';
 
@@ -10,7 +12,10 @@ import { PaymentsService } from './payments.service';
 @RequireModule('payments')
 @UseGuards(ModuleGuard)
 export class PaymentsController {
-  constructor(private readonly payments: PaymentsService) {}
+  constructor(
+    private readonly payments: PaymentsService,
+    private readonly audit: AuditService,
+  ) {}
 
   @Get()
   list(@OrgId() organizationId: string) {
@@ -42,7 +47,19 @@ export class PaymentsController {
 
   @Post()
   @Roles(['imperador', 'administrador', 'tesoureiro'])
-  create(@OrgId() organizationId: string, @Body() dto: CreatePaymentDto) {
-    return this.payments.create(organizationId, dto);
+  async create(
+    @OrgId() organizationId: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreatePaymentDto,
+  ) {
+    const payment = await this.payments.create(organizationId, dto);
+    await this.audit.log({
+      organizationId,
+      userId: user.id,
+      action: 'payment.created',
+      entity: 'Payment',
+      entityId: payment.id,
+    });
+    return payment;
   }
 }

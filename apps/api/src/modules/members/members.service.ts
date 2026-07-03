@@ -122,7 +122,14 @@ export class MembersService {
 
   async update(organizationId: string, id: string, dto: UpdateMemberDto) {
     await this.findOne(organizationId, id);
-    return this.prisma.member.update({ where: { id }, data: dto });
+    const { quotaPlanId, ...rest } = dto;
+    return this.prisma.member.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(quotaPlanId !== undefined ? { quotaPlanId: quotaPlanId || null } : {}),
+      },
+    });
   }
 
   async remove(organizationId: string, id: string) {

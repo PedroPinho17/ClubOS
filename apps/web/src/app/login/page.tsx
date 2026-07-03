@@ -6,7 +6,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { signIn } from '@/lib/auth-client';
+import { postLoginPath } from '@/lib/auth-redirect';
+import { authClient, signIn } from '@/lib/auth-client';
+
+async function redirectAfterLogin(router: ReturnType<typeof useRouter>) {
+  const session = await authClient.getSession();
+  router.push(postLoginPath(session.data?.user?.role));
+  router.refresh();
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,22 +27,26 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     const { error } = await signIn.email({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message ?? 'Credenciais invalidas.');
       return;
     }
-    router.push('/dashboard');
+    await redirectAfterLogin(router);
+    setLoading(false);
   }
 
   async function onPasskey() {
     setError(null);
+    setLoading(true);
     const res = await signIn.passkey();
     if (res?.error) {
+      setLoading(false);
       setError(res.error.message ?? 'Falha na autenticacao com passkey.');
       return;
     }
-    router.push('/dashboard');
+    await redirectAfterLogin(router);
+    setLoading(false);
   }
 
   return (
@@ -44,7 +55,7 @@ export default function LoginPage() {
         <CardHeader>
           <div className="mb-2 text-2xl font-bold text-primary">ClubOS</div>
           <CardTitle>Entrar</CardTitle>
-          <CardDescription>Acede ao backoffice da tua organizacao.</CardDescription>
+          <CardDescription>Acede ao backoffice ou portal do socio.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -73,7 +84,7 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          <Button type="button" variant="outline" className="w-full" onClick={onPasskey}>
+          <Button type="button" variant="outline" className="w-full" onClick={onPasskey} disabled={loading}>
             <KeyRound className="h-4 w-4" />
             Entrar com passkey
           </Button>

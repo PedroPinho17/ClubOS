@@ -55,9 +55,40 @@ async function main() {
     organizationId: org.id,
   });
 
+  // Tesoureiro demo do CRC Vale.
+  await ensureUser({
+    email: 'tesoureiro@crcvale.pt',
+    password: 'Password123!',
+    name: 'Tesoureiro CRC Vale',
+    role: 'tesoureiro',
+    organizationId: org.id,
+  });
+
+  // Socio demo com acesso ao portal (ligado ao membro Joao Silva).
+  await ensureUser({
+    email: 'joao@example.com',
+    password: 'Portal2026!',
+    name: 'Joao Silva',
+    role: 'socio',
+    organizationId: org.id,
+  });
+
+  const joaoUser = await prisma.user.findUnique({ where: { email: 'joao@example.com' } });
+  const joaoMember = await prisma.member.findFirst({
+    where: { organizationId: org.id, email: 'joao@example.com' },
+  });
+  if (joaoUser && joaoMember) {
+    await prisma.member.update({
+      where: { id: joaoMember.id },
+      data: { userId: joaoUser.id },
+    });
+  }
+
   console.log('Utilizadores prontos:');
   console.log('  Imperador:     pedropinho364@gmail.com / Gestao2026!dev');
   console.log('  Administrador: admin@crcvale.pt / Password123!');
+  console.log('  Tesoureiro:    tesoureiro@crcvale.pt / Password123!');
+  console.log('  Socio (portal): joao@example.com / Portal2026!');
 }
 
 main()

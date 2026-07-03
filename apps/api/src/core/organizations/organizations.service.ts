@@ -53,7 +53,7 @@ export class OrganizationsService {
     return this.prisma.organization.update({
       where: { id: organizationId },
       data: dto,
-    });
+    }).then(() => this.findById(organizationId));
   }
 
   async getSettings(organizationId: string) {

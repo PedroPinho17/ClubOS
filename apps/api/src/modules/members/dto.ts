@@ -25,6 +25,10 @@ export class CreateMemberDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  cardRole?: string;
 }
 
 export class UpdateMemberDto {
@@ -52,4 +56,8 @@ export class UpdateMemberDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  cardRole?: string;
 }

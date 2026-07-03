@@ -1,0 +1,30 @@
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/database/package.json ./packages/database/
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS build
+COPY apps/api ./apps/api
+COPY packages/database ./packages/database
+RUN pnpm db:generate
+RUN pnpm --filter @clubos/api build
+
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/package.json ./apps/api/
+COPY --from=build /app/packages ./packages
+COPY package.json pnpm-workspace.yaml ./
+
+WORKDIR /app/apps/api
+EXPOSE 4000
+CMD ["node", "dist/main.js"]

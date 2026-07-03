@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { api } from '@/lib/api';
 import { passkey, signOut, useSession } from '@/lib/auth-client';
-import { NAV_ITEMS } from '@/lib/nav';
+import { NAV_ITEMS, filterNavItems } from '@/lib/nav';
 import type { Organization } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -38,9 +38,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     enabled: !!session,
   });
 
-  const enabledSet = new Set(enabled ?? []);
-  const visibleNav = NAV_ITEMS.filter((item) => !item.module || enabledSet.has(item.module));
-
   async function logout() {
     await signOut();
     router.replace('/login');
@@ -54,6 +51,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isPending || !session) {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">A carregar...</div>;
   }
+
+  const role = session.user?.role;
+  const enabledSet = new Set(enabled ?? []);
+  const visibleNav = filterNavItems(NAV_ITEMS, enabledSet, role);
 
   return (
     <div className="flex min-h-screen">

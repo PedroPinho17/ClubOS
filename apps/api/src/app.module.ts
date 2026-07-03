@@ -6,6 +6,7 @@ import { AuditModule } from './core/audit/audit.module';
 import { MailModule } from './core/mail/mail.module';
 import { ModulesModule } from './core/modules/modules.module';
 import { OrganizationsModule } from './core/organizations/organizations.module';
+import { UsersModule } from './core/users/users.module';
 import { CommunicationsModule } from './modules/communications/communications.module';
 import { CardsModule } from './modules/cards/cards.module';
 import { PortalModule } from './modules/portal/portal.module';
@@ -32,6 +33,7 @@ import { StorageModule } from './storage/storage.module';
     AuditModule,
     // Core
     OrganizationsModule,
+    UsersModule,
     ModulesModule,
     // Modulos base
     MembersModule,
