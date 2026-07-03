@@ -21,6 +21,8 @@ interface CardProps {
   data: CardData;
   /** Largura de render em px (mantem o racio CR80). */
   width?: number;
+  /** Frente ou verso (verso apenas para CRC Vale). */
+  side?: 'front' | 'back';
 }
 
 /** Moldura que escala o conteudo 856x540 para a largura desejada. */
@@ -354,11 +356,139 @@ function CrcValeCard({ data }: { data: CardData }) {
   );
 }
 
+function CrcValeVersoCard({ data }: { data: CardData }) {
+  const navy = '#0a1f44';
+  const blue = '#4a90c8';
+  const sky = '#e8f4fc';
+  const rules = [
+    'Este cartão é pessoal e intransmissível.',
+    'A apresentação deste cartão é obrigatória no acesso às instalações.',
+    'O sócio deve manter a quota em dia para usufruir dos benefícios do clube.',
+    'Em caso de perda ou roubo, contacte imediatamente a direção do clube.',
+  ];
+
+  return (
+    <div
+      style={{
+        width: BASE_W,
+        height: BASE_H,
+        position: 'relative',
+        background: navy,
+        color: '#fff',
+        overflow: 'hidden',
+        fontFamily: 'Arial, sans-serif',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `repeating-linear-gradient(52deg, transparent, transparent 30px, ${blue}22 30px, ${blue}22 60px)`,
+        }}
+      />
+
+      <div style={{ position: 'relative', padding: '28px 32px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ textAlign: 'center', borderBottom: `2px solid ${blue}`, paddingBottom: 14 }}>
+          <div style={{ fontSize: 18, letterSpacing: 2, color: blue, fontWeight: 700 }}>CLUBE RECREATIVO</div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: sky, lineHeight: 1.1 }}>
+            {data.organization.name.toUpperCase()}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, marginTop: 18, fontSize: 15, lineHeight: 1.55 }}>
+          <div style={{ fontSize: 13, letterSpacing: 2, color: blue, fontWeight: 700, marginBottom: 10 }}>
+            CONDIÇÕES DE UTILIZAÇÃO
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {rules.map((rule) => (
+              <li key={rule} style={{ marginBottom: 6 }}>
+                {rule}
+              </li>
+            ))}
+          </ul>
+          {data.layout.footerText && (
+            <p style={{ marginTop: 14, fontSize: 14, color: sky, fontStyle: 'italic' }}>{data.layout.footerText}</p>
+          )}
+        </div>
+
+        <div
+          style={{
+            marginTop: 'auto',
+            paddingTop: 16,
+            borderTop: `1px solid ${blue}55`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            gap: 16,
+          }}
+        >
+          <div style={{ fontSize: 13, color: sky, lineHeight: 1.5 }}>
+            <div style={{ fontWeight: 700, color: '#fff' }}>Contactos</div>
+            <div>{data.member.email ?? 'secretaria@crcvale.pt'}</div>
+            <div>{data.member.phone ?? '+351 000 000 000'}</div>
+          </div>
+          <div style={{ textAlign: 'center', minWidth: 180 }}>
+            <div
+              style={{
+                borderTop: `2px solid ${blue}`,
+                marginTop: 36,
+                paddingTop: 6,
+                fontSize: 12,
+                color: sky,
+              }}
+            >
+              Assinatura da Direção
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 44,
+            background: 'linear-gradient(180deg, #1a1a2e, #0d0d1a)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 14,
+            left: 32,
+            right: 32,
+            height: 16,
+            borderRadius: 4,
+            background: 'repeating-linear-gradient(90deg, #333 0px, #333 8px, #555 8px, #555 16px)',
+            opacity: 0.85,
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: 12,
+          height: '100%',
+          background: 'linear-gradient(180deg, #ff6ec4, #7873f5, #4ade80, #facc15)',
+          opacity: 0.8,
+        }}
+      />
+    </div>
+  );
+}
+
 export const MemberCard = forwardRef<HTMLDivElement, CardProps>(function MemberCard(
-  { data, width = 380 },
+  { data, width = 380, side = 'front' },
   ref,
 ) {
   const render = () => {
+    if (side === 'back' && data.layout.template === 'crc_vale') {
+      return <CrcValeVersoCard data={data} />;
+    }
     switch (data.layout.template) {
       case 'modern':
         return <ModernCard data={data} />;

@@ -1,10 +1,15 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { FileText, KeyRound } from 'lucide-react';
+import { useState } from 'react';
 import { MemberCard } from '@/components/cards/member-card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { Input } from '@/components/ui/input';
+import { api, openBlob } from '@/lib/api';
+import { changePassword } from '@/lib/auth-client';
 import type { PortalMe, QuotaStatus } from '@/lib/types';
 
 const QUOTA_BADGE: Record<QuotaStatus, { label: string; variant: 'success' | 'muted' | 'secondary' | 'default' }> = {
@@ -15,9 +20,29 @@ const QUOTA_BADGE: Record<QuotaStatus, { label: string; variant: 'success' | 'mu
 };
 
 export default function PortalPage() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const { data, isLoading, isError } = useQuery<PortalMe>({
     queryKey: ['portal', 'me'],
     queryFn: () => api.get<PortalMe>('/portal/me'),
+  });
+
+  const changePwd = useMutation({
+    mutationFn: async () => {
+      if (newPassword.length < 8) throw new Error('A nova password deve ter pelo menos 8 caracteres.');
+      if (newPassword !== confirmPassword) throw new Error('As passwords não coincidem.');
+      const res = await changePassword({ currentPassword, newPassword, revokeOtherSessions: false });
+      if (res.error) throw new Error(res.error.message ?? 'Não foi possível alterar a password.');
+    },
+    onSuccess: () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      alert('Password alterada com sucesso.');
+    },
+    onError: (err: Error) => alert(err.message),
   });
 
   if (isLoading) return <p className="text-muted-foreground">A carregar...</p>;
@@ -68,6 +93,7 @@ export default function PortalPage() {
                 <th className="p-3">Valor</th>
                 <th className="p-3">Método</th>
                 <th className="p-3">Estado</th>
+                <th className="p-3 text-right">Recibo</th>
               </tr>
             </thead>
             <tbody>
@@ -78,17 +104,83 @@ export default function PortalPage() {
                     <td className="p-3">{p.amount} €</td>
                     <td className="p-3">{p.method}</td>
                     <td className="p-3">{p.status}</td>
+                    <td className="p-3 text-right">
+                      {p.status === 'PAID' ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openBlob(`/portal/payments/${p.id}/receipt`)}
+                        >
+                          <FileText className="h-4 w-4" />
+                          PDF
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                  <td colSpan={5} className="p-6 text-center text-muted-foreground">
                     Sem pagamentos registados.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-muted-foreground" />
+            <h2 className="font-semibold">Alterar password</h2>
+          </div>
+          <form
+            className="grid gap-3 sm:max-w-md"
+            onSubmit={(e) => {
+              e.preventDefault();
+              changePwd.mutate();
+            }}
+          >
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Password atual</label>
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Nova password</label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Confirmar nova password</label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={changePwd.isPending || !currentPassword || !newPassword}>
+              {changePwd.isPending ? 'A guardar...' : 'Guardar nova password'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

@@ -1,12 +1,13 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ImagePlus } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
+import { api, uploadFile } from '@/lib/api';
 import type { Member, MembershipPlan, QuotaStatus } from '@/lib/types';
 
 const QUOTA_BADGE: Record<QuotaStatus, { label: string; variant: 'success' | 'muted' | 'secondary' | 'default' }> = {
@@ -57,6 +58,22 @@ export default function MembersPage() {
     },
     onError: (err: Error) => alert(err.message),
   });
+
+  const uploadPhoto = useMutation({
+    mutationFn: ({ memberId, file }: { memberId: string; file: File }) =>
+      uploadFile(`/members/${memberId}/photo`, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members'] }),
+    onError: (err: Error) => alert(err.message),
+  });
+
+  function memberInitials(name: string): string {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join('');
+  }
 
   return (
     <div>
@@ -113,6 +130,7 @@ export default function MembersPage() {
             <thead className="border-b bg-muted/50">
               <tr className="text-left">
                 <th className="p-3 font-medium">Nº</th>
+                <th className="p-3 font-medium">Foto</th>
                 <th className="p-3 font-medium">Nome</th>
                 <th className="p-3 font-medium">Email</th>
                 <th className="p-3 font-medium">Plano</th>
@@ -124,7 +142,7 @@ export default function MembersPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                  <td colSpan={8} className="p-6 text-center text-muted-foreground">
                     A carregar...
                   </td>
                 </tr>
@@ -132,6 +150,36 @@ export default function MembersPage() {
                 members.map((m) => (
                   <tr key={m.id} className="border-b last:border-0">
                     <td className="p-3">{m.number}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {m.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={m.photoUrl}
+                            alt={m.name}
+                            className="h-9 w-9 rounded-md border object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-9 w-9 items-center justify-center rounded-md border bg-muted text-xs font-semibold">
+                            {memberInitials(m.name)}
+                          </div>
+                        )}
+                        <label className="inline-flex cursor-pointer items-center rounded-md border border-input p-1.5 hover:bg-muted">
+                          <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            disabled={uploadPhoto.isPending}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) uploadPhoto.mutate({ memberId: m.id, file: f });
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </td>
                     <td className="p-3 font-medium">{m.name}</td>
                     <td className="p-3 text-muted-foreground">{m.email ?? '-'}</td>
                     <td className="p-3">{m.quotaPlan?.name ?? '-'}</td>
@@ -169,7 +217,7 @@ export default function MembersPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                  <td colSpan={8} className="p-6 text-center text-muted-foreground">
                     Sem membros.
                   </td>
                 </tr>

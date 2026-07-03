@@ -1,9 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { CheckCircle2, Clock, HelpCircle, XCircle } from 'lucide-react';
-import { useParams } from 'next/navigation';
-import { api } from '@/lib/api';
+import { CheckCircle2, Clock, HelpCircle, ShieldAlert, XCircle } from 'lucide-react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { api, ApiError } from '@/lib/api';
 import type { QuotaStatus } from '@/lib/types';
 
 interface ValidationResult {
@@ -49,26 +50,61 @@ const STATUS: Record<
 };
 
 export default function ValidatePage() {
-  const params = useParams<{ memberId: string }>();
-  const memberId = params.memberId;
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-slate-500">A carregar...</div>}>
+      <ValidateContent />
+    </Suspense>
+  );
+}
 
-  const { data, isLoading, isError } = useQuery<ValidationResult>({
-    queryKey: ['validate', memberId],
-    queryFn: () => api.get<ValidationResult>(`/validate/${memberId}`),
+function ValidateContent() {
+  const params = useParams<{ memberId: string }>();
+  const searchParams = useSearchParams();
+  const memberId = params.memberId;
+  const expires = searchParams.get('expires');
+  const sig = searchParams.get('sig');
+  const linkValid = Boolean(expires && sig);
+
+  const { data, isLoading, isError, error } = useQuery<ValidationResult>({
+    queryKey: ['validate', memberId, expires, sig],
+    queryFn: () => {
+      const qs = new URLSearchParams({ expires: expires!, sig: sig! });
+      return api.get<ValidationResult>(`/validate/${memberId}?${qs}`);
+    },
+    enabled: linkValid,
     retry: false,
   });
+
+  const invalidLink = !linkValid;
+  const expiredOrInvalid = isError && error instanceof ApiError && error.status === 401;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
       <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
-        {isLoading && <div className="p-10 text-center text-slate-500">A validar cartão...</div>}
+        {invalidLink && (
+          <div className="p-10 text-center">
+            <ShieldAlert className="mx-auto h-14 w-14 text-amber-500" />
+            <h1 className="mt-4 text-xl font-bold text-slate-800">Link inválido</h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Este cartão não tem um link de validação assinado. Leia o QR atualizado no cartão físico.
+            </p>
+          </div>
+        )}
 
-        {isError && (
+        {!invalidLink && isLoading && (
+          <div className="p-10 text-center text-slate-500">A validar cartão...</div>
+        )}
+
+        {!invalidLink && isError && (
           <div className="p-10 text-center">
             <XCircle className="mx-auto h-14 w-14 text-red-500" />
-            <h1 className="mt-4 text-xl font-bold text-slate-800">Cartão inválido</h1>
+            <h1 className="mt-4 text-xl font-bold text-slate-800">
+              {expiredOrInvalid ? 'Link expirado' : 'Cartão inválido'}
+            </h1>
             <p className="mt-2 text-sm text-slate-500">
-              Não foi possível validar este cartão. Pode estar inativo ou não existir.
+              {expiredOrInvalid
+                ? 'O link de validação expirou. Peça ao sócio um cartão renovado.'
+                : 'Não foi possível validar este cartão. Pode estar inativo ou não existir.'}
             </p>
           </div>
         )}

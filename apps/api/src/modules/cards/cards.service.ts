@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { buildSignedValidationUrl } from '../../common/qr-signature';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
 import { computeQuotaSituation } from '../members/quota.util';
@@ -91,11 +92,15 @@ export class CardsService {
 
     const numeroFormatado = `${layout.numeroPrefix ?? ''}${member.number}`;
 
+    const qrExpiresAt =
+      member.cardValidUntil ?? (quota.nextDueDate ? new Date(quota.nextDueDate) : null);
+
     const qrPayload = this.buildQrPayload(layout.qrContent, {
       organizationName: org.name,
       memberId: member.id,
       numeroFormatado,
       name: member.name,
+      qrExpiresAt,
     });
 
     return {
@@ -129,7 +134,13 @@ export class CardsService {
 
   private buildQrPayload(
     qrContent: CardLayout['qrContent'],
-    ctx: { organizationName: string; memberId: string; numeroFormatado: string; name: string },
+    ctx: {
+      organizationName: string;
+      memberId: string;
+      numeroFormatado: string;
+      name: string;
+      qrExpiresAt: Date | null;
+    },
   ): string {
     switch (qrContent) {
       case 'numero':
@@ -137,10 +148,8 @@ export class CardsService {
       case 'dados':
         return JSON.stringify({ clube: ctx.organizationName, numero: ctx.numeroFormatado, nome: ctx.name });
       case 'validacao':
-      default: {
-        const origin = (process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(',')[0].trim();
-        return `${origin}/validar/${ctx.memberId}`;
-      }
+      default:
+        return buildSignedValidationUrl(ctx.memberId, ctx.qrExpiresAt);
     }
   }
 }

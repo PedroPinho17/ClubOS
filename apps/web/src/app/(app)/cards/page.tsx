@@ -48,6 +48,8 @@ export default function CardsPage() {
   const [memberId, setMemberId] = useState('');
   const [layout, setLayout] = useState<CardLayout | null>(null);
   const [captureData, setCaptureData] = useState<CardData | null>(null);
+  const [captureSide, setCaptureSide] = useState<'front' | 'back'>('front');
+  const [cardSide, setCardSide] = useState<'front' | 'back'>('front');
   const [exporting, setExporting] = useState(false);
 
   const { data: settings } = useQuery<CardSettings>({
@@ -111,12 +113,20 @@ export default function CardsPage() {
 
   // Pre-visualizacao com o layout local (edicoes por guardar).
   const previewData: CardData | null = cardData ? { ...cardData, layout } : null;
+  const isCrcVale = layout.template === 'crc_vale';
+
+  const captureCardImage = async (el: HTMLElement | null) => {
+    await waitForImages(el);
+    if (!el) throw new Error('Elemento do cartão indisponível.');
+    return toPng(el, { pixelRatio: 4, cacheBust: true });
+  };
 
   const exportPng = async () => {
     if (!cardRef.current) return;
     const dataUrl = await toPng(cardRef.current, { pixelRatio: 3, cacheBust: true });
+    const suffix = isCrcVale && cardSide === 'back' ? '-verso' : '';
     const link = document.createElement('a');
-    link.download = `cartao-${cardData?.numeroFormatado ?? 'socio'}.png`;
+    link.download = `cartao-${cardData?.numeroFormatado ?? 'socio'}${suffix}.png`;
     link.href = dataUrl;
     link.click();
   };
@@ -124,10 +134,30 @@ export default function CardsPage() {
   const CARD_MM: [number, number] = [85.6, 53.98];
 
   const exportPdf = async () => {
-    if (!cardRef.current) return;
-    const dataUrl = await toPng(cardRef.current, { pixelRatio: 4, cacheBust: true });
+    if (!previewData) return;
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: CARD_MM });
-    pdf.addImage(dataUrl, 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+
+    flushSync(() => {
+      setCaptureData(previewData);
+      setCaptureSide('front');
+    });
+    await waitForImages(hiddenRef.current);
+    if (!hiddenRef.current) return;
+    pdf.addImage(await captureCardImage(hiddenRef.current), 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+
+    if (isCrcVale) {
+      flushSync(() => setCaptureSide('back'));
+      await waitForImages(hiddenRef.current);
+      if (hiddenRef.current) {
+        pdf.addPage(CARD_MM, 'landscape');
+        pdf.addImage(await captureCardImage(hiddenRef.current), 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+      }
+    }
+
+    flushSync(() => {
+      setCaptureData(null);
+      setCaptureSide('front');
+    });
     pdf.save(`cartao-${cardData?.numeroFormatado ?? 'socio'}.pdf`);
   };
 
@@ -138,18 +168,37 @@ export default function CardsPage() {
     setExporting(true);
     try {
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: CARD_MM });
+      let pageIndex = 0;
+
       for (let i = 0; i < list.length; i++) {
         const cd = await api.get<CardData>(`/cards/${list[i].id}`);
-        flushSync(() => setCaptureData({ ...cd, layout }));
+        const cardPayload = { ...cd, layout };
+
+        flushSync(() => {
+          setCaptureData(cardPayload);
+          setCaptureSide('front');
+        });
         await waitForImages(hiddenRef.current);
         if (!hiddenRef.current) continue;
-        const dataUrl = await toPng(hiddenRef.current, { pixelRatio: 4, cacheBust: true });
-        if (i > 0) pdf.addPage(CARD_MM, 'landscape');
-        pdf.addImage(dataUrl, 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+
+        if (pageIndex > 0) pdf.addPage(CARD_MM, 'landscape');
+        pdf.addImage(await captureCardImage(hiddenRef.current), 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+        pageIndex++;
+
+        if (layout.template === 'crc_vale') {
+          flushSync(() => setCaptureSide('back'));
+          await waitForImages(hiddenRef.current);
+          if (hiddenRef.current) {
+            pdf.addPage(CARD_MM, 'landscape');
+            pdf.addImage(await captureCardImage(hiddenRef.current), 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+            pageIndex++;
+          }
+        }
       }
       pdf.save('cartoes-socios.pdf');
     } finally {
       setCaptureData(null);
+      setCaptureSide('front');
       setExporting(false);
     }
   };
@@ -182,7 +231,31 @@ export default function CardsPage() {
               </div>
 
               {previewData ? (
-                <MemberCard ref={cardRef} data={previewData} width={420} />
+                <>
+                  {isCrcVale && (
+                    <div className="flex w-full gap-2">
+                      <Button
+                        type="button"
+                        variant={cardSide === 'front' ? 'default' : 'outline'}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setCardSide('front')}
+                      >
+                        Frente
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={cardSide === 'back' ? 'default' : 'outline'}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setCardSide('back')}
+                      >
+                        Verso
+                      </Button>
+                    </div>
+                  )}
+                  <MemberCard ref={cardRef} data={previewData} width={420} side={cardSide} />
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">Seleciona um sócio.</p>
               )}
@@ -329,7 +402,9 @@ export default function CardsPage() {
 
       {/* Render oculto para exportacao em lote (fora do ecra). */}
       <div style={{ position: 'fixed', left: -10000, top: 0, pointerEvents: 'none' }} aria-hidden>
-        {captureData && <MemberCard ref={hiddenRef} data={captureData} width={620} />}
+        {captureData && (
+          <MemberCard ref={hiddenRef} data={captureData} width={620} side={captureSide} />
+        )}
       </div>
     </div>
   );

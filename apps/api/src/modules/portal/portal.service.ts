@@ -5,6 +5,7 @@ import { auth } from '../../auth/auth';
 import { MailService } from '../../core/mail/mail.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CardsService } from '../cards/cards.service';
+import { PaymentsService } from '../payments/payments.service';
 import { computeQuotaSituation } from '../members/quota.util';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class PortalService {
     private readonly prisma: PrismaService,
     private readonly cards: CardsService,
     private readonly mail: MailService,
+    private readonly payments: PaymentsService,
   ) {}
 
   async getMe(userId: string) {
@@ -104,5 +106,25 @@ export class PortalService {
     });
 
     return { email: member.email, tempPassword };
+  }
+
+  /** Recibo PDF de um pagamento do socio autenticado. */
+  async getReceipt(userId: string, paymentId: string) {
+    const member = await this.prisma.member.findFirst({ where: { userId } });
+    if (!member) {
+      throw new NotFoundException('A sua conta ainda nao esta associada a um socio.');
+    }
+
+    const payment = await this.prisma.payment.findFirst({
+      where: { id: paymentId, memberId: member.id, organizationId: member.organizationId },
+    });
+    if (!payment) {
+      throw new NotFoundException('Pagamento nao encontrado.');
+    }
+    if (payment.status !== PaymentStatus.PAID) {
+      throw new BadRequestException('Recibo disponivel apenas para pagamentos concluidos.');
+    }
+
+    return this.payments.getReceipt(member.organizationId, paymentId);
   }
 }
