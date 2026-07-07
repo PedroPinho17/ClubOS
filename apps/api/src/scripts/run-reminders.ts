@@ -9,7 +9,9 @@ async function main() {
   const reminders = app.get(RemindersService);
   const results = await reminders.runForAllOrganizations();
   for (const r of results) {
-    console.log(`${r.organizationName}: enviados=${r.sent}, ignorados=${r.skipped}`);
+    console.log(
+      `${r.organizationName}: due_soon=${r.dueSoonSent}, overdue=${r.overdueSent}, ignorados=${r.skipped}`,
+    );
     for (const err of r.errors) console.log(`  erro: ${err}`);
   }
   await app.close();

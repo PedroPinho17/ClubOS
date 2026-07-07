@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PaymentStatus } from '@clubos/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeQuotaSituation, type QuotaStatus } from '../members/quota.util';
+import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
 
 export interface ValidationResult {
   organization: { name: string; primaryColor: string };
@@ -44,11 +45,13 @@ export class ValidationService {
       throw new NotFoundException('Validacao indisponivel para esta organizacao.');
     }
 
+    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, member.organizationId);
     const quota = computeQuotaSituation({
       periodicity: member.quotaPlan?.periodicity,
       joinedAt: member.joinedAt,
       lastPaidAt: member.payments[0]?.paidAt ?? null,
       cardValidUntil: member.cardValidUntil,
+      dueSoonDays: diasAvisoQuota,
     });
 
     const validUntil = member.cardValidUntil?.toISOString() ?? quota.nextDueDate;

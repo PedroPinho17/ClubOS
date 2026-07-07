@@ -10,6 +10,7 @@ import type { QuotaStatus, ReportsOverview } from '@/lib/types';
 
 const QUOTA_LABEL: Record<QuotaStatus, string> = {
   up_to_date: 'Em dia',
+  due_soon: 'A vencer',
   overdue: 'Em atraso',
   pending: 'Pendente',
   no_plan: 'Sem plano',

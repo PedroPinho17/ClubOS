@@ -151,10 +151,28 @@ O ficheiro exportado pode ser reimportado sem alteracoes (round-trip).
 
 ## Lembretes automaticos
 
+### Settings por organizacao (Definicoes → Lembretes de quota)
+
+| Setting | Chave | Default |
+|---------|-------|---------|
+| Dias de aviso | `dias_aviso_quota` | 7 |
+| Lembretes on/off | `lembretes_automaticos` | false |
+
+### Job diario (cron 09:00)
+
+Para cada org com lembretes activos:
+- Socios activos com plano + email
+- `nextDueDate` nos proximos X dias → email **«A sua quota vence em…»** (`DUE_SOON`)
+- Quota em atraso → email **«Quota em atraso»** (`OVERDUE`)
+- Registo em `QuotaReminderSent` (member + vencimento + tipo) — sem reenvio
+
+### Servidor
+
 | Variavel | Descricao |
 |----------|-----------|
-| `REMINDERS_ENABLED=true` | Activa cron (seg–sex 09:00) |
+| `REMINDERS_ENABLED=true` | Activa cron diario 09:00 |
 | `REMINDERS_CRON` | Opcional; override do schedule |
+| `HEALTHCHECK_QUOTA_REMINDERS_URL` | Ping Healthchecks.io apos cada execucao |
 | SMTP configurado | Envio real; sem SMTP → apenas log |
 
 Execucao manual:
@@ -163,7 +181,7 @@ pnpm --filter @clubos/api reminders:run
 # ou POST /api/reminders/run (autenticado)
 ```
 
-Dedupe: 1 email por socio / 7 dias (Redis).
+Badge **A vencer** na lista de membros quando faltam ≤ X dias para o vencimento.
 
 ---
 
@@ -205,7 +223,9 @@ Modelo operacional ja suportado — sem portar o `QuotaService` completo do Lara
 
 Calculo: ultimo pagamento (ou data de adesao) + periodicidade do plano. Validade manual do cartao pode prolongar "em dia".
 
-Extras do `gestao_socios` **nao implementados** (opcionais): vencimento dia fixo do mes, estado "a vencer em X dias".
+Extras do `gestao_socios` **nao implementados** (opcionais): vencimento dia fixo do mes.
+
+Estado **A vencer** (`due_soon`) e lembretes por email X dias antes do vencimento — ver [Lembretes automaticos](#lembretes-automaticos).
 
 ---
 

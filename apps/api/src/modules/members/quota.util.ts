@@ -1,11 +1,13 @@
 import { Periodicity } from '@clubos/database';
 
-export type QuotaStatus = 'up_to_date' | 'overdue' | 'no_plan' | 'pending';
+export type QuotaStatus = 'up_to_date' | 'due_soon' | 'overdue' | 'no_plan' | 'pending';
 
 export interface QuotaSituation {
   status: QuotaStatus;
   nextDueDate: string | null;
   lastPaymentAt: string | null;
+  daysUntilDue?: number | null;
+  daysOverdue?: number | null;
 }
 
 const PERIOD_MONTHS: Record<Periodicity, number | null> = {
@@ -22,6 +24,16 @@ function addMonths(date: Date, months: number): Date {
   return d;
 }
 
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function dayDiff(from: Date, to: Date): number {
+  return Math.floor((to.getTime() - from.getTime()) / 86_400_000);
+}
+
 /**
  * Calcula a situacao de quota de um socio a partir do plano e do ultimo
  * pagamento pago. Regras simples e deterministicas (Fase 2 V1).
@@ -31,8 +43,10 @@ export function computeQuotaSituation(input: {
   joinedAt: Date;
   lastPaidAt: Date | null;
   cardValidUntil?: Date | null;
+  /** Dias antes do vencimento para estado due_soon (0 = desactivado). */
+  dueSoonDays?: number;
 }): QuotaSituation {
-  const { periodicity, joinedAt, lastPaidAt, cardValidUntil } = input;
+  const { periodicity, joinedAt, lastPaidAt, cardValidUntil, dueSoonDays = 0 } = input;
 
   if (!periodicity) {
     return { status: 'no_plan', nextDueDate: null, lastPaymentAt: lastPaidAt?.toISOString() ?? null };
@@ -40,7 +54,6 @@ export function computeQuotaSituation(input: {
 
   const months = PERIOD_MONTHS[periodicity];
 
-  // Plano de pagamento unico: pago = em dia; sem pagamento = pendente.
   if (months === null) {
     return {
       status: lastPaidAt ? 'up_to_date' : 'pending',
@@ -52,15 +65,38 @@ export function computeQuotaSituation(input: {
   const baseline = lastPaidAt ?? joinedAt;
   let nextDue = addMonths(baseline, months);
 
-  // Validade manual do cartao sobrepoe (se definida e posterior).
   if (cardValidUntil && cardValidUntil > nextDue) {
     nextDue = cardValidUntil;
   }
 
-  const now = new Date();
+  const now = startOfDay(new Date());
+  const due = startOfDay(nextDue);
+  const nextDueIso = nextDue.toISOString();
+
+  if (now > due) {
+    return {
+      status: 'overdue',
+      nextDueDate: nextDueIso,
+      lastPaymentAt: lastPaidAt?.toISOString() ?? null,
+      daysOverdue: dayDiff(due, now),
+    };
+  }
+
+  const daysUntil = dayDiff(now, due);
+
+  if (dueSoonDays > 0 && daysUntil <= dueSoonDays) {
+    return {
+      status: 'due_soon',
+      nextDueDate: nextDueIso,
+      lastPaymentAt: lastPaidAt?.toISOString() ?? null,
+      daysUntilDue: daysUntil,
+    };
+  }
+
   return {
-    status: now <= nextDue ? 'up_to_date' : 'overdue',
-    nextDueDate: nextDue.toISOString(),
+    status: 'up_to_date',
+    nextDueDate: nextDueIso,
     lastPaymentAt: lastPaidAt?.toISOString() ?? null,
+    daysUntilDue: daysUntil,
   };
 }

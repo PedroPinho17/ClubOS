@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
 import { CreateMemberDto, UpdateMemberDto } from './dto';
 import { computeQuotaSituation } from './quota.util';
+import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
 
 const IMAGE_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -46,6 +47,8 @@ export class MembersService {
       orderBy: { createdAt: 'desc' },
     });
 
+    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
+
     return Promise.all(
       members.map(async ({ payments, ...member }) => ({
         ...member,
@@ -55,6 +58,7 @@ export class MembersService {
           joinedAt: member.joinedAt,
           lastPaidAt: payments[0]?.paidAt ?? null,
           cardValidUntil: member.cardValidUntil,
+          dueSoonDays: diasAvisoQuota,
         }),
       })),
     );
@@ -69,6 +73,7 @@ export class MembersService {
       throw new NotFoundException('Membro nao encontrado.');
     }
 
+    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
     const lastPaid = member.payments.find((p) => p.status === PaymentStatus.PAID && p.paidAt);
     return {
       ...member,
@@ -78,6 +83,7 @@ export class MembersService {
         joinedAt: member.joinedAt,
         lastPaidAt: lastPaid?.paidAt ?? null,
         cardValidUntil: member.cardValidUntil,
+        dueSoonDays: diasAvisoQuota,
       }),
     };
   }

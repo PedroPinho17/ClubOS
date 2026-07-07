@@ -62,6 +62,7 @@ describe('PortalService', () => {
     member: { findFirst: vi.fn(), update: vi.fn() },
     payment: { findFirst: vi.fn() },
     user: { findUnique: vi.fn(), update: vi.fn() },
+    organizationSetting: { findMany: vi.fn().mockResolvedValue([]) },
   };
   const cards = { getCardData: vi.fn() };
   const mail = { send: vi.fn() };

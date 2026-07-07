@@ -189,7 +189,18 @@ async function main() {
     });
   }
 
-  // Layout CRC Vale ativado apenas para esta organizacao (decisao da plataforma).
+  for (const key of ['dias_aviso_quota', 'lembretes_automaticos'] as const) {
+    await prisma.organizationSetting.upsert({
+      where: { organizationId_key: { organizationId: org.id, key } },
+      update: {},
+      create: {
+        organizationId: org.id,
+        key,
+        value: (key === 'dias_aviso_quota' ? 7 : false) as never,
+      },
+    });
+  }
+
   await prisma.organizationSetting.upsert({
     where: { organizationId_key: { organizationId: org.id, key: 'card.layout' } },
     update: {

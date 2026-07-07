@@ -8,14 +8,15 @@ export class RemindersScheduler {
 
   constructor(private readonly reminders: RemindersService) {}
 
-  /** Segunda-feira 09:00 (timezone do servidor). */
-  @Cron(process.env.REMINDERS_CRON ?? CronExpression.MONDAY_TO_FRIDAY_AT_9AM)
+  /** Diario 09:00 (timezone do servidor). */
+  @Cron(process.env.REMINDERS_CRON ?? CronExpression.EVERY_DAY_AT_9AM)
   async handleCron(): Promise<void> {
     if (process.env.REMINDERS_ENABLED !== 'true') return;
 
     this.logger.log('A executar lembretes automaticos de quotas...');
     const results = await this.reminders.runForAllOrganizations();
-    const sent = results.reduce((a, r) => a + r.sent, 0);
-    this.logger.log(`Lembretes concluidos. Total enviados: ${sent}`);
+    const dueSoon = results.reduce((a, r) => a + r.dueSoonSent, 0);
+    const overdue = results.reduce((a, r) => a + r.overdueSent, 0);
+    this.logger.log(`Lembretes concluidos. due_soon=${dueSoon}, overdue=${overdue}`);
   }
 }

@@ -12,8 +12,9 @@ import { api, openBlob } from '@/lib/api';
 import { changePassword } from '@/lib/auth-client';
 import type { PortalMe, QuotaStatus } from '@/lib/types';
 
-const QUOTA_BADGE: Record<QuotaStatus, { label: string; variant: 'success' | 'muted' | 'secondary' | 'default' }> = {
+const QUOTA_BADGE: Record<QuotaStatus, { label: string; variant: 'success' | 'muted' | 'secondary' | 'default' | 'warning' }> = {
   up_to_date: { label: 'Em dia', variant: 'success' },
+  due_soon: { label: 'A vencer', variant: 'warning' },
   overdue: { label: 'Em atraso', variant: 'default' },
   pending: { label: 'Pendente', variant: 'secondary' },
   no_plan: { label: 'Sem plano', variant: 'muted' },

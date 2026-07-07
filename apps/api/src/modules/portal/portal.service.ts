@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CardsService } from '../cards/cards.service';
 import { PaymentsService } from '../payments/payments.service';
 import { computeQuotaSituation } from '../members/quota.util';
+import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
 
 @Injectable()
 export class PortalService {
@@ -30,11 +31,13 @@ export class PortalService {
     }
 
     const lastPaid = member.payments.find((p) => p.status === PaymentStatus.PAID && p.paidAt);
+    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, member.organizationId);
     const quotaSituation = computeQuotaSituation({
       periodicity: member.quotaPlan?.periodicity,
       joinedAt: member.joinedAt,
       lastPaidAt: lastPaid?.paidAt ?? null,
       cardValidUntil: member.cardValidUntil,
+      dueSoonDays: diasAvisoQuota,
     });
 
     let card: Awaited<ReturnType<CardsService['getCardData']>> | null = null;

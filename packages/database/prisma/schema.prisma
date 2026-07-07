@@ -169,6 +169,7 @@ model Organization {
   payments       Payment[]
   communications Communication[]
   auditLogs      AuditLog[]
+  quotaRemindersSent QuotaReminderSent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -312,7 +313,8 @@ model Member {
   quotaPlanId String?
   quotaPlan   QuotaPlan? @relation(fields: [quotaPlanId], references: [id], onDelete: SetNull)
 
-  payments Payment[]
+  payments           Payment[]
+  quotaRemindersSent QuotaReminderSent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -381,6 +383,31 @@ model Payment {
   @@index([organizationId])
   @@index([organizationId, memberId])
   @@index([organizationId, status])
+}
+
+enum QuotaReminderKind {
+  DUE_SOON
+  OVERDUE
+}
+
+/// Registo de lembrete de quota enviado (evita reenvio para o mesmo vencimento).
+model QuotaReminderSent {
+  id               String            @id @default(cuid())
+  organizationId   String
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberId         String
+  member           Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// Referencia do periodo / vencimento (YYYY-MM-DD).
+  periodReference  String
+  kind             QuotaReminderKind
+  sentAt           DateTime          @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([memberId, periodReference, kind])
+  @@index([organizationId])
+  @@index([memberId])
 }
 
 // ===========================================================================

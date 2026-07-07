@@ -58,6 +58,18 @@ describe('computeQuotaSituation', () => {
     expect(r.status).toBe('overdue');
   });
 
+  it('mensal a vencer dentro de X dias → due_soon', () => {
+    const lastPaid = new Date('2026-05-20T00:00:00.000Z');
+    const r = computeQuotaSituation({
+      periodicity: Periodicity.MONTHLY,
+      joinedAt: joined,
+      lastPaidAt: lastPaid,
+      dueSoonDays: 7,
+    });
+    expect(r.status).toBe('due_soon');
+    expect(r.daysUntilDue).toBeLessThanOrEqual(7);
+  });
+
   it('validade manual do cartao prolonga nextDue', () => {
     const lastPaid = new Date('2026-01-01T00:00:00.000Z');
     const cardValid = new Date('2030-12-31T00:00:00.000Z');

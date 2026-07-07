@@ -7,7 +7,7 @@ import { RemindersService } from './reminders.service';
 export class RemindersController {
   constructor(private readonly reminders: RemindersService) {}
 
-  /** Dispara lembretes de quotas em atraso para a organizacao activa. */
+  /** Dispara lembretes de quota (a vencer + em atraso) para a organizacao activa. */
   @Post('run')
   @Roles(['imperador', 'administrador'])
   run(@OrgId() organizationId: string) {

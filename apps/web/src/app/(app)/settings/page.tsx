@@ -40,12 +40,21 @@ export default function SettingsPage() {
   const [inviteRole, setInviteRole] = useState<StaffRole>('tesoureiro');
 
   const orgKey = useTenantQueryKey(['organization']);
+  const orgSettingsKey = useTenantQueryKey(['organization', 'settings']);
   const staffKey = useTenantQueryKey(['users', 'staff']);
 
   const { data: org, isLoading } = useQuery<Organization>({
     queryKey: orgKey,
     queryFn: () => api.get<Organization>('/organization'),
   });
+
+  const { data: orgSettings } = useQuery<Record<string, unknown>>({
+    queryKey: orgSettingsKey,
+    queryFn: () => api.get<Record<string, unknown>>('/organization/settings'),
+  });
+
+  const [diasAvisoQuota, setDiasAvisoQuota] = useState(7);
+  const [lembretesAutomaticos, setLembretesAutomaticos] = useState(false);
 
   const { data: staff, isLoading: staffLoading } = useQuery<StaffUser[]>({
     queryKey: staffKey,
@@ -61,6 +70,14 @@ export default function SettingsPage() {
     }
   }, [org]);
 
+  useEffect(() => {
+    if (orgSettings) {
+      const dias = Number(orgSettings.dias_aviso_quota);
+      setDiasAvisoQuota(Number.isFinite(dias) && dias > 0 ? dias : 7);
+      setLembretesAutomaticos(orgSettings.lembretes_automaticos === true);
+    }
+  }, [orgSettings]);
+
   const saveOrg = useMutation({
     mutationFn: () =>
       api.patch<Organization>('/organization', {
@@ -72,6 +89,21 @@ export default function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization'] });
       alert('Definições guardadas.');
+    },
+    onError: (err: Error) => alert(err.message),
+  });
+
+  const saveReminders = useMutation({
+    mutationFn: async () => {
+      await api.put('/organization/settings', { key: 'dias_aviso_quota', value: diasAvisoQuota });
+      await api.put('/organization/settings', {
+        key: 'lembretes_automaticos',
+        value: lembretesAutomaticos,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization', 'settings'] });
+      alert('Definições de lembretes guardadas.');
     },
     onError: (err: Error) => alert(err.message),
   });
@@ -190,6 +222,47 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <h2 className="font-semibold">Lembretes de quota</h2>
+          <p className="text-sm text-muted-foreground">
+            Email automático aos sócios quando a quota está a vencer (nos próximos X dias) ou em atraso.
+            Requer SMTP configurado e <code className="text-xs">REMINDERS_ENABLED=true</code> no servidor.
+          </p>
+          <form
+            className="grid gap-3 sm:grid-cols-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveReminders.mutate();
+            }}
+          >
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Dias de aviso antes do vencimento</label>
+              <Input
+                type="number"
+                min={1}
+                max={90}
+                value={diasAvisoQuota}
+                onChange={(e) => setDiasAvisoQuota(Number(e.target.value) || 7)}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={lembretesAutomaticos}
+                onChange={(e) => setLembretesAutomaticos(e.target.checked)}
+              />
+              Lembretes automáticos activos nesta organização
+            </label>
+            <div className="sm:col-span-2">
+              <Button type="submit" variant="secondary" disabled={saveReminders.isPending}>
+                {saveReminders.isPending ? 'A guardar...' : 'Guardar lembretes'}
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
 

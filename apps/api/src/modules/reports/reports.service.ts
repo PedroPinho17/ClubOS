@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PaymentStatus } from '@clubos/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeQuotaSituation } from '../members/quota.util';
+import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
 
 function csvCell(value: unknown): string {
   const s = value == null ? '' : String(value);
@@ -31,7 +32,9 @@ export class ReportsService {
       },
     });
 
-    const quotaBreakdown = { up_to_date: 0, overdue: 0, pending: 0, no_plan: 0 };
+    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
+
+    const quotaBreakdown = { up_to_date: 0, due_soon: 0, overdue: 0, pending: 0, no_plan: 0 };
     const byPlan = new Map<string, number>();
     let active = 0;
 
@@ -42,6 +45,7 @@ export class ReportsService {
         joinedAt: m.joinedAt,
         lastPaidAt: m.payments[0]?.paidAt ?? null,
         cardValidUntil: m.cardValidUntil,
+        dueSoonDays: diasAvisoQuota,
       });
       quotaBreakdown[q.status]++;
       const planName = m.quotaPlan?.name ?? 'Sem plano';
@@ -80,6 +84,7 @@ export class ReportsService {
   }
 
   async membersCsv(organizationId: string): Promise<string> {
+    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
     const members = await this.prisma.member.findMany({
       where: { organizationId },
       include: {
@@ -94,6 +99,7 @@ export class ReportsService {
         joinedAt: m.joinedAt,
         lastPaidAt: m.payments[0]?.paidAt ?? null,
         cardValidUntil: m.cardValidUntil,
+        dueSoonDays: diasAvisoQuota,
       });
       return [m.number, m.name, m.email ?? '', m.phone ?? '', m.status, m.quotaPlan?.name ?? '', q.status];
     });

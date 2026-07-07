@@ -76,12 +76,14 @@ export interface PlatformModule {
 
 export type Periodicity = 'MONTHLY' | 'QUARTERLY' | 'BIANNUAL' | 'ANNUAL' | 'ONCE';
 
-export type QuotaStatus = 'up_to_date' | 'overdue' | 'no_plan' | 'pending';
+export type QuotaStatus = 'up_to_date' | 'due_soon' | 'overdue' | 'no_plan' | 'pending';
 
 export interface QuotaSituation {
   status: QuotaStatus;
   nextDueDate: string | null;
   lastPaymentAt: string | null;
+  daysUntilDue?: number | null;
+  daysOverdue?: number | null;
 }
 
 export interface MembershipPlan {

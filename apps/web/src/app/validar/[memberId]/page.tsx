@@ -26,6 +26,13 @@ const STATUS: Record<
     bg: '#dcfce7',
     Icon: CheckCircle2,
   },
+  due_soon: {
+    label: 'Quota a vencer',
+    sub: 'Vencimento em breve',
+    color: '#b45309',
+    bg: '#fef3c7',
+    Icon: Clock,
+  },
   overdue: {
     label: 'Quota em atraso',
     sub: 'Pagamento em falta',
