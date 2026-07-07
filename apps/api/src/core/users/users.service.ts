@@ -6,7 +6,7 @@ import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { InvitableRole } from './dto';
 
-const STAFF_ROLES = ['imperador', 'administrador', 'tesoureiro'] as const;
+const STAFF_ORG_ROLES = ['administrador', 'tesoureiro'] as const;
 
 const ROLE_LABEL: Record<string, string> = {
   imperador: 'Imperador',
@@ -22,19 +22,46 @@ export class UsersService {
     private readonly audit: AuditService,
   ) {}
 
-  listStaff(organizationId: string) {
-    return this.prisma.user.findMany({
-      where: { organizationId, role: { in: [...STAFF_ROLES] } },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        emailVerified: true,
-        createdAt: true,
+  async listStaff(organizationId: string) {
+    const memberships = await this.prisma.organizationMember.findMany({
+      where: {
+        organizationId,
+        orgRole: { in: ['imperador', 'administrador', 'tesoureiro'] },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            emailVerified: true,
+            createdAt: true,
+          },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    if (memberships.length === 0) {
+      return this.prisma.user.findMany({
+        where: { organizationId, role: { in: ['imperador', 'administrador', 'tesoureiro'] } },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          emailVerified: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+    }
+
+    return memberships.map((m) => ({
+      ...m.user,
+      role: m.user.role === 'imperador' ? 'imperador' : m.orgRole,
+    }));
   }
 
   async invite(organizationId: string, actorRole: string | null | undefined, actorId: string, dto: {
@@ -52,13 +79,21 @@ export class UsersService {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({
       where: { email },
-      include: { member: true },
+      include: { member: true, organizationMemberships: true },
     });
-    if (existing?.organizationId && existing.organizationId !== organizationId) {
-      throw new BadRequestException('Este email ja pertence a outra organizacao.');
-    }
+
     if (existing?.role === 'socio' && existing.member) {
       throw new BadRequestException('Este email esta associado a um socio. Use o portal do socio.');
+    }
+
+    const alreadyInOrg = existing?.organizationMemberships.some((m) => m.organizationId === organizationId);
+    if (alreadyInOrg) {
+      throw new BadRequestException('Este utilizador ja pertence a esta organizacao.');
+    }
+
+    const otherOrgMembership = existing?.organizationMemberships.find((m) => m.organizationId !== organizationId);
+    if (otherOrgMembership && actorRole !== 'imperador') {
+      throw new BadRequestException('Este email ja pertence a outra organizacao.');
     }
 
     const tempPassword = `Cv${randomBytes(6).toString('base64url')}!9`;
@@ -79,9 +114,15 @@ export class UsersService {
       data: {
         name: dto.name,
         role: dto.role,
-        organizationId,
+        organizationId: user.organizationId ?? organizationId,
         emailVerified: true,
       },
+    });
+
+    await this.prisma.organizationMember.upsert({
+      where: { userId_organizationId: { userId: user.id, organizationId } },
+      update: { orgRole: dto.role },
+      create: { userId: user.id, organizationId, orgRole: dto.role },
     });
 
     const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });

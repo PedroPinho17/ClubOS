@@ -7,8 +7,11 @@
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "seed:users": "tsx src/scripts/seed-users.ts",
+    "reminders:run": "tsx src/scripts/run-reminders.ts",
     "lint": "eslint \"src/**/*.ts\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1078.0",
@@ -19,6 +22,7 @@
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/schedule": "^6.1.3",
     "@thallesp/nestjs-better-auth": "^2.6.1",
     "better-auth": "^1.6.23",
     "bullmq": "^5.79.2",
@@ -31,7 +35,8 @@
     "nodemailer": "^9.0.3",
     "pdf-lib": "^1.17.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
@@ -44,6 +49,7 @@
     "ts-loader": "^9.5.1",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
   }
 }

@@ -3,11 +3,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { DashboardStats } from '@/lib/types';
 
 export default function DashboardPage() {
+  const statsKey = useTenantQueryKey(['dashboard', 'stats']);
   const { data, isLoading } = useQuery<DashboardStats>({
-    queryKey: ['dashboard', 'stats'],
+    queryKey: statsKey,
     queryFn: () => api.get<DashboardStats>('/dashboard/stats'),
   });
 

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { AuditLogEntry } from '@/lib/types';
 
 const ACTION_LABEL: Record<string, string> = {
@@ -16,8 +17,9 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 export default function AuditPage() {
+  const auditKey = useTenantQueryKey(['audit']);
   const { data, isLoading } = useQuery<AuditLogEntry[]>({
-    queryKey: ['audit'],
+    queryKey: auditKey,
     queryFn: () => api.get<AuditLogEntry[]>('/audit?limit=200'),
   });
 

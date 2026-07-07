@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { buildSignedValidationUrl } from '../../common/qr-signature';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
@@ -38,11 +38,23 @@ export class CardsService {
     return { layout, catalog: CARD_CATALOG };
   }
 
-  async updateSettings(organizationId: string, dto: UpdateCardSettingsDto) {
+  async updateSettings(
+    organizationId: string,
+    dto: UpdateCardSettingsDto,
+    actorRole?: string | null,
+  ) {
     const org = await this.getOrg(organizationId);
     const current = await this.getLayout(organizationId);
-    // Merge do atual com as alteracoes e re-valida (CRC Vale so se ativado).
-    const next = resolveCardLayout(org, { ...current, ...dto });
+
+    const patch = { ...dto };
+    if (actorRole !== 'imperador') {
+      delete patch.crcValeEnabled;
+      if (patch.template === 'crc_vale') {
+        throw new ForbiddenException('Apenas o Imperador pode ativar o layout CRC Vale.');
+      }
+    }
+
+    const next = resolveCardLayout(org, { ...current, ...patch });
     await this.prisma.organizationSetting.upsert({
       where: { organizationId_key: { organizationId, key: CARD_LAYOUT_KEY } },
       update: { value: next as never },

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
 import { Roles } from '@thallesp/nestjs-better-auth';
-import { OrgId, RequireModule } from '../../common/decorators';
+import { CurrentUser, OrgId, RequireModule } from '../../common/decorators';
+import type { AuthUser } from '../../common/types';
 import { ModuleGuard } from '../../common/guards/module.guard';
 import { CardsService } from './cards.service';
 import { UpdateCardSettingsDto } from './dto';
@@ -18,8 +19,12 @@ export class CardsController {
 
   @Put('settings')
   @Roles(['imperador', 'administrador'])
-  updateSettings(@OrgId() organizationId: string, @Body() dto: UpdateCardSettingsDto) {
-    return this.cards.updateSettings(organizationId, dto);
+  updateSettings(
+    @OrgId() organizationId: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateCardSettingsDto,
+  ) {
+    return this.cards.updateSettings(organizationId, dto, user.role);
   }
 
   @Get(':memberId')

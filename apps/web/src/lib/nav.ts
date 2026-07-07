@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Relatórios', href: '/reports', module: 'reports', icon: BarChart3 },
   { label: 'Auditoria', href: '/audit', icon: ClipboardList, roles: ['imperador', 'administrador'] },
   { label: 'Definições', href: '/settings', icon: SlidersHorizontal, roles: ['imperador', 'administrador'] },
-  { label: 'Módulos', href: '/modules', icon: Settings, roles: ['imperador', 'administrador'] },
+  { label: 'Módulos', href: '/modules', icon: Settings, roles: ['imperador'] },
 ];
 
 /** Filtra itens de navegacao por modulos ativos e role do utilizador. */

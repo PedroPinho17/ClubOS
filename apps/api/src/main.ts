@@ -15,6 +15,7 @@ async function bootstrap() {
   app.enableCors({
     origin: (process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(',').map((o) => o.trim()),
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id'],
   });
   app.useGlobalPipes(
     new ValidationPipe({

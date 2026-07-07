@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api, openBlob } from '@/lib/api';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { Member, MembershipPlan, Payment, PaymentMethod, PaymentStatus } from '@/lib/types';
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
@@ -31,18 +32,22 @@ export default function PaymentsPage() {
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
 
+  const paymentsKey = useTenantQueryKey(['payments']);
+  const membersKey = useTenantQueryKey(['members']);
+  const plansKey = useTenantQueryKey(['membership-plans']);
+
   const { data: payments, isLoading } = useQuery<Payment[]>({
-    queryKey: ['payments'],
+    queryKey: paymentsKey,
     queryFn: () => api.get<Payment[]>('/payments'),
   });
 
   const { data: members } = useQuery<Member[]>({
-    queryKey: ['members'],
+    queryKey: membersKey,
     queryFn: () => api.get<Member[]>('/members'),
   });
 
   const { data: plans } = useQuery<MembershipPlan[]>({
-    queryKey: ['membership-plans'],
+    queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>('/membership-plans'),
   });
 

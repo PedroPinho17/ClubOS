@@ -19,6 +19,29 @@ export interface Organization {
   timezone?: string | null;
 }
 
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  slug: string;
+  plan: string;
+  status: string;
+  primaryColor: string;
+}
+
+/** Organizacao acessivel pelo utilizador autenticado (membership). */
+export interface MyOrganization extends OrganizationSummary {
+  logoUrl?: string | null;
+  orgRole: string;
+}
+
+export interface MemberImportResult {
+  created: number;
+  updated: number;
+  payments: number;
+  skipped: number;
+  errors: { row: number; message: string }[];
+}
+
 export type StaffRole = 'imperador' | 'administrador' | 'tesoureiro';
 
 export interface StaffUser {

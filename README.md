@@ -33,6 +33,24 @@ O objetivo nao e ter 30 modulos, mas sim uma plataforma onde adicionar o 31.o mo
 
 Base de dados unica, schema unico, isolamento por linha via `organizationId` em todas as tabelas de negocio. A ativacao de modulos e feita na tabela `OrganizationModule`. Guards no backend (`ModuleGuard`) e navegacao no frontend so expoem os modulos ativos por organizacao.
 
+### Multi-organizacao (memberships)
+
+Um utilizador staff pode pertencer a **varias organizacoes** via tabela `OrganizationMember` (N:N). A organizacao em que trabalha e a **organizacao activa**, guardada na sessao (`Session.activeOrganizationId`) e cookie `clubos_active_org`, validada em cada pedido API.
+
+| Cenario | Comportamento |
+|---------|---------------|
+| Imperador com 2+ orgs | Selector na sidebar; so ve orgs com membership |
+| Org partilhada (2 imperadores) | Cada um tem `OrganizationMember` na mesma org |
+| Admin / tesoureiro | Normalmente 1 membership; sem selector |
+| Socio (portal) | Org implicita via `Member.userId` |
+
+Endpoints:
+- `GET /api/me/organizations` — orgs do utilizador
+- `POST /api/me/active-organization` — troca org activa
+- `POST /api/organizations` — criar org (imperador) + memberships
+
+> `User.organizationId` esta **deprecated** — usar `OrganizationMember`. Sera removido numa release futura.
+
 ## Stack
 
 | Camada        | Tecnologia                                  |
@@ -40,25 +58,201 @@ Base de dados unica, schema unico, isolamento por linha via `organizationId` em 
 | Frontend      | Next.js 15 + React 19 + shadcn/ui + Tailwind |
 | Data fetching | TanStack Query                              |
 | Backend       | NestJS 11 (modular)                         |
-| ORM / BD      | Prisma + PostgreSQL *(dev atual: MySQL)*    |
+| ORM / BD      | **Prisma + PostgreSQL**                     |
 | Cache/filas   | Redis + BullMQ *(preparado)*                |
-| Ficheiros     | S3 / MinIO *(preparado)*                    |
+| Ficheiros     | S3 / MinIO *(em uso: logotipos, fotos)*     |
 | Auth          | **Better Auth** (email+password, passkey/WebAuthn, roles/admin) |
+| PWA           | Manifest Next.js + service worker (`/sw.js`) |
+| Testes        | Vitest (API, unitarios)                     |
 | Observabilidade | Sentry *(preparado)*                      |
 | Deploy        | Docker / Coolify                            |
 
-> **Nota sobre a BD:** o alvo do projeto e PostgreSQL. Em desenvolvimento estamos
-> a usar o MySQL local (phpMyAdmin) por ser o que estava disponivel. Para migrar
-> para Postgres: mudar `provider` em `packages/database/prisma/schema.prisma` para
-> `postgresql`, remover os `@db.Text` (nao sao precisos no Postgres) e atualizar `DATABASE_URL`.
+## Estado do projeto
 
-### Autenticacao (Better Auth)
+### Checklist (ordem sugerida inicial)
+
+| # | Tarefa | Estado |
+|---|--------|--------|
+| 1 | Actualizar README (Postgres, Better Auth, feito vs preparado, sem passwords) | ✅ |
+| 2 | Testes (`quota.util`, import, `ModuleGuard`, portal) | ✅ 36 testes API |
+| 3 | Import Excel (paridade `gestao_socios`) | ✅ |
+| 4 | Limpar nav (`/events`, `/documents`, `/football`) | ✅ |
+| 5 | Paridade quotas (CRC Vale: plano + pagamentos + situacao) | ✅ suficiente para o Vale |
+| 6 | Nao migrar CRC Vale ainda (1–2 meses em paralelo) | ⏳ decisao de produto |
+
+### Implementado (MVP V1)
+
+| Area | Funcionalidade |
+|------|----------------|
+| Auth | Better Auth — email+password, passkey, roles (`imperador`, `administrador`, `tesoureiro`, `socio`) |
+| Multi-tenant | `organizationId` por linha + `OrganizationMember` N:N + org activa na sessao |
+| Core | Organizacoes, utilizadores, convites, auditoria, definicoes (nome, cor, logotipo) |
+| Membros | CRUD, foto, quota em tempo real, **import/export Excel** (round-trip compativel) |
+| Planos | Quotas por periodicidade (mensal, trimestral, etc.) |
+| Pagamentos | Registo, recibos PDF (fila BullMQ), estado de emissao |
+| Cartoes | Layout CRC Vale, export PNG/PDF em lote, QR assinado |
+| Comunicacoes | Campanhas por email (fila) |
+| Relatorios | Overview, CSV generico, **pagantes / em atraso** (PDF + Excel) |
+| Portal socio | Quotas, cartao, recibos PDF, concessao de acesso pelo admin |
+| Lembretes | Cron seg–sex 09:00, dedupe Redis 7 dias, email SMTP |
+| Branding | Logotipo na sidebar + titulo/favicon dinamicos por organizacao |
+| PWA | Instalavel no telemovel (manifest + cache de assets estaticos) |
+| Nav | Apenas rotas com paginas reais (`apps/web/src/lib/nav.ts`) |
+| Deploy | `Dockerfile.api`, `Dockerfile.web`, `docker-compose.prod.yml` |
+
+### Preparado (infra / catalogo, sem UI ou logica completa)
+
+| Area | Estado |
+|------|--------|
+| Redis + MinIO | `docker-compose.yml`; Redis usado em lembretes e filas |
+| BullMQ | Recibos PDF + comunicacoes + lembretes |
+| Plugins (football, padel, …) | Registados no seed; **zero codigo** de modalidade |
+| Sentry | Variavel `SENTRY_DSN`; nao integrado no runtime |
+| OAuth Google/GitHub | Variaveis no `.env.example`; opcional |
+
+### Por fazer
+
+| Funcionalidade | Notas |
+|----------------|-------|
+| **Paridade quotas (CRC Vale)** | ✅ Planos mensal/anual, atribuicao ao socio, pagamentos, badges, relatorios, lembretes |
+| **Eventos / Documentos** | Modulos futuros — **nao estao no menu** |
+| **Testes e2e** | Falta integracao HTTP e testes do frontend (`apps/web`) |
+| **Migracao CRC Vale** | Aguardar 1–2 meses; manter `gestao_socios` em producao |
+| **PWA offline** | V1 so cache estatico; paginas e API precisam de rede |
+
+### Proximos passos (ordem sugerida)
+
+1. **CRC Vale** — validar em paralelo; nao migrar ate o ClubOS amadurecer (1–2 meses).
+2. **Testes e2e** — fluxos criticos (login, import, portal, pagamentos).
+3. **Plugins** — primeira modalidade quando houver cliente.
+4. **Quotas avancadas** *(opcional)* — dia fixo de vencimento, alerta "a vencer em X dias" (extras do Laravel).
+
+---
+
+## Membros: import, export e relatorios
+
+Paridade com `gestao_socios` — modelo Excel de **14 colunas** (socio + linhas de pagamento).
+
+| Accao | Endpoint / UI |
+|-------|----------------|
+| Modelo importacao | `GET /api/members/import/template` |
+| Importar | `POST /api/members/import` (multipart: `file`, `updateExisting`) |
+| Exportar todos | `GET /api/members/export` → `socios_YYYY-MM-DD.xlsx` |
+| Pagantes PDF/Excel | `GET /api/reports/members/paying.pdf` / `.csv` |
+| Em atraso PDF/Excel | `GET /api/reports/members/overdue.pdf` / `.csv` |
+
+UI em **Membros**:
+- **Importar / Exportar** — modelo, import, export completo
+- **Relatorios de quota** — pagantes e em atraso (imperador, administrador, tesoureiro)
+
+O ficheiro exportado pode ser reimportado sem alteracoes (round-trip).
+
+---
+
+## Lembretes automaticos
+
+| Variavel | Descricao |
+|----------|-----------|
+| `REMINDERS_ENABLED=true` | Activa cron (seg–sex 09:00) |
+| `REMINDERS_CRON` | Opcional; override do schedule |
+| SMTP configurado | Envio real; sem SMTP → apenas log |
+
+Execucao manual:
+```powershell
+pnpm --filter @clubos/api reminders:run
+# ou POST /api/reminders/run (autenticado)
+```
+
+Dedupe: 1 email por socio / 7 dias (Redis).
+
+---
+
+## Portal do socio
+
+| Endpoint | Descricao |
+|----------|-----------|
+| `GET /api/portal/me` | Dados do socio, quota, pagamentos, cartao |
+| `GET /api/portal/payments/:id/receipt` | Recibo PDF (so pagamentos PAID) |
+| `POST /api/portal/access/:memberId` | Admin cria conta + envia password temporaria |
+
+Frontend: `/portal` (role `socio`). Concessao de acesso em **Membros → Acesso portal**.
+
+---
+
+## PWA
+
+- Manifest: `apps/web/src/app/manifest.ts` (servido automaticamente pelo Next.js)
+- Service worker: `apps/web/public/sw.js` (cache de icones e assets estaticos)
+- Registo: `PwaRegister` no layout raiz
+- Instalar: Chrome → menu → **Instalar aplicacao** (util em telemovel para o portal)
+
+Limitacao V1: sem offline para dados dinamicos nem push notifications.
+
+---
+
+## Quotas (CRC Vale)
+
+Modelo operacional ja suportado — sem portar o `QuotaService` completo do Laravel:
+
+| Passo | Onde |
+|-------|------|
+| Criar planos (mensal, anual, …) | **Planos** (`/membership-plans`) |
+| Atribuir plano ao socio | **Membros** — criar/editar, campo plano |
+| Registar pagamentos | **Pagamentos** ou import Excel |
+| Ver situacao | Badges **Em dia** / **Em atraso** / **Pendente** / **Sem plano** |
+| Relatorios | **Membros → Relatorios de quota** (pagantes / em atraso, PDF/Excel) |
+| Lembretes email | Cron com `REMINDERS_ENABLED=true` |
+
+Calculo: ultimo pagamento (ou data de adesao) + periodicidade do plano. Validade manual do cartao pode prolongar "em dia".
+
+Extras do `gestao_socios` **nao implementados** (opcionais): vencimento dia fixo do mes, estado "a vencer em X dias".
+
+---
+
+## Testes
+
+```powershell
+pnpm --filter @clubos/api test
+```
+
+| Ficheiro | Cobertura |
+|----------|-----------|
+| `quota.util.spec.ts` | Calculo de situacao de quota |
+| `member-import-*.spec.ts` | Mapa de colunas e parsing Excel |
+| `member-export-rows.spec.ts` | Linhas de exportacao (round-trip) |
+| `member-quota-report.util.spec.ts` | Dias em atraso nos relatorios |
+| `module.guard.spec.ts` | Modulo activo / core / forbidden |
+| `portal.service.spec.ts` | `getMe`, `getReceipt`, `grantAccess` |
+
+Sem testes no frontend (`apps/web`) nem e2e HTTP.
+
+---
+
+## Autenticacao (Better Auth)
 
 - Instancia em `apps/api/src/auth/auth.ts` (fonte unica de verdade).
 - Rotas montadas em `/api/auth/*` via `@thallesp/nestjs-better-auth` (AuthGuard global).
 - Metodos: **email + password** e **passkey / WebAuthn** (`@better-auth/passkey`).
 - Roles (admin plugin): `imperador` (super admin), `administrador`, `tesoureiro`, `socio`.
   Endpoints protegidos com `@Roles([...])`; modulos com `@RequireModule('slug')` + `ModuleGuard`.
+
+### Variaveis de ambiente essenciais
+
+Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
+
+| Variavel | Uso |
+|----------|-----|
+| `DATABASE_URL` | PostgreSQL |
+| `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` | Sessoes e auth |
+| `WEB_ORIGIN` | CORS + links em emails |
+| `NEXT_PUBLIC_API_URL` | Frontend → API |
+| `REDIS_*` | Filas, lembretes, dedupe |
+| `S3_*` / MinIO | Logotipos, fotos, recibos |
+| `SMTP_*` | Emails (portal, lembretes, comunicacoes) |
+| `QR_SIGNING_SECRET` | QR de validacao de cartoes |
+| `REMINDERS_ENABLED` | Lembretes automaticos |
+
+---
 
 ## Estrutura do monorepo
 
@@ -74,52 +268,73 @@ ClubOS/
 
 Backend organizado em `src/core` (Core), `src/modules` (modulos base) e — futuramente — `src/plugins` (modalidades).
 
+### Navegacao (frontend)
+
+Itens em `apps/web/src/lib/nav.ts` — apenas modulos com pagina implementada:
+
+Dashboard · Membros · Planos · Pagamentos · Cartoes · Comunicacoes · Relatorios · Auditoria · Definicoes · Modulos
+
+**Removidos** ate existirem paginas: `/events`, `/documents`, `/football`.
+
+---
+
 ## Como correr (desenvolvimento)
 
-Pre-requisitos: Node 20+, pnpm 9+, Docker (para Postgres/Redis/MinIO).
+Pre-requisitos: Node 20+, pnpm 9+, Docker (Postgres + Redis + MinIO).
 
 ```powershell
 # 1. Instalar dependencias
 pnpm install
 
-# 2. Variaveis de ambiente (copiar e ajustar DATABASE_URL)
+# 2. Variaveis de ambiente
 Copy-Item .env.example .env
+# Editar DATABASE_URL, BETTER_AUTH_SECRET, SMTP se necessario
 
-# 3. Base de dados
-#    - Dev atual: MySQL local (phpMyAdmin), DATABASE_URL="mysql://root@localhost:3306/clubos"
-#    - Alternativa: pnpm docker:up  (Postgres + Redis + MinIO do docker-compose)
+# 3. Infra (Postgres, Redis, MinIO)
+pnpm docker:up
 
 # 4. Gerar client Prisma + criar schema na BD
 pnpm db:generate
 pnpm db:push
 
-# 5. Popular dados demo (catalogo de modulos + CRC Vale + socios + utilizador Imperador)
+# 5. Popular dados demo
 pnpm db:seed
 
 # 6. Arrancar API + Web
 pnpm dev
+
+# 7. Testes (API)
+pnpm --filter @clubos/api test
 ```
 
 - API: http://localhost:4000/api
 - Web: http://localhost:3000
+- MinIO console: http://localhost:9001
 
 ### Credenciais demo
 
-| Utilizador                 | Password         | Role          |
-| -------------------------- | ---------------- | ------------- |
-| `pedropinho364@gmail.com`  | `Gestao2026!dev` | `imperador`   |
-| `admin@crcvale.pt`         | `Password123!`   | `administrador` |
+Corre `pnpm db:seed` — as contas sao impressas no terminal (**passwords nao ficam no README**).
+
+Contas tipicas apos seed:
+- Imperador (multi-org)
+- `joao.imperador@clubos.pt` — segundo imperador demo
+- Administrador / Tesoureiro — org CRC Vale
+- Socio com acesso ao portal
+
+---
 
 ## Roadmap por fases (conforme documento de stack)
 
-- **Fase 1 (MVP)** — Next.js + NestJS + PostgreSQL + Prisma + Auth JWT. ✅ *(este repositorio)*
-- **Fase 2 (crescimento)** — Redis + BullMQ + S3.
+- **Fase 1 (MVP)** — Next.js + NestJS + PostgreSQL + Prisma + Better Auth. ✅ *(este repositorio)*
+- **Fase 2 (crescimento)** — Redis + BullMQ + S3. 🟡 *(parcialmente em uso)*
 - **Fase 3 (escala)** — Sentry + WAF + backups + React Native.
 - **Fase 4 (enterprise)** — Keycloak + Kubernetes + microservicos.
 
+---
+
 ## Adicionar um novo modulo/plugin
 
-1. Adicionar o registo no catalogo (`packages/database/prisma/seed.ts` -> `MODULES`).
+1. Adicionar o registo no catalogo (`packages/database/prisma/seed.ts` → `MODULES`).
 2. Backend: criar `apps/api/src/modules/<slug>` (ou `plugins/<slug>`) e decorar o controller com `@RequireModule('<slug>')`.
-3. Frontend: adicionar a entrada em `apps/web/src/lib/nav.ts` com o `module: '<slug>'`.
+3. Frontend: adicionar a entrada em `apps/web/src/lib/nav.ts` com o `module: '<slug>'` **e criar a pagina**.
 4. Ativar o modulo por organizacao na pagina **Modulos** do backoffice.

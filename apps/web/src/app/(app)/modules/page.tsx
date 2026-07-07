@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { PlatformModule } from '@/lib/types';
 
 const CATEGORY_LABEL: Record<PlatformModule['category'], string> = {
@@ -15,9 +16,10 @@ const CATEGORY_LABEL: Record<PlatformModule['category'], string> = {
 
 export default function ModulesPage() {
   const queryClient = useQueryClient();
+  const modulesKey = useTenantQueryKey(['modules']);
 
   const { data: modules } = useQuery<PlatformModule[]>({
-    queryKey: ['modules'],
+    queryKey: modulesKey,
     queryFn: () => api.get<PlatformModule[]>('/modules'),
   });
 

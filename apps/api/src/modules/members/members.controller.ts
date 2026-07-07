@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,17 +8,22 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { Roles } from '@thallesp/nestjs-better-auth';
 import { CurrentUser, OrgId, RequireModule } from '../../common/decorators';
 import { ModuleGuard } from '../../common/guards/module.guard';
 import type { AuthUser } from '../../common/types';
 import { AuditService } from '../../core/audit/audit.service';
 import { CreateMemberDto, UpdateMemberDto } from './dto';
+import { buildImportTemplateBuffer } from './import/member-spreadsheet';
+import { MemberExportService } from './import/member-export.service';
+import { MemberImportService } from './import/member-import.service';
 import { MembersService } from './members.service';
 
 @Controller('api/members')
@@ -26,12 +32,69 @@ import { MembersService } from './members.service';
 export class MembersController {
   constructor(
     private readonly members: MembersService,
+    private readonly memberImport: MemberImportService,
+    private readonly memberExport: MemberExportService,
     private readonly audit: AuditService,
   ) {}
 
   @Get()
   list(@OrgId() organizationId: string, @Query('search') search?: string) {
     return this.members.list(organizationId, search);
+  }
+
+  @Get('import/template')
+  @Roles(['imperador', 'administrador'])
+  downloadImportTemplate(@Res() res: Response) {
+    const buffer = buildImportTemplateBuffer();
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="modelo_importacao_socios.xlsx"',
+    });
+    res.send(buffer);
+  }
+
+  @Get('export')
+  @Roles(['imperador', 'administrador', 'tesoureiro'])
+  async exportMembers(@OrgId() organizationId: string, @Res() res: Response) {
+    const buffer = await this.memberExport.exportBuffer(organizationId);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${this.memberExport.exportFilename()}"`,
+    });
+    res.send(buffer);
+  }
+
+  @Post('import')
+  @Roles(['imperador', 'administrador'])
+  @UseInterceptors(FileInterceptor('file'))
+  async importSpreadsheet(
+    @OrgId() organizationId: string,
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file: { buffer: Buffer; size: number } | undefined,
+    @Body('updateExisting') updateExisting?: string,
+  ) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Ficheiro em falta.');
+    }
+    const result = await this.memberImport.importFromBuffer(
+      organizationId,
+      file.buffer,
+      updateExisting !== 'false',
+    );
+    await this.audit.log({
+      organizationId,
+      userId: user.id,
+      action: 'member.imported',
+      entity: 'Member',
+      meta: {
+        created: result.created,
+        updated: result.updated,
+        payments: result.payments,
+        skipped: result.skipped,
+        errors: result.errors.length,
+      },
+    });
+    return result;
   }
 
   @Get(':id')

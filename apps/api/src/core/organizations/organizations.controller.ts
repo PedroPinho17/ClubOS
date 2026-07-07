@@ -5,10 +5,12 @@ import {
   Patch,
   Post,
   Put,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { Roles } from '@thallesp/nestjs-better-auth';
 import { OrgId } from '../../common/decorators';
 import { OrganizationsService } from './organizations.service';
@@ -21,6 +23,17 @@ export class OrganizationsController {
   @Get()
   current(@OrgId() organizationId: string) {
     return this.organizations.findById(organizationId);
+  }
+
+  /** Logotipo binario (favicon / mesma origem via proxy do Next). */
+  @Get('logo')
+  async logo(@OrgId() organizationId: string, @Res() res: Response) {
+    const { buffer, contentType } = await this.organizations.getLogoBuffer(organizationId);
+    res.set({
+      'Content-Type': contentType,
+      'Cache-Control': 'private, max-age=300',
+    });
+    res.send(buffer);
   }
 
   @Patch()

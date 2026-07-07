@@ -54,4 +54,19 @@ export class StorageService implements OnModuleInit {
       expiresIn,
     });
   }
+
+  /** Leitura direta do objeto (ex.: favicon via API autenticada). */
+  async getObject(key: string): Promise<{ buffer: Buffer; contentType: string }> {
+    const result = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    const bytes = await result.Body?.transformToByteArray();
+    if (!bytes) {
+      throw new Error('Objeto vazio no storage.');
+    }
+    return {
+      buffer: Buffer.from(bytes),
+      contentType: result.ContentType ?? 'application/octet-stream',
+    };
+  }
 }

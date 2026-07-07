@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api, uploadFile } from '@/lib/api';
 import { useSession } from '@/lib/auth-client';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { Organization, StaffRole, StaffUser } from '@/lib/types';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -38,13 +39,16 @@ export default function SettingsPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<StaffRole>('tesoureiro');
 
+  const orgKey = useTenantQueryKey(['organization']);
+  const staffKey = useTenantQueryKey(['users', 'staff']);
+
   const { data: org, isLoading } = useQuery<Organization>({
-    queryKey: ['organization'],
+    queryKey: orgKey,
     queryFn: () => api.get<Organization>('/organization'),
   });
 
   const { data: staff, isLoading: staffLoading } = useQuery<StaffUser[]>({
-    queryKey: ['users', 'staff'],
+    queryKey: staffKey,
     queryFn: () => api.get<StaffUser[]>('/users'),
   });
 

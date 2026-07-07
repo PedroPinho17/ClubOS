@@ -1,7 +1,18 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { OrganizationPlan, OrganizationStatus } from '@clubos/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
-import { UpdateOrganizationDto } from './dto';
+import { CreateOrganizationDto, UpdateOrganizationDto } from './dto';
+
+function slugify(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 48);
+}
 
 const IMAGE_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -26,6 +37,73 @@ export class OrganizationsService {
       throw new NotFoundException('Organizacao nao encontrada.');
     }
     return { ...org, logoUrl: await this.storage.getUrl(org.logoKey) };
+  }
+
+  async getLogoBuffer(organizationId: string) {
+    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    if (!org?.logoKey) {
+      throw new NotFoundException('Logotipo nao definido.');
+    }
+    return this.storage.getObject(org.logoKey);
+  }
+
+  /** Lista todas as organizacoes (Imperador). @deprecated Preferir GET /api/me/organizations */
+  listAll() {
+    return this.prisma.organization.findMany({
+      select: { id: true, name: true, slug: true, plan: true, status: true, primaryColor: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  /** Cria organizacao + modulos base + memberships do criador e imperadores extra. */
+  async create(dto: CreateOrganizationDto, creatorUserId: string) {
+    const baseSlug = dto.slug?.trim() || slugify(dto.name);
+    if (!baseSlug) {
+      throw new BadRequestException('Slug invalido.');
+    }
+
+    let slug = baseSlug;
+    let suffix = 0;
+    while (await this.prisma.organization.findUnique({ where: { slug } })) {
+      suffix += 1;
+      slug = `${baseSlug}-${suffix}`;
+    }
+
+    const basicModules = new Set(['dashboard', 'members', 'membership-plans', 'payments']);
+    const allModules = await this.prisma.module.findMany();
+
+    const org = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.organization.create({
+        data: {
+          name: dto.name.trim(),
+          slug,
+          plan: OrganizationPlan.FREE,
+          status: OrganizationStatus.TRIAL,
+        },
+      });
+
+      for (const module of allModules) {
+        const enabled = module.isCore || basicModules.has(module.slug);
+        await tx.organizationModule.create({
+          data: { organizationId: created.id, moduleId: module.id, enabled },
+        });
+      }
+
+      const memberIds = new Set<string>([creatorUserId, ...(dto.imperadorUserIds ?? [])]);
+      for (const userId of memberIds) {
+        await tx.organizationMember.create({
+          data: {
+            userId,
+            organizationId: created.id,
+            orgRole: 'imperador',
+          },
+        });
+      }
+
+      return created;
+    });
+
+    return this.findById(org.id);
   }
 
   /** Guarda o logotipo da organizacao no S3/MinIO e atualiza o logoKey. */

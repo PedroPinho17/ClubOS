@@ -24,7 +24,7 @@ export class ModulesController {
   }
 
   @Put(':slug')
-  @Roles(['imperador', 'administrador'])
+  @Roles(['imperador'])
   toggle(
     @OrgId() organizationId: string,
     @Param('slug') slug: string,

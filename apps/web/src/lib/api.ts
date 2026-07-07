@@ -1,3 +1,5 @@
+import { orgRequestHeaders } from './org-context';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export class ApiError extends Error {
@@ -12,6 +14,9 @@ export class ApiError extends Error {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set('Content-Type', 'application/json');
+  for (const [key, value] of Object.entries(orgRequestHeaders())) {
+    headers.set(key, value as string);
+  }
 
   // Cookies de sessao do Better Auth (cross-origin em dev).
   const res = await fetch(`${API_URL}/api${path}`, {
@@ -39,7 +44,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 /** Abre um recurso binario (ex.: PDF) numa nova aba, enviando cookies de sessao. */
 export async function openBlob(path: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api${path}`, { credentials: 'include' });
+  const res = await fetch(`${API_URL}/api${path}`, {
+    credentials: 'include',
+    headers: orgRequestHeaders(),
+  });
   if (!res.ok) {
     throw new ApiError(res.status, 'Falha ao obter o ficheiro.');
   }
@@ -49,14 +57,24 @@ export async function openBlob(path: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-/** Upload multipart (ex.: foto/logotipo). Nao define Content-Type (o browser trata). */
-export async function uploadFile<T>(path: string, file: File): Promise<T> {
+/** Upload multipart (ex.: foto/logotipo, import Excel). */
+export async function uploadFile<T>(
+  path: string,
+  file: File,
+  fields?: Record<string, string>,
+): Promise<T> {
   const form = new FormData();
   form.append('file', file);
+  if (fields) {
+    for (const [key, value] of Object.entries(fields)) {
+      form.append(key, value);
+    }
+  }
   const res = await fetch(`${API_URL}/api${path}`, {
     method: 'POST',
     body: form,
     credentials: 'include',
+    headers: orgRequestHeaders(),
   });
   if (!res.ok) {
     let message = res.statusText;
@@ -71,9 +89,28 @@ export async function uploadFile<T>(path: string, file: File): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** Descarrega ficheiro binario autenticado (ex.: modelo Excel). */
+export async function downloadBlob(path: string, filename: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api${path}`, {
+    credentials: 'include',
+    headers: orgRequestHeaders(),
+  });
+  if (!res.ok) throw new ApiError(res.status, 'Falha ao descarregar o ficheiro.');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /** Descarrega CSV autenticado (relatórios). */
 export async function downloadCsv(path: string, filename: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api${path}`, { credentials: 'include' });
+  const res = await fetch(`${API_URL}/api${path}`, {
+    credentials: 'include',
+    headers: orgRequestHeaders(),
+  });
   if (!res.ok) throw new ApiError(res.status, 'Falha ao descarregar o ficheiro.');
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

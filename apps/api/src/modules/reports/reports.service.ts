@@ -16,6 +16,12 @@ function toCsv(headers: string[], rows: unknown[][]): string {
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  getOrganizationName(organizationId: string) {
+    return this.prisma.organization
+      .findUnique({ where: { id: organizationId }, select: { name: true } })
+      .then((o) => o?.name ?? 'Organização');
+  }
+
   async overview(organizationId: string) {
     const members = await this.prisma.member.findMany({
       where: { organizationId },

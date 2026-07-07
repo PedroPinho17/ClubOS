@@ -5,6 +5,7 @@ import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { api, downloadCsv } from '@/lib/api';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { QuotaStatus, ReportsOverview } from '@/lib/types';
 
 const QUOTA_LABEL: Record<QuotaStatus, string> = {
@@ -15,8 +16,9 @@ const QUOTA_LABEL: Record<QuotaStatus, string> = {
 };
 
 export default function ReportsPage() {
+  const overviewKey = useTenantQueryKey(['reports', 'overview']);
   const { data, isLoading } = useQuery<ReportsOverview>({
-    queryKey: ['reports', 'overview'],
+    queryKey: overviewKey,
     queryFn: () => api.get<ReportsOverview>('/reports/overview'),
   });
 

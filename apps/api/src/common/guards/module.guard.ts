@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
 import { REQUIRED_MODULE_KEY } from '../decorators';
-import type { AuthUser } from '../types';
+import { getActiveOrganizationId } from '../org-context';
 
 /**
  * Garante que o modulo exigido pela rota esta ativo na organizacao atual.
@@ -27,13 +27,7 @@ export class ModuleGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    const user = request.user as AuthUser | undefined;
-    const organizationId =
-      user?.organizationId ?? (request.headers['x-organization-id'] as string | undefined);
-
-    if (!organizationId) {
-      throw new ForbiddenException('Contexto de organizacao em falta.');
-    }
+    const organizationId = getActiveOrganizationId(request);
 
     const module = await this.prisma.module.findUnique({ where: { slug } });
     if (!module) {

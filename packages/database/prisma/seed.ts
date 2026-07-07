@@ -189,6 +189,73 @@ async function main() {
     });
   }
 
+  // Layout CRC Vale ativado apenas para esta organizacao (decisao da plataforma).
+  await prisma.organizationSetting.upsert({
+    where: { organizationId_key: { organizationId: org.id, key: 'card.layout' } },
+    update: {
+      value: {
+        template: 'crc_vale',
+        crcValeEnabled: true,
+        slogan: 'Juntos Somos Mais Fortes',
+      } as never,
+    },
+    create: {
+      organizationId: org.id,
+      key: 'card.layout',
+      value: {
+        template: 'crc_vale',
+        crcValeEnabled: true,
+        slogan: 'Juntos Somos Mais Fortes',
+      } as never,
+    },
+  });
+
+  // Segunda organizacao demo (testar multi-tenant / switcher do Imperador).
+  const org2 = await prisma.organization.upsert({
+    where: { slug: 'academia-fit' },
+    update: {},
+    create: {
+      name: 'Academia Fit Lisboa',
+      slug: 'academia-fit',
+      plan: OrganizationPlan.FREE,
+      status: OrganizationStatus.TRIAL,
+      primaryColor: '#2563eb',
+    },
+  });
+
+  const basicModules = new Set(['dashboard', 'members', 'membership-plans', 'payments']);
+  for (const module of allModules) {
+    const enabled = module.isCore || basicModules.has(module.slug);
+    await prisma.organizationModule.upsert({
+      where: { organizationId_moduleId: { organizationId: org2.id, moduleId: module.id } },
+      update: { enabled },
+      create: { organizationId: org2.id, moduleId: module.id, enabled },
+    });
+  }
+
+  await prisma.quotaPlan.upsert({
+    where: { id: `${org2.id}-quota-mensal` },
+    update: {},
+    create: {
+      id: `${org2.id}-quota-mensal`,
+      organizationId: org2.id,
+      name: 'Mensalidade',
+      amount: 25,
+      periodicity: Periodicity.MONTHLY,
+    },
+  });
+
+  await prisma.member.upsert({
+    where: { organizationId_number: { organizationId: org2.id, number: '1' } },
+    update: {},
+    create: {
+      organizationId: org2.id,
+      number: '1',
+      name: 'Ana Demo',
+      email: 'ana@academiafit.pt',
+    },
+  });
+
   console.log('Catalogo/org/socios/pagamentos prontos. (Utilizadores: pnpm db:seed ou seed:users na API.)');
 }
 

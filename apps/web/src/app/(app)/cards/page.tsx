@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api, uploadFile } from '@/lib/api';
+import { useSession } from '@/lib/auth-client';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { CardData, CardLayout, CardSettings, CardTemplate, Member, QrContent } from '@/lib/types';
 
 async function waitForImages(el: HTMLElement | null): Promise<void> {
@@ -43,6 +45,8 @@ const FIELD_TOGGLES: { key: keyof CardLayout; label: string }[] = [
 
 export default function CardsPage() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const isImperador = session?.user?.role === 'imperador';
   const cardRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
   const [memberId, setMemberId] = useState('');
@@ -52,13 +56,17 @@ export default function CardsPage() {
   const [cardSide, setCardSide] = useState<'front' | 'back'>('front');
   const [exporting, setExporting] = useState(false);
 
+  const cardSettingsKey = useTenantQueryKey(['card-settings']);
+  const membersKey = useTenantQueryKey(['members']);
+  const cardKey = useTenantQueryKey(['card', memberId]);
+
   const { data: settings } = useQuery<CardSettings>({
-    queryKey: ['card-settings'],
+    queryKey: cardSettingsKey,
     queryFn: () => api.get<CardSettings>('/cards/settings'),
   });
 
   const { data: members } = useQuery<Member[]>({
-    queryKey: ['members'],
+    queryKey: membersKey,
     queryFn: () => api.get<Member[]>('/members'),
   });
 
@@ -71,7 +79,7 @@ export default function CardsPage() {
   }, [members, memberId]);
 
   const { data: cardData } = useQuery<CardData>({
-    queryKey: ['card', memberId],
+    queryKey: cardKey,
     queryFn: () => api.get<CardData>(`/cards/${memberId}`),
     enabled: !!memberId,
   });
@@ -319,14 +327,18 @@ export default function CardsPage() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label className="text-sm font-semibold">Modelo ativo</label>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={layout.crcValeEnabled}
-                      onChange={(e) => set('crcValeEnabled', e.target.checked)}
-                    />
-                    Ativar layout CRC Vale
-                  </label>
+                  {isImperador ? (
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={layout.crcValeEnabled}
+                        onChange={(e) => set('crcValeEnabled', e.target.checked)}
+                      />
+                      Ativar layout CRC Vale
+                    </label>
+                  ) : layout.crcValeEnabled ? (
+                    <span className="text-xs text-muted-foreground">Layout CRC Vale ativado pela plataforma</span>
+                  ) : null}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {availableTemplates.map((t) => (

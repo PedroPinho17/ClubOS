@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { Communication, CommunicationAudience, CommunicationStatus, MembershipPlan } from '@/lib/types';
 
 const AUDIENCE_LABEL: Record<CommunicationAudience, string> = {
@@ -31,14 +32,17 @@ export default function CommunicationsPage() {
   const [planId, setPlanId] = useState('');
   const [previewCount, setPreviewCount] = useState<number | null>(null);
 
+  const communicationsKey = useTenantQueryKey(['communications']);
+  const plansKey = useTenantQueryKey(['membership-plans']);
+
   const { data: list, isLoading } = useQuery<Communication[]>({
-    queryKey: ['communications'],
+    queryKey: communicationsKey,
     queryFn: () => api.get<Communication[]>('/communications'),
     refetchInterval: 5000,
   });
 
   const { data: plans } = useQuery<MembershipPlan[]>({
-    queryKey: ['membership-plans'],
+    queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>('/membership-plans'),
   });
 

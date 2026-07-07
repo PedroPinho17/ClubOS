@@ -1,14 +1,16 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Pencil, Trash2, UserPlus, X } from 'lucide-react';
-import { useState } from 'react';
+import { Download, FileSpreadsheet, FileText, ImagePlus, Pencil, Trash2, UserPlus, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { api, uploadFile } from '@/lib/api';
-import type { Member, MembershipPlan, QuotaStatus } from '@/lib/types';
+import { api, downloadBlob, uploadFile } from '@/lib/api';
+import { useSession } from '@/lib/auth-client';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
+import type { Member, MemberImportResult, MembershipPlan, QuotaStatus } from '@/lib/types';
 
 const QUOTA_BADGE: Record<QuotaStatus, { label: string; variant: 'success' | 'muted' | 'secondary' | 'default' }> = {
   up_to_date: { label: 'Em dia', variant: 'success' },
@@ -45,6 +47,11 @@ function memberToForm(m: Member): EditForm {
 
 export default function MembersPage() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const canManage = ['imperador', 'administrador'].includes(session?.user?.role ?? '');
+  const canExportReports = ['imperador', 'administrador', 'tesoureiro'].includes(session?.user?.role ?? '');
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [updateExisting, setUpdateExisting] = useState(true);
   const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -52,13 +59,16 @@ export default function MembersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>(emptyEditForm());
 
+  const membersKey = useTenantQueryKey(['members', search]);
+  const plansKey = useTenantQueryKey(['membership-plans']);
+
   const { data: members, isLoading } = useQuery<Member[]>({
-    queryKey: ['members', search],
+    queryKey: membersKey,
     queryFn: () => api.get<Member[]>(`/members${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   });
 
   const { data: plans } = useQuery<MembershipPlan[]>({
-    queryKey: ['membership-plans'],
+    queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>('/membership-plans'),
   });
 
@@ -123,6 +133,27 @@ export default function MembersPage() {
     onError: (err: Error) => alert(err.message),
   });
 
+  const importMembers = useMutation({
+    mutationFn: (file: File) =>
+      uploadFile<MemberImportResult>('/members/import', file, {
+        updateExisting: updateExisting ? 'true' : 'false',
+      }),
+    onSuccess: (res) => {
+      invalidate();
+      const errLines =
+        res.errors.length > 0
+          ? `\n\nErros (${res.errors.length}):\n${res.errors
+              .slice(0, 8)
+              .map((e) => `Linha ${e.row}: ${e.message}`)
+              .join('\n')}${res.errors.length > 8 ? '\n...' : ''}`
+          : '';
+      alert(
+        `Importação concluída.\nCriados: ${res.created}\nAtualizados: ${res.updated}\nPagamentos: ${res.payments}\nIgnorados: ${res.skipped}${errLines}`,
+      );
+    },
+    onError: (err: Error) => alert(err.message),
+  });
+
   function memberInitials(name: string): string {
     return name
       .split(' ')
@@ -149,6 +180,125 @@ export default function MembersPage() {
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">Membros</h1>
+
+      {canExportReports && (
+        <Card className="mb-6">
+          <CardContent className="space-y-3 pt-6">
+            <div>
+              <h2 className="font-semibold">Relatórios de quota</h2>
+              <p className="text-sm text-muted-foreground">
+                Exportar sócios pagantes (em dia) ou em atraso — PDF ou Excel (CSV).
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void downloadBlob('/reports/members/paying.pdf', 'socios_pagantes.pdf')}
+              >
+                <FileText className="h-4 w-4" />
+                Pagantes PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  void downloadBlob('/reports/members/paying.csv', 'socios_pagantes.csv')
+                }
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Pagantes Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void downloadBlob('/reports/members/overdue.pdf', 'socios_em_atraso.pdf')}
+              >
+                <FileText className="h-4 w-4" />
+                Em atraso PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  void downloadBlob('/reports/members/overdue.csv', 'socios_em_atraso.csv')
+                }
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Em atraso Excel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {(canManage || canExportReports) && (
+        <Card className="mb-6">
+          <CardContent className="space-y-3 pt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Importar / Exportar</h2>
+                <p className="text-sm text-muted-foreground">
+                  Excel (.xlsx) com o mesmo modelo do gestao_socios — sócios e pagamentos.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {canExportReports && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void downloadBlob('/members/export', 'socios_exportacao.xlsx')}
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Exportar todos
+                  </Button>
+                )}
+                {canManage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void downloadBlob('/members/import/template', 'modelo_importacao_socios.xlsx')}
+                  >
+                    <Download className="h-4 w-4" />
+                    Modelo Excel
+                  </Button>
+                )}
+              </div>
+            </div>
+            {canManage && (
+              <>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={updateExisting}
+                onChange={(e) => setUpdateExisting(e.target.checked)}
+              />
+              Actualizar sócios existentes (por número)
+            </label>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) importMembers.mutate(file);
+                e.target.value = '';
+              }}
+            />
+            <Button
+              variant="secondary"
+              disabled={importMembers.isPending}
+              onClick={() => importInputRef.current?.click()}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              {importMembers.isPending ? 'A importar...' : 'Importar Excel'}
+            </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {editingId && (
         <Card className="mb-6 border-primary/40">

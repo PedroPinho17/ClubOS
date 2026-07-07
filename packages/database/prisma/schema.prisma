@@ -36,8 +36,11 @@ model User {
   banExpires DateTime?
 
   // Multi-tenant: organizacao a que o utilizador pertence (campo adicional).
+  /// @deprecated Usar OrganizationMember. Mantido durante migracao.
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  organizationMemberships OrganizationMember[]
 
   // Ligacao opcional ao socio correspondente (Member Portal).
   member Member?
@@ -64,6 +67,9 @@ model Session {
 
   // admin plugin (impersonation)
   impersonatedBy String?
+
+  /// Organizacao em que o utilizador esta a trabalhar nesta sessao.
+  activeOrganizationId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -155,6 +161,7 @@ model Organization {
   timezone     String             @default("Europe/Lisbon")
 
   users      User[]
+  staffMemberships OrganizationMember[]
   modules    OrganizationModule[]
   settings   OrganizationSetting[]
   members    Member[]
@@ -167,6 +174,24 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   @@index([status])
+}
+
+/// Staff / imperador: pertenca N:N utilizador ↔ organizacao.
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Papel dentro desta org (administrador, tesoureiro). Imperador usa user.role global.
+  orgRole        String       @default("administrador")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
 }
 
 /// Configuracoes dinamicas por organizacao (key/value) sem alterar o schema.

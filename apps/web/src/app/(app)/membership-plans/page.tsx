@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { MembershipPlan, Periodicity } from '@/lib/types';
 
 const PERIODICITY_LABEL: Record<Periodicity, string> = {
@@ -23,8 +24,10 @@ export default function MembershipPlansPage() {
   const [amount, setAmount] = useState('');
   const [periodicity, setPeriodicity] = useState<Periodicity>('MONTHLY');
 
+  const plansKey = useTenantQueryKey(['membership-plans']);
+
   const { data: plans, isLoading } = useQuery<MembershipPlan[]>({
-    queryKey: ['membership-plans'],
+    queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>('/membership-plans'),
   });
 

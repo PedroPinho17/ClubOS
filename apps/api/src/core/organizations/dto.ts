@@ -1,4 +1,19 @@
-import { IsHexColor, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsHexColor, IsOptional, IsString, MinLength } from 'class-validator';
+
+export class CreateOrganizationDto {
+  @IsString()
+  @MinLength(2)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imperadorUserIds?: string[];
+}
 
 export class UpdateOrganizationDto {
   @IsOptional()

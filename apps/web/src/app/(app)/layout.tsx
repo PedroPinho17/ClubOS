@@ -10,6 +10,11 @@ import { passkey, signOut, useSession } from '@/lib/auth-client';
 import { NAV_ITEMS, filterNavItems } from '@/lib/nav';
 import type { Organization } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { OrgSwitcher } from '@/components/org-switcher';
+import { OrgBrandHeader } from '@/components/org-brand-header';
+import { OrgDocumentBranding } from '@/components/org-document-branding';
+import { useActiveOrgId } from '@/hooks/use-active-org';
+import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -26,16 +31,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isPending, session, router]);
 
+  const activeOrgId = useActiveOrgId();
+  const orgKey = useTenantQueryKey(['organization']);
+  const modulesKey = useTenantQueryKey(['modules', 'enabled']);
+
   const { data: org } = useQuery<Organization>({
-    queryKey: ['organization'],
+    queryKey: orgKey,
     queryFn: () => api.get<Organization>('/organization'),
-    enabled: !!session,
+    enabled: !!session && !!activeOrgId,
   });
 
   const { data: enabled } = useQuery<string[]>({
-    queryKey: ['modules', 'enabled'],
+    queryKey: modulesKey,
     queryFn: () => api.get<string[]>('/modules/enabled'),
-    enabled: !!session,
+    enabled: !!session && !!activeOrgId,
   });
 
   async function logout() {
@@ -58,11 +67,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      <OrgDocumentBranding name={org?.name} logoUrl={org?.logoUrl} organizationId={org?.id} />
       <aside className="flex w-64 flex-col border-r bg-card">
         <div className="border-b p-4">
-          <div className="text-xl font-bold text-primary">ClubOS</div>
-          <div className="mt-1 truncate text-sm text-muted-foreground">{org?.name ?? '...'}</div>
+          <OrgBrandHeader name={org?.name} logoUrl={org?.logoUrl} />
         </div>
+        <OrgSwitcher />
         <nav className="flex-1 space-y-1 p-2">
           {visibleNav.map((item) => {
             const active = pathname === item.href;
@@ -103,7 +113,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto bg-muted/20 p-8">{children}</main>
+      <main key={activeOrgId ?? 'org'} className="flex-1 overflow-auto bg-muted/20 p-8">
+        {children}
+      </main>
     </div>
   );
 }
