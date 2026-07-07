@@ -1,18 +1,18 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { KeyRound, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { api } from '@/lib/api';
-import { passkey, signOut, useSession } from '@/lib/auth-client';
+import { useSession } from '@/lib/auth-client';
 import { NAV_ITEMS, filterNavItems } from '@/lib/nav';
 import type { Organization } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { OrgSwitcher } from '@/components/org-switcher';
 import { OrgBrandHeader } from '@/components/org-brand-header';
 import { OrgDocumentBranding } from '@/components/org-document-branding';
+import { UserMenu } from '@/components/user-menu';
 import { useActiveOrgId } from '@/hooks/use-active-org';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 
@@ -46,16 +46,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     queryFn: () => api.get<string[]>('/modules/enabled'),
     enabled: !!session && !!activeOrgId,
   });
-
-  async function logout() {
-    await signOut();
-    router.replace('/login');
-  }
-
-  async function addPasskey() {
-    await passkey.addPasskey({ name: `${session?.user?.name ?? 'passkey'}` });
-    alert('Passkey registada com sucesso.');
-  }
 
   if (isPending || !session) {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">A carregar...</div>;
@@ -92,30 +82,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="border-t p-4">
-          <div className="mb-2 text-sm">
-            <div className="font-medium">{session.user?.name}</div>
-            <div className="truncate text-xs text-muted-foreground">{session.user?.email}</div>
-          </div>
-          <button
-            onClick={addPasskey}
-            className="mb-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent"
-          >
-            <KeyRound className="h-4 w-4" />
-            Adicionar passkey
-          </button>
-          <button
-            onClick={logout}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent"
-          >
-            <LogOut className="h-4 w-4" />
-            Sair
-          </button>
-        </div>
       </aside>
-      <main key={activeOrgId ?? 'org'} className="flex-1 overflow-auto bg-muted/20 p-8">
-        {children}
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 shrink-0 items-center justify-end border-b bg-card px-6">
+          <UserMenu name={session.user?.name} email={session.user?.email} />
+        </header>
+        <main key={activeOrgId ?? 'org'} className="flex-1 overflow-auto bg-muted/20 p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
