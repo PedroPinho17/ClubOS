@@ -9,6 +9,8 @@ export interface MemberImportResult {
   payments: number;
   skipped: number;
   errors: MemberImportError[];
+  /** true quando a importacao foi apenas simulada (sem gravar na BD). */
+  dryRun?: boolean;
 }
 
 export function emptyImportResult(): MemberImportResult {

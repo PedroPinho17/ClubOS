@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import './env';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -12,6 +13,24 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
   app.use(helmet());
+
+  const authLimiter = rateLimit({
+    windowMs: 60_000,
+    max: Number(process.env.RATE_LIMIT_AUTH_PER_MIN ?? 15),
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Demasiados pedidos de autenticacao. Tente novamente em breve.' },
+  });
+  const validateLimiter = rateLimit({
+    windowMs: 60_000,
+    max: Number(process.env.RATE_LIMIT_VALIDATE_PER_MIN ?? 60),
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Demasiados pedidos de validacao. Tente novamente em breve.' },
+  });
+  app.use('/api/auth', authLimiter);
+  app.use('/api/validate', validateLimiter);
+
   app.enableCors({
     origin: (process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(',').map((o) => o.trim()),
     credentials: true,

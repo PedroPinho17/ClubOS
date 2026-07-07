@@ -28,6 +28,7 @@ export class MemberImportService {
     organizationId: string,
     buffer: Buffer,
     updateExisting = true,
+    dryRun = false,
   ): Promise<MemberImportResult> {
     if (buffer.length > MAX_IMPORT_BYTES) {
       return {
@@ -70,7 +71,7 @@ export class MemberImportService {
       if (this.rowIsEmpty(data)) continue;
 
       if (this.isPaymentOnlyRow(data)) {
-        await this.importPaymentOnlyRow(organizationId, data, excelRow, membersInSession, result);
+        await this.importPaymentOnlyRow(organizationId, data, excelRow, membersInSession, result, dryRun);
         continue;
       }
 
@@ -105,10 +106,20 @@ export class MemberImportService {
       }
 
       try {
-        await this.prisma.$transaction(async (tx) => {
-          let member: Member;
-          if (existing) {
-            member = await tx.member.update({
+        if (dryRun) {
+          await this.simulateMemberRow(
+            organizationId,
+            existing,
+            memberPayload,
+            data,
+            membersInSession,
+            result,
+          );
+        } else {
+          await this.prisma.$transaction(async (tx) => {
+            let member: Member;
+            if (existing) {
+              member = await tx.member.update({
               where: { id: existing.id },
               data: {
                 name: memberPayload.name,
@@ -147,13 +158,84 @@ export class MemberImportService {
           membersInSession.set(member.number, member);
           await this.importPaymentForMember(tx, organizationId, member, data, result);
         });
+        }
       } catch (e) {
         result.errors.push({ row: excelRow, message: (e as Error).message });
         result.skipped++;
       }
     }
 
+    if (dryRun) result.dryRun = true;
     return result;
+  }
+
+  private async simulateMemberRow(
+    organizationId: string,
+    existing: Member | null,
+    memberPayload: MemberPayload,
+    data: ImportRowData,
+    membersInSession: Map<string, Member>,
+    result: MemberImportResult,
+  ): Promise<void> {
+    let member: Member;
+    if (existing) {
+      member = {
+        ...existing,
+        name: memberPayload.name,
+        email: memberPayload.email,
+        phone: memberPayload.phone,
+        joinedAt: memberPayload.joinedAt,
+        cardRole: memberPayload.cardRole,
+        cardValidUntil: memberPayload.cardValidUntil ?? existing.cardValidUntil,
+        status: memberPayload.status,
+        notes: memberPayload.notes,
+        quotaPlanId: memberPayload.quotaPlanId ?? existing.quotaPlanId,
+      };
+      result.updated++;
+    } else {
+      const number = memberPayload.number ?? (await this.nextNumber(this.prisma, organizationId));
+      member = {
+        id: `dry-${number}`,
+        organizationId,
+        number,
+        name: memberPayload.name,
+        email: memberPayload.email,
+        phone: memberPayload.phone,
+        joinedAt: memberPayload.joinedAt,
+        cardRole: memberPayload.cardRole,
+        cardValidUntil: memberPayload.cardValidUntil ?? null,
+        status: memberPayload.status,
+        notes: memberPayload.notes,
+        photoKey: null,
+        userId: null,
+        quotaPlanId: memberPayload.quotaPlanId ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      result.created++;
+    }
+
+    membersInSession.set(member.number, member);
+    await this.simulatePaymentForMember(organizationId, member, data, result);
+  }
+
+  private async simulatePaymentForMember(
+    organizationId: string,
+    member: Member,
+    data: ImportRowData,
+    result: MemberImportResult,
+  ): Promise<void> {
+    if (!this.hasPaymentData(data)) return;
+    this.buildPaymentPayload(data);
+    if (!member.id.startsWith('dry-')) {
+      const reference =
+        nullableString(data.pagamento_referencia) ??
+        formatYearMonth(parseDate(data.pagamento_data) ?? new Date());
+      await this.prisma.payment.findFirst({
+        where: { organizationId, memberId: member.id, reference },
+      });
+    }
+    result.payments++;
   }
 
   private extractRowData(row: unknown[], columnMap: Record<number, string>): ImportRowData {
@@ -259,6 +341,7 @@ export class MemberImportService {
     excelRow: number,
     membersInSession: Map<string, Member>,
     result: MemberImportResult,
+    dryRun: boolean,
   ): Promise<void> {
     const numero = nullableString(data.numero);
     if (!numero) {
@@ -293,10 +376,15 @@ export class MemberImportService {
     }
 
     try {
-      await this.prisma.$transaction(async (tx) => {
+      if (dryRun) {
         membersInSession.set(member.number, member);
-        await this.importPaymentForMember(tx, organizationId, member, data, result);
-      });
+        await this.simulatePaymentForMember(organizationId, member, data, result);
+      } else {
+        await this.prisma.$transaction(async (tx) => {
+          membersInSession.set(member.number, member);
+          await this.importPaymentForMember(tx, organizationId, member, data, result);
+        });
+      }
     } catch (e) {
       result.errors.push({ row: excelRow, message: (e as Error).message });
       result.skipped++;
@@ -344,7 +432,10 @@ export class MemberImportService {
     result.payments++;
   }
 
-  private async nextNumber(tx: Prisma.TransactionClient, organizationId: string): Promise<string> {
+  private async nextNumber(
+    tx: Prisma.TransactionClient | PrismaService,
+    organizationId: string,
+  ): Promise<string> {
     const members = await tx.member.findMany({
       where: { organizationId },
       select: { number: true },

@@ -40,6 +40,13 @@ export interface MemberImportResult {
   payments: number;
   skipped: number;
   errors: { row: number; message: string }[];
+  dryRun?: boolean;
+}
+
+export interface WhatsappLink {
+  name: string;
+  phone: string;
+  url: string;
 }
 
 export type StaffRole = 'imperador' | 'administrador' | 'tesoureiro';

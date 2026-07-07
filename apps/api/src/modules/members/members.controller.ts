@@ -72,6 +72,7 @@ export class MembersController {
     @CurrentUser() user: AuthUser,
     @UploadedFile() file: { buffer: Buffer; size: number } | undefined,
     @Body('updateExisting') updateExisting?: string,
+    @Body('dryRun') dryRun?: string,
   ) {
     if (!file?.buffer?.length) {
       throw new BadRequestException('Ficheiro em falta.');
@@ -80,11 +81,12 @@ export class MembersController {
       organizationId,
       file.buffer,
       updateExisting !== 'false',
+      dryRun === 'true',
     );
     await this.audit.log({
       organizationId,
       userId: user.id,
-      action: 'member.imported',
+      action: dryRun === 'true' ? 'member.import_dry_run' : 'member.imported',
       entity: 'Member',
       meta: {
         created: result.created,

@@ -19,3 +19,17 @@ export class CreateCommunicationDto {
   @IsString()
   planId?: string;
 }
+
+export class WhatsappLinksDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(5000)
+  body!: string;
+
+  @IsEnum(CommunicationAudience)
+  audience!: CommunicationAudience;
+
+  @IsOptional()
+  @IsString()
+  planId?: string;
+}

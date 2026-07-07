@@ -74,7 +74,7 @@ Endpoints:
 | # | Tarefa | Estado |
 |---|--------|--------|
 | 1 | Actualizar README (Postgres, Better Auth, feito vs preparado, sem passwords) | ✅ |
-| 2 | Testes (`quota.util`, import, `ModuleGuard`, portal) | ✅ 36 testes API |
+| 2 | Testes (`quota.util`, import, `ModuleGuard`, portal, WhatsApp, dry-run) | ✅ 44 testes API |
 | 3 | Import Excel (paridade `gestao_socios`) | ✅ |
 | 4 | Limpar nav (`/events`, `/documents`, `/football`) | ✅ |
 | 5 | Paridade quotas (CRC Vale: plano + pagamentos + situacao) | ✅ suficiente para o Vale |
@@ -87,14 +87,15 @@ Endpoints:
 | Auth | Better Auth — email+password, passkey, roles (`imperador`, `administrador`, `tesoureiro`, `socio`) |
 | Multi-tenant | `organizationId` por linha + `OrganizationMember` N:N + org activa na sessao |
 | Core | Organizacoes, utilizadores, convites, auditoria, definicoes (nome, cor, logotipo) |
-| Membros | CRUD, foto, quota em tempo real, **import/export Excel** (round-trip compativel) |
+| Membros | CRUD, foto, quota em tempo real, **import/export Excel**, **import dry-run** |
 | Planos | Quotas por periodicidade (mensal, trimestral, etc.) |
 | Pagamentos | Registo, recibos PDF (fila BullMQ), estado de emissao |
 | Cartoes | Layout CRC Vale, export PNG/PDF em lote, QR assinado |
-| Comunicacoes | Campanhas por email (fila) |
+| Comunicacoes | Email em massa (fila) + **WhatsApp `wa.me`** (links por socio) |
 | Relatorios | Overview, CSV generico, **pagantes / em atraso** (PDF + Excel) |
 | Portal socio | Quotas, cartao, recibos PDF, concessao de acesso pelo admin |
-| Lembretes | Cron seg–sex 09:00, dedupe Redis 7 dias, email SMTP |
+| Lembretes | Cron diario 09:00, `QuotaReminderSent`, email a vencer + atraso |
+| Seguranca | **Rate limit** login (`/api/auth`) e validacao QR publica |
 | Branding | Logotipo na sidebar + titulo/favicon dinamicos por organizacao |
 | PWA | Instalavel no telemovel (manifest + cache de assets estaticos) |
 | Nav | Apenas rotas com paginas reais (`apps/web/src/lib/nav.ts`) |
@@ -136,16 +137,49 @@ Paridade com `gestao_socios` — modelo Excel de **14 colunas** (socio + linhas 
 | Accao | Endpoint / UI |
 |-------|----------------|
 | Modelo importacao | `GET /api/members/import/template` |
-| Importar | `POST /api/members/import` (multipart: `file`, `updateExisting`) |
+| Importar | `POST /api/members/import` (multipart: `file`, `updateExisting`, `dryRun`) |
 | Exportar todos | `GET /api/members/export` → `socios_YYYY-MM-DD.xlsx` |
 | Pagantes PDF/Excel | `GET /api/reports/members/paying.pdf` / `.csv` |
 | Em atraso PDF/Excel | `GET /api/reports/members/overdue.pdf` / `.csv` |
 
 UI em **Membros**:
-- **Importar / Exportar** — modelo, import, export completo
+- **Importar / Exportar** — modelo, import (com **simulacao dry-run**), export completo
 - **Relatorios de quota** — pagantes e em atraso (imperador, administrador, tesoureiro)
 
-O ficheiro exportado pode ser reimportado sem alteracoes (round-trip).
+---
+
+## Comunicacoes e WhatsApp (`wa.me`)
+
+Paridade com `gestao_socios` — **nao envia WhatsApp automaticamente**; gera links para o operador abrir um a um.
+
+### De onde vêm os numeros
+
+| Origem | Campo ClubOS | Coluna Excel import |
+|--------|--------------|---------------------|
+| Ficha do socio | `Member.phone` | **Telefone** |
+| Normalizacao | 9 digitos PT → prefixo `351` | Igual ao Laravel |
+| Link | `https://wa.me/{digits}?text=...` | Mensagem com «Olá {nome},» + texto |
+
+So entram socios da **organizacao activa** com telemovel valido (audiencia seleccionada). Quem nao tem telefone ou tem numero invalido fica de fora — o preview mostra a contagem antes de gerar.
+
+### Audiencias (iguais ao email)
+
+| Audiencia | Quem inclui |
+|-----------|-------------|
+| `ALL` | Todos os socios da org (com telemovel) |
+| `ACTIVE` | So `status = ACTIVE` |
+| `OVERDUE` | Quota em atraso |
+| `PLAN` | Socios do plano escolhido |
+
+### API / UI
+
+| Accao | Onde |
+|-------|------|
+| Preview destinatarios | `GET /api/communications/preview/whatsapp?audience=...` |
+| Gerar links | `POST /api/communications/whatsapp` `{ body, audience, planId? }` |
+| UI | **Comunicacoes → WhatsApp → Gerar links** |
+
+> Envio automatico em massa por WhatsApp/SMS exige fornecedor pago (Twilio/Meta). O `wa.me` e gratuito e semi-manual.
 
 ---
 
@@ -243,8 +277,10 @@ pnpm --filter @clubos/api test
 | `member-quota-report.util.spec.ts` | Dias em atraso nos relatorios |
 | `module.guard.spec.ts` | Modulo activo / core / forbidden |
 | `portal.service.spec.ts` | `getMe`, `getReceipt`, `grantAccess` |
+| `whatsapp.util.spec.ts` | Normalizacao telefone PT + URL `wa.me` |
+| `org-reminder-settings.spec.ts` | Settings de lembretes por org |
 
-Sem testes no frontend (`apps/web`) nem e2e HTTP.
+**44 testes** a passar. Sem testes no frontend (`apps/web`) nem e2e HTTP.
 
 ---
 
@@ -271,6 +307,8 @@ Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
 | `SMTP_*` | Emails (portal, lembretes, comunicacoes) |
 | `QR_SIGNING_SECRET` | QR de validacao de cartoes |
 | `REMINDERS_ENABLED` | Lembretes automaticos |
+| `RATE_LIMIT_AUTH_PER_MIN` | Limite pedidos/min em `/api/auth` (default 15) |
+| `RATE_LIMIT_VALIDATE_PER_MIN` | Limite pedidos/min em `/api/validate` (default 60) |
 
 ---
 

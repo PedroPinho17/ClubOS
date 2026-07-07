@@ -53,6 +53,7 @@ export default function MembersPage() {
   const canExportReports = ['imperador', 'administrador', 'tesoureiro'].includes(session?.user?.role ?? '');
   const importInputRef = useRef<HTMLInputElement>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
+  const [importDryRun, setImportDryRun] = useState(false);
   const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -138,9 +139,10 @@ export default function MembersPage() {
     mutationFn: (file: File) =>
       uploadFile<MemberImportResult>('/members/import', file, {
         updateExisting: updateExisting ? 'true' : 'false',
+        dryRun: importDryRun ? 'true' : 'false',
       }),
     onSuccess: (res) => {
-      invalidate();
+      if (!res.dryRun) invalidate();
       const errLines =
         res.errors.length > 0
           ? `\n\nErros (${res.errors.length}):\n${res.errors
@@ -149,7 +151,7 @@ export default function MembersPage() {
               .join('\n')}${res.errors.length > 8 ? '\n...' : ''}`
           : '';
       alert(
-        `Importação concluída.\nCriados: ${res.created}\nAtualizados: ${res.updated}\nPagamentos: ${res.payments}\nIgnorados: ${res.skipped}${errLines}`,
+        `${res.dryRun ? 'Simulação (dry-run)' : 'Importação concluída'}.\nCriados: ${res.created}\nAtualizados: ${res.updated}\nPagamentos: ${res.payments}\nIgnorados: ${res.skipped}${errLines}`,
       );
     },
     onError: (err: Error) => alert(err.message),
@@ -271,6 +273,14 @@ export default function MembersPage() {
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
+                checked={importDryRun}
+                onChange={(e) => setImportDryRun(e.target.checked)}
+              />
+              Simular importação (dry-run) — não grava na base de dados
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
                 checked={updateExisting}
                 onChange={(e) => setUpdateExisting(e.target.checked)}
               />
@@ -293,7 +303,13 @@ export default function MembersPage() {
               onClick={() => importInputRef.current?.click()}
             >
               <FileSpreadsheet className="h-4 w-4" />
-              {importMembers.isPending ? 'A importar...' : 'Importar Excel'}
+              {importMembers.isPending
+                ? importDryRun
+                  ? 'A simular...'
+                  : 'A importar...'
+                : importDryRun
+                  ? 'Simular importação'
+                  : 'Importar Excel'}
             </Button>
               </>
             )}

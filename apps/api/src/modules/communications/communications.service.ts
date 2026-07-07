@@ -2,8 +2,16 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CommunicationAudience, PaymentStatus } from '@clubos/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeQuotaSituation } from '../members/quota.util';
+import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
 import { CommunicationsQueue } from './communications.queue';
-import { CreateCommunicationDto } from './dto';
+import { CreateCommunicationDto, WhatsappLinksDto } from './dto';
+import { buildWhatsappUrl, normalizeWhatsappPhone } from './whatsapp.util';
+
+export interface WhatsappLink {
+  name: string;
+  phone: string;
+  url: string;
+}
 
 @Injectable()
 export class CommunicationsService {
@@ -25,15 +33,62 @@ export class CommunicationsService {
     return comm;
   }
 
-  private async resolveRecipients(
+  async previewCount(organizationId: string, audience: CommunicationAudience, planId?: string) {
+    const email = await this.resolveRecipients(organizationId, audience, planId);
+    return { count: email.length };
+  }
+
+  async previewWhatsappCount(organizationId: string, audience: CommunicationAudience, planId?: string) {
+    const links = await this.resolveWhatsappRecipients(organizationId, audience, planId);
+    return { count: links.length };
+  }
+
+  async generateWhatsappLinks(
+    organizationId: string,
+    dto: WhatsappLinksDto,
+  ): Promise<{ links: WhatsappLink[] }> {
+    if (dto.audience === CommunicationAudience.PLAN && !dto.planId) {
+      throw new BadRequestException('Indica o plano para a audiencia "PLAN".');
+    }
+    const links = await this.resolveWhatsappRecipients(organizationId, dto.audience, dto.planId, dto.body);
+    if (links.length === 0) {
+      throw new BadRequestException('Nenhum destinatario com telemovel valido para esta audiencia.');
+    }
+    return { links };
+  }
+
+  private async resolveWhatsappRecipients(
     organizationId: string,
     audience: CommunicationAudience,
     planId?: string,
-  ): Promise<{ name: string; email: string }[]> {
+    messageBody?: string,
+  ): Promise<WhatsappLink[]> {
+    const members = await this.fetchMembersForAudience(organizationId, audience, planId);
+    const plainBody = (messageBody ?? '').trim();
+    const links: WhatsappLink[] = [];
+
+    for (const m of members) {
+      const digits = normalizeWhatsappPhone(m.phone);
+      if (!digits) continue;
+      const text = `Olá ${m.name},\n\n${plainBody}`;
+      links.push({
+        name: m.name,
+        phone: m.phone ?? digits,
+        url: buildWhatsappUrl(digits, text),
+      });
+    }
+    return links;
+  }
+
+  private async fetchMembersForAudience(
+    organizationId: string,
+    audience: CommunicationAudience,
+    planId?: string,
+  ) {
+    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
     const members = await this.prisma.member.findMany({
       where: {
         organizationId,
-        email: { not: null },
         ...(audience === CommunicationAudience.ACTIVE ? { status: 'ACTIVE' } : {}),
         ...(audience === CommunicationAudience.PLAN && planId ? { quotaPlanId: planId } : {}),
       },
@@ -43,20 +98,28 @@ export class CommunicationsService {
       },
     });
 
-    const filtered =
-      audience === CommunicationAudience.OVERDUE
-        ? members.filter(
-            (m) =>
-              computeQuotaSituation({
-                periodicity: m.quotaPlan?.periodicity,
-                joinedAt: m.joinedAt,
-                lastPaidAt: m.payments[0]?.paidAt ?? null,
-                cardValidUntil: m.cardValidUntil,
-              }).status === 'overdue',
-          )
-        : members;
+    if (audience !== CommunicationAudience.OVERDUE) return members;
 
-    return filtered
+    return members.filter(
+      (m) =>
+        computeQuotaSituation({
+          periodicity: m.quotaPlan?.periodicity,
+          joinedAt: m.joinedAt,
+          lastPaidAt: m.payments[0]?.paidAt ?? null,
+          cardValidUntil: m.cardValidUntil,
+          dueSoonDays: diasAvisoQuota,
+        }).status === 'overdue',
+    );
+  }
+
+  private async resolveRecipients(
+    organizationId: string,
+    audience: CommunicationAudience,
+    planId?: string,
+  ): Promise<{ name: string; email: string }[]> {
+    const members = await this.fetchMembersForAudience(organizationId, audience, planId);
+
+    return members
       .filter((m) => m.email)
       .map((m) => ({ name: m.name, email: m.email! }));
   }
@@ -93,10 +156,5 @@ export class CommunicationsService {
       })),
     );
     return comm;
-  }
-
-  async previewCount(organizationId: string, audience: CommunicationAudience, planId?: string) {
-    const recipients = await this.resolveRecipients(organizationId, audience, planId);
-    return { count: recipients.length };
   }
 }
