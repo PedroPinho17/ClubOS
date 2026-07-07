@@ -74,7 +74,7 @@ Endpoints:
 | # | Tarefa | Estado |
 |---|--------|--------|
 | 1 | Actualizar README (Postgres, Better Auth, feito vs preparado, sem passwords) | ✅ |
-| 2 | Testes (`quota.util`, import, `ModuleGuard`, portal, WhatsApp, dry-run) | ✅ 44 testes API |
+| 2 | Testes (unit + E2E auth API) | ✅ ver secao Testes |
 | 3 | Import Excel (paridade `gestao_socios`) | ✅ |
 | 4 | Limpar nav (`/events`, `/documents`, `/football`) | ✅ |
 | 5 | Paridade quotas (CRC Vale: plano + pagamentos + situacao) | ✅ suficiente para o Vale |
@@ -266,8 +266,11 @@ Estado **A vencer** (`due_soon`) e lembretes por email X dias antes do venciment
 ## Testes
 
 ```powershell
+# Unit + E2E (requer Postgres acessivel via DATABASE_URL)
 pnpm --filter @clubos/api test
 ```
+
+### Unitarios (`src/**/*.spec.ts`)
 
 | Ficheiro | Cobertura |
 |----------|-----------|
@@ -280,7 +283,21 @@ pnpm --filter @clubos/api test
 | `whatsapp.util.spec.ts` | Normalizacao telefone PT + URL `wa.me` |
 | `org-reminder-settings.spec.ts` | Settings de lembretes por org |
 
-**44 testes** a passar. Sem testes no frontend (`apps/web`) nem e2e HTTP.
+### E2E HTTP (`test/e2e/*.e2e-spec.ts`)
+
+| Ficheiro | Cobertura |
+|----------|-----------|
+| `auth.e2e-spec.ts` | Sign-up, sign-in, sign-out, rota protegida sem sessao |
+| `protected-routes.e2e-spec.ts` | `/api/members` com org activa; `/api/validate` publico |
+| `auth-rate-limit.e2e-spec.ts` | Rate limit em `/api/auth` |
+
+Os E2E saltam automaticamente se `DATABASE_URL` nao estiver disponivel. `protected-routes` assume `pnpm db:seed` ja corrido (org `crc-vale`).
+
+```powershell
+pnpm --filter @clubos/api test:unit   # 44 testes
+pnpm --filter @clubos/api test:e2e    # 9 testes HTTP (auth + rotas protegidas)
+pnpm --filter @clubos/api test        # ambos (53 no total)
+```
 
 ---
 
@@ -355,13 +372,16 @@ pnpm docker:up
 pnpm db:generate
 pnpm db:push
 
-# 5. Popular dados demo
+# 5. Definir password dos utilizadores demo (apenas local; ver .env.example)
+#    SEED_DEMO_PASSWORD="..."
+
+# 6. Popular dados demo
 pnpm db:seed
 
-# 6. Arrancar API + Web
+# 7. Arrancar API + Web
 pnpm dev
 
-# 7. Testes (API)
+# 8. Testes (API — unit + E2E)
 pnpm --filter @clubos/api test
 ```
 
@@ -369,15 +389,7 @@ pnpm --filter @clubos/api test
 - Web: http://localhost:3000
 - MinIO console: http://localhost:9001
 
-### Credenciais demo
-
-Corre `pnpm db:seed` — as contas sao impressas no terminal (**passwords nao ficam no README**).
-
-Contas tipicas apos seed:
-- Imperador (multi-org)
-- `joao.imperador@clubos.pt` — segundo imperador demo
-- Administrador / Tesoureiro — org CRC Vale
-- Socio com acesso ao portal
+**Credenciais:** nao documentadas neste README. Defina `SEED_DEMO_PASSWORD` no `.env` local antes de `pnpm db:seed`; use essa password no login. Nunca commitar `.env` com segredos reais.
 
 ---
 

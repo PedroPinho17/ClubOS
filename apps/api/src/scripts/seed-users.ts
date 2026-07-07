@@ -2,6 +2,16 @@ import '../env';
 import { prisma } from '@clubos/database';
 import { auth } from '../auth/auth';
 
+function requireSeedPassword(): string {
+  const password = process.env.SEED_DEMO_PASSWORD?.trim();
+  if (!password || password.length < 8) {
+    throw new Error(
+      'Defina SEED_DEMO_PASSWORD (min. 8 caracteres) no .env antes de correr o seed de utilizadores.',
+    );
+  }
+  return password;
+}
+
 async function ensureMembership(userId: string, organizationId: string, orgRole: string) {
   await prisma.organizationMember.upsert({
     where: { userId_organizationId: { userId, organizationId } },
@@ -45,6 +55,8 @@ async function ensureUser(opts: {
 }
 
 async function main() {
+  const demoPassword = requireSeedPassword();
+
   const crcVale = await prisma.organization.findUnique({ where: { slug: 'crc-vale' } });
   const academiaFit = await prisma.organization.findUnique({ where: { slug: 'academia-fit' } });
   if (!crcVale) {
@@ -54,7 +66,7 @@ async function main() {
   // Imperador Pedro — CRC Vale + Academia Fit.
   await ensureUser({
     email: 'pedropinho364@gmail.com',
-    password: 'Gestao2026!dev',
+    password: demoPassword,
     name: 'Pedro Pinho',
     role: 'imperador',
     organizationId: crcVale.id,
@@ -68,7 +80,7 @@ async function main() {
   // Segundo imperador Joao — CRC Vale (org partilhada com Pedro) + Academia Fit.
   await ensureUser({
     email: 'joao.imperador@clubos.pt',
-    password: 'Password123!',
+    password: demoPassword,
     name: 'Joao Imperador',
     role: 'imperador',
     organizationId: crcVale.id,
@@ -81,7 +93,7 @@ async function main() {
 
   await ensureUser({
     email: 'admin@crcvale.pt',
-    password: 'Password123!',
+    password: demoPassword,
     name: 'Admin CRC Vale',
     role: 'administrador',
     organizationId: crcVale.id,
@@ -90,7 +102,7 @@ async function main() {
 
   await ensureUser({
     email: 'tesoureiro@crcvale.pt',
-    password: 'Password123!',
+    password: demoPassword,
     name: 'Tesoureiro CRC Vale',
     role: 'tesoureiro',
     organizationId: crcVale.id,
@@ -99,7 +111,7 @@ async function main() {
 
   await ensureUser({
     email: 'joao@example.com',
-    password: 'Portal2026!',
+    password: demoPassword,
     name: 'Joao Silva',
     role: 'socio',
     organizationId: crcVale.id,
@@ -126,12 +138,10 @@ async function main() {
     await ensureMembership(u.id, u.organizationId, u.role === 'imperador' ? 'imperador' : (u.role ?? 'administrador'));
   }
 
-  console.log('Utilizadores prontos:');
-  console.log('  Imperador (Pedro):  pedropinho364@gmail.com / Gestao2026!dev');
-  console.log('  Imperador (Joao):   joao.imperador@clubos.pt / Password123!');
-  console.log('  Administrador:      admin@crcvale.pt / Password123!');
-  console.log('  Tesoureiro:         tesoureiro@crcvale.pt / Password123!');
-  console.log('  Socio (portal):     joao@example.com / Portal2026!');
+  console.log('Utilizadores demo criados.');
+  console.log('Password: valor de SEED_DEMO_PASSWORD no .env local (nao commitar).');
+  console.log('Contas: pedropinho364@gmail.com, joao.imperador@clubos.pt, admin@crcvale.pt,');
+  console.log('        tesoureiro@crcvale.pt, joao@example.com');
 }
 
 main()
