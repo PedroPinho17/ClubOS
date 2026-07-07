@@ -3,16 +3,30 @@ import { getActiveOrganizationId } from './org-context';
 const DEFAULT_TITLE = 'ClubOS';
 const DEFAULT_FAVICON = '/clubos-icon.svg';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const FAVICON_LINK_ID = 'clubos-org-favicon';
 
 let faviconBlobUrl: string | null = null;
 
-/** Substitui todos os favicons do documento (inclui os injetados pelo Next.js). */
+/** Atualiza favicon sem remover links geridos pelo Next (evita crash removeChild no React). */
 function setFaviconHref(href: string): void {
-  document.querySelectorAll("link[rel*='icon']").forEach((el) => el.remove());
-  const link = document.createElement('link');
-  link.rel = 'icon';
-  link.href = href;
-  document.head.appendChild(link);
+  let link = document.getElementById(FAVICON_LINK_ID) as HTMLLinkElement | null;
+
+  if (!link) {
+    const existing = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
+    if (existing) {
+      link = existing;
+      link.id = FAVICON_LINK_ID;
+    } else {
+      link = document.createElement('link');
+      link.id = FAVICON_LINK_ID;
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+  }
+
+  if (link.href !== new URL(href, window.location.origin).href) {
+    link.href = href;
+  }
 }
 
 function revokeFaviconBlob(): void {

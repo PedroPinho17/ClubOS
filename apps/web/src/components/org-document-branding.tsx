@@ -17,7 +17,6 @@ export function OrgDocumentBranding({ name, logoUrl, organizationId }: OrgDocume
     } else {
       resetOrgDocumentBranding();
     }
-    return () => resetOrgDocumentBranding();
   }, [name, logoUrl, organizationId]);
 
   return null;

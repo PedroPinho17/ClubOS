@@ -1,4 +1,4 @@
-const CACHE = 'clubos-static-v1';
+const CACHE = 'clubos-static-v2';
 
 const PRECACHE_URLS = ['/clubos-icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 
@@ -23,8 +23,17 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-
   if (url.pathname.startsWith('/api')) return;
+  if (url.pathname.startsWith('/_next')) return;
+
+  // Nao cachear HTML/RSC — evita hidratacao desfasada e erros de DOM no dev.
+  const accept = request.headers.get('accept') ?? '';
+  if (request.mode === 'navigate' || accept.includes('text/html')) return;
+
+  const isStatic =
+    PRECACHE_URLS.includes(url.pathname) || url.pathname.startsWith('/icons/');
+
+  if (!isStatic) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {
