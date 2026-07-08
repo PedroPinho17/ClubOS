@@ -44,18 +44,7 @@ export class UsersService {
     });
 
     if (memberships.length === 0) {
-      return this.prisma.user.findMany({
-        where: { organizationId, role: { in: ['imperador', 'administrador', 'tesoureiro'] } },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          emailVerified: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'asc' },
-      });
+      return [];
     }
 
     return memberships.map((m) => ({
@@ -114,7 +103,6 @@ export class UsersService {
       data: {
         name: dto.name,
         role: dto.role,
-        organizationId: user.organizationId ?? organizationId,
         emailVerified: true,
       },
     });

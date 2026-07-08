@@ -49,8 +49,6 @@ Endpoints:
 - `POST /api/me/active-organization` — troca org activa
 - `POST /api/organizations` — criar org (imperador) + memberships
 
-> `User.organizationId` esta **deprecated** — usar `OrganizationMember`. Sera removido numa release futura.
-
 ## Stack
 
 | Camada        | Tecnologia                                  |
@@ -290,13 +288,16 @@ pnpm --filter @clubos/api test
 | `auth.e2e-spec.ts` | Sign-up, sign-in, sign-out, rota protegida sem sessao |
 | `protected-routes.e2e-spec.ts` | `/api/members` com org activa; `/api/validate` publico |
 | `auth-rate-limit.e2e-spec.ts` | Rate limit em `/api/auth` |
+| `crc-vale-flow.e2e-spec.ts` | **Fluxo negocio:** login → import dry-run → pagamento → portal socio |
 
-Os E2E saltam automaticamente se `DATABASE_URL` nao estiver disponivel. `protected-routes` assume `pnpm db:seed` ja corrido (org `crc-vale`).
+Os E2E saltam automaticamente se `DATABASE_URL` nao estiver disponivel. `protected-routes` e `crc-vale-flow` assumem `pnpm db:seed` ja corrido (org `crc-vale`).
+
+**CI (GitHub Actions):** `.github/workflows/ci.yml` — Postgres + Redis, seed, typecheck, testes em cada push/PR.
 
 ```powershell
 pnpm --filter @clubos/api test:unit   # 44 testes
-pnpm --filter @clubos/api test:e2e    # 9 testes HTTP (auth + rotas protegidas)
-pnpm --filter @clubos/api test        # ambos (53 no total)
+pnpm --filter @clubos/api test:e2e    # 10 testes HTTP
+pnpm --filter @clubos/api test        # ambos (54 no total)
 ```
 
 ---

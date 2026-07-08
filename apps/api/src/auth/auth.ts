@@ -41,10 +41,7 @@ export const auth = betterAuth({
   },
 
   user: {
-    additionalFields: {
-      // Tenant a que o utilizador pertence (definido pelo backoffice, nao pelo registo).
-      organizationId: { type: 'string', required: false, input: false },
-    },
+    additionalFields: {},
   },
 
   plugins: [

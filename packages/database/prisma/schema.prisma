@@ -4,7 +4,7 @@
 //
 // Autenticacao: Better Auth (email+password, passkey/WebAuthn, admin/roles).
 // As tabelas User/Session/Account/Verification/Passkey sao geridas pelo
-// Better Auth. Multi-tenancy por linha via `organizationId`.
+// Better Auth. Multi-tenancy por linha via organizationId nas tabelas de negocio.
 // ---------------------------------------------------------------------------
 
 generator client {
@@ -35,11 +35,6 @@ model User {
   banReason  String?
   banExpires DateTime?
 
-  // Multi-tenant: organizacao a que o utilizador pertence (campo adicional).
-  /// @deprecated Usar OrganizationMember. Mantido durante migracao.
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-
   organizationMemberships OrganizationMember[]
 
   // Ligacao opcional ao socio correspondente (Member Portal).
@@ -52,8 +47,6 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@index([organizationId])
 }
 
 model Session {
@@ -160,7 +153,6 @@ model Organization {
   locale       String             @default("pt-PT")
   timezone     String             @default("Europe/Lisbon")
 
-  users      User[]
   staffMemberships OrganizationMember[]
   modules    OrganizationModule[]
   settings   OrganizationSetting[]

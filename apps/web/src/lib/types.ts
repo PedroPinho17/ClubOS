@@ -2,7 +2,6 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  organizationId: string | null;
   isSuperAdmin: boolean;
   permissions: string[];
 }

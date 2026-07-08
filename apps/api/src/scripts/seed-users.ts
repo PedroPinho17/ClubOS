@@ -29,8 +29,7 @@ async function ensureUser(opts: {
   password: string;
   name: string;
   role: string;
-  organizationId: string | null;
-  orgRole?: string;
+  memberships?: { organizationId: string; orgRole: string }[];
 }) {
   const existing = await prisma.user.findUnique({ where: { email: opts.email } });
   if (!existing) {
@@ -43,14 +42,15 @@ async function ensureUser(opts: {
     where: { email: opts.email },
     data: {
       role: opts.role,
-      organizationId: opts.organizationId,
       emailVerified: true,
     },
   });
 
   const user = await prisma.user.findUnique({ where: { email: opts.email } });
-  if (user && opts.organizationId && opts.role !== 'socio') {
-    await ensureMembership(user.id, opts.organizationId, opts.orgRole ?? opts.role);
+  if (!user) return;
+
+  for (const m of opts.memberships ?? []) {
+    await ensureMembership(user.id, m.organizationId, m.orgRole);
   }
 }
 
@@ -63,41 +63,33 @@ async function main() {
     throw new Error('Organizacao "crc-vale" nao existe. Corre primeiro: pnpm db:seed');
   }
 
-  // Imperador Pedro — CRC Vale + Academia Fit.
+  const crcMembership = { organizationId: crcVale.id, orgRole: 'imperador' as const };
+  const fitMembership = academiaFit
+    ? { organizationId: academiaFit.id, orgRole: 'imperador' as const }
+    : null;
+
   await ensureUser({
     email: 'pedropinho364@gmail.com',
     password: demoPassword,
     name: 'Pedro Pinho',
     role: 'imperador',
-    organizationId: crcVale.id,
-    orgRole: 'imperador',
+    memberships: fitMembership ? [crcMembership, fitMembership] : [crcMembership],
   });
-  const pedro = await prisma.user.findUnique({ where: { email: 'pedropinho364@gmail.com' } });
-  if (pedro && academiaFit) {
-    await ensureMembership(pedro.id, academiaFit.id, 'imperador');
-  }
 
-  // Segundo imperador Joao — CRC Vale (org partilhada com Pedro) + Academia Fit.
   await ensureUser({
     email: 'joao.imperador@clubos.pt',
     password: demoPassword,
     name: 'Joao Imperador',
     role: 'imperador',
-    organizationId: crcVale.id,
-    orgRole: 'imperador',
+    memberships: fitMembership ? [crcMembership, fitMembership] : [crcMembership],
   });
-  const joaoImp = await prisma.user.findUnique({ where: { email: 'joao.imperador@clubos.pt' } });
-  if (joaoImp && academiaFit) {
-    await ensureMembership(joaoImp.id, academiaFit.id, 'imperador');
-  }
 
   await ensureUser({
     email: 'admin@crcvale.pt',
     password: demoPassword,
     name: 'Admin CRC Vale',
     role: 'administrador',
-    organizationId: crcVale.id,
-    orgRole: 'administrador',
+    memberships: [{ organizationId: crcVale.id, orgRole: 'administrador' }],
   });
 
   await ensureUser({
@@ -105,8 +97,7 @@ async function main() {
     password: demoPassword,
     name: 'Tesoureiro CRC Vale',
     role: 'tesoureiro',
-    organizationId: crcVale.id,
-    orgRole: 'tesoureiro',
+    memberships: [{ organizationId: crcVale.id, orgRole: 'tesoureiro' }],
   });
 
   await ensureUser({
@@ -114,7 +105,6 @@ async function main() {
     password: demoPassword,
     name: 'Joao Silva',
     role: 'socio',
-    organizationId: crcVale.id,
   });
 
   const joaoUser = await prisma.user.findUnique({ where: { email: 'joao@example.com' } });
@@ -126,16 +116,6 @@ async function main() {
       where: { id: joaoMember.id },
       data: { userId: joaoUser.id },
     });
-  }
-
-  // Migrar utilizadores legacy sem membership.
-  const legacyUsers = await prisma.user.findMany({
-    where: { organizationId: { not: null }, role: { not: 'socio' } },
-    select: { id: true, organizationId: true, role: true },
-  });
-  for (const u of legacyUsers) {
-    if (!u.organizationId) continue;
-    await ensureMembership(u.id, u.organizationId, u.role === 'imperador' ? 'imperador' : (u.role ?? 'administrador'));
   }
 
   console.log('Utilizadores demo criados.');

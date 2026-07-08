@@ -50,11 +50,6 @@ export class OrganizationContextService {
 
     const membershipIds = await this.listMembershipOrganizationIds(user.id);
 
-    // Fallback legacy durante migracao.
-    if (membershipIds.length === 0 && user.organizationId) {
-      membershipIds.push(user.organizationId);
-    }
-
     if (membershipIds.length === 0) {
       throw new ForbiddenException('Sem organizacoes associadas a esta conta.');
     }

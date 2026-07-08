@@ -3,7 +3,6 @@ export interface AuthUser {
   email: string;
   name: string;
   role?: string | null;
-  organizationId?: string | null;
 }
 
 declare module 'express' {

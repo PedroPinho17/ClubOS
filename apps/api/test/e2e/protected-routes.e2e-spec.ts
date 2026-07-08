@@ -34,7 +34,6 @@ describe.skipIf(!dbReady)('Protected API routes (E2E)', () => {
       where: { email: testEmail },
       data: {
         role: 'administrador',
-        organizationId,
         emailVerified: true,
       },
     });

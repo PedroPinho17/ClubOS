@@ -26,13 +26,11 @@ export function getActiveOrganizationId(request: {
  * Mantido para compatibilidade pontual.
  */
 export function resolveOrganizationId(
-  user: AuthUser | undefined,
+  _user: AuthUser | undefined,
   headerOrgId: string | undefined,
 ): string {
-  if (!user) {
-    throw new ForbiddenException('Autenticacao em falta.');
+  if (!headerOrgId) {
+    throw new ForbiddenException('Contexto de organizacao em falta.');
   }
-  if (headerOrgId) return headerOrgId;
-  if (user.organizationId) return user.organizationId;
-  throw new ForbiddenException('Contexto de organizacao em falta.');
+  return headerOrgId;
 }

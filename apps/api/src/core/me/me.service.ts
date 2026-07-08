@@ -40,24 +40,6 @@ export class MeService {
       orderBy: { createdAt: 'asc' },
     });
 
-    if (memberships.length === 0 && user.organizationId) {
-      const org = await this.prisma.organization.findUnique({ where: { id: user.organizationId } });
-      if (org) {
-        return [
-          {
-            id: org.id,
-            name: org.name,
-            slug: org.slug,
-            plan: org.plan,
-            status: org.status,
-            primaryColor: org.primaryColor,
-            logoUrl: await this.storage.getUrl(org.logoKey),
-            orgRole: user.role ?? 'administrador',
-          },
-        ];
-      }
-    }
-
     return Promise.all(
       memberships.map(async (m) => ({
         id: m.organization.id,
@@ -80,8 +62,7 @@ export class MeService {
       }
     } else {
       const ok = await this.orgContext.hasMembership(user.id, organizationId);
-      const legacy = user.organizationId === organizationId;
-      if (!ok && !legacy) {
+      if (!ok) {
         throw new ForbiddenException('Sem permissao para aceder a esta organizacao.');
       }
     }

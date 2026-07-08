@@ -91,7 +91,7 @@ export class PortalService {
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { role: 'socio', organizationId, emailVerified: true },
+      data: { role: 'socio', emailVerified: true },
     });
     await this.prisma.member.update({ where: { id: member.id }, data: { userId: user.id } });
 
