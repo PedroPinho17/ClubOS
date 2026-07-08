@@ -1,19 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { useSession } from '@/lib/auth-client';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { data: session, isPending } = useSession();
+  const { session, isLoading } = useRequireAuth();
 
-  useEffect(() => {
-    if (!isPending && !session) router.replace('/login');
-  }, [isPending, session, router]);
-
-  if (isPending || !session) {
+  if (isLoading || !session) {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">A carregar...</div>;
   }
 

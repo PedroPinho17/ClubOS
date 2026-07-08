@@ -8,16 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { postLoginPath } from '@/lib/auth-redirect';
-import { authClient, signIn } from '@/lib/auth-client';
+import { authClient, signIn, useSession } from '@/lib/auth-client';
 
-async function redirectAfterLogin(router: ReturnType<typeof useRouter>) {
-  const session = await authClient.getSession();
-  router.push(postLoginPath(session.data?.user?.role));
-  router.refresh();
+async function redirectAfterLogin(
+  router: ReturnType<typeof useRouter>,
+  refetch: () => Promise<void>,
+) {
+  await refetch();
+  const { data } = await authClient.getSession();
+  if (!data) return false;
+  router.replace(postLoginPath(data.user.role));
+  return true;
 }
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refetch } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +39,8 @@ export default function LoginPage() {
       setError(error.message ?? 'Credenciais invalidas.');
       return;
     }
-    await redirectAfterLogin(router);
+    const ok = await redirectAfterLogin(router, refetch);
+    if (!ok) setError('Sessao nao iniciada. Tenta novamente.');
     setLoading(false);
   }
 
@@ -46,7 +53,8 @@ export default function LoginPage() {
       setError(res.error.message ?? 'Falha na autenticacao com passkey.');
       return;
     }
-    await redirectAfterLogin(router);
+    const ok = await redirectAfterLogin(router, refetch);
+    if (!ok) setError('Sessao nao iniciada. Tenta novamente.');
     setLoading(false);
   }
 
@@ -61,15 +69,28 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium">Email</label>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+              <label htmlFor="login-email" className="text-sm font-medium">
+                Email
+              </label>
+              <Input
+                id="login-email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                autoComplete="email"
+                required
+              />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Password</label>
+              <label htmlFor="login-password" className="text-sm font-medium">
+                Password
+              </label>
               <Input
+                id="login-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type="password"
+                autoComplete="current-password"
                 required
               />
             </div>

@@ -115,14 +115,15 @@ Endpoints:
 |----------------|-------|
 | **Paridade quotas (CRC Vale)** | ✅ Planos mensal/anual, atribuicao ao socio, pagamentos, badges, relatorios, lembretes |
 | **Eventos / Documentos** | Modulos futuros — **nao estao no menu** |
-| **Testes e2e** | Falta integracao HTTP e testes do frontend (`apps/web`) |
+| **Testes e2e API** | ✅ Vitest HTTP (`apps/api/test/e2e`) |
+| **Testes e2e Web** | ✅ Playwright (`apps/web/e2e`) |
 | **Migracao CRC Vale** | Aguardar 1–2 meses; manter `gestao_socios` em producao |
 | **PWA offline** | V1 so cache estatico; paginas e API precisam de rede |
 
 ### Proximos passos (ordem sugerida)
 
 1. **CRC Vale** — validar em paralelo; nao migrar ate o ClubOS amadurecer (1–2 meses).
-2. **Testes e2e** — fluxos criticos (login, import, portal, pagamentos).
+2. **Testes e2e** — fluxos criticos (login, import, portal, pagamentos). ✅ API + Playwright web
 3. **Plugins** — primeira modalidade quando houver cliente.
 4. **Quotas avancadas** *(opcional)* — dia fixo de vencimento, alerta "a vencer em X dias" (extras do Laravel).
 
@@ -302,6 +303,48 @@ pnpm --filter @clubos/api test:unit   # 45 testes
 pnpm --filter @clubos/api test:e2e    # 14 testes HTTP
 pnpm --filter @clubos/api test        # ambos (59 no total)
 ```
+
+### Playwright (`apps/web/e2e/*.spec.ts`)
+
+Requer `pnpm db:seed` e `SEED_DEMO_PASSWORD` no `.env`. O `pretest:e2e` gera o fixture Excel automaticamente.
+
+| Ficheiro | Cobertura |
+|----------|-----------|
+| `login.spec.ts` | Login valido + credenciais invalidas |
+| `members.spec.ts` | Lista de socios + navegacao |
+| `import-dry-run.spec.ts` | Simulacao de import Excel |
+| `public.spec.ts` | `/privacidade` e `/dpa` |
+
+```powershell
+# Com API+Web ja a correr (pnpm dev):
+$env:E2E_SKIP_WEBSERVER="true"
+$env:E2E_USER_PASSWORD=$env:SEED_DEMO_PASSWORD
+pnpm --filter @clubos/web test:e2e
+
+# Ou deixa o Playwright arrancar API+Web (apos build):
+pnpm --filter @clubos/api build
+pnpm --filter @clubos/web build
+pnpm --filter @clubos/web test:e2e
+```
+
+**CI:** Playwright corre apos build API/Web, com Chromium headless.
+
+---
+
+## Backups (PostgreSQL)
+
+Scripts em `scripts/` — formato `pg_dump -Fc` (`.dump`).
+
+```powershell
+# Backup (Docker clubos-postgres ou pg_dump + DATABASE_URL)
+pnpm db:backup
+# -> backups/clubos-YYYYMMDD-HHMMSS.dump
+
+# Restore (substitui dados da BD clubos)
+pnpm db:restore -- backups/clubos-20260708-120000.dump
+```
+
+**Producao:** agendar `backup-db.sh` via cron (diario) e testar restore num ambiente de staging mensalmente. Guardar dumps fora do servidor (S3, NAS).
 
 ---
 

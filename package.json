@@ -20,7 +20,9 @@
     "db:studio": "pnpm --filter @clubos/database studio",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build"
+    "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build",
+    "db:backup": "node scripts/run-backup.mjs",
+    "db:restore": "node scripts/run-backup.mjs restore"
   },
   "devDependencies": {
     "prettier": "^3.4.2",

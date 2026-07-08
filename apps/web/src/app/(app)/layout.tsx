@@ -2,10 +2,9 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
-import { useSession } from '@/lib/auth-client';
+import { redirectSocioFromAdmin } from '@/lib/auth-redirect';
 import { NAV_ITEMS, filterNavItems } from '@/lib/nav';
 import type { Organization } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -14,22 +13,12 @@ import { OrgBrandHeader } from '@/components/org-brand-header';
 import { OrgDocumentBranding } from '@/components/org-document-branding';
 import { UserMenu } from '@/components/user-menu';
 import { useActiveOrgId } from '@/hooks/use-active-org';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const { data: session, isPending } = useSession();
-
-  useEffect(() => {
-    if (!isPending && !session) {
-      router.replace('/login');
-      return;
-    }
-    if (!isPending && session && session.user.role === 'socio') {
-      router.replace('/portal');
-    }
-  }, [isPending, session, router]);
+  const { session, isLoading } = useRequireAuth({ redirectIf: redirectSocioFromAdmin });
 
   const activeOrgId = useActiveOrgId();
   const orgKey = useTenantQueryKey(['organization']);
@@ -47,7 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     enabled: !!session && !!activeOrgId,
   });
 
-  if (isPending || !session) {
+  if (isLoading || !session) {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">A carregar...</div>;
   }
 

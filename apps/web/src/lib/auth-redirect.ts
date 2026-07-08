@@ -7,3 +7,11 @@ export function postLoginPath(role: string | null | undefined): string {
 export function isAdminRole(role: string | null | undefined): boolean {
   return role === 'imperador' || role === 'administrador' || role === 'tesoureiro';
 }
+
+export function redirectSocioFromAdmin(role: string): string | null {
+  return role === 'socio' ? '/portal' : null;
+}
+
+export function redirectAdminFromPortal(role: string): string | null {
+  return isAdminRole(role) ? '/dashboard' : null;
+}

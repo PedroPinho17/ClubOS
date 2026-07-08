@@ -1,24 +1,16 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { OrgBrandHeader } from '@/components/org-brand-header';
 import { OrgDocumentBranding } from '@/components/org-document-branding';
 import { UserMenu } from '@/components/user-menu';
 import { api } from '@/lib/api';
-import { isAdminRole } from '@/lib/auth-redirect';
-import { useSession } from '@/lib/auth-client';
+import { redirectAdminFromPortal } from '@/lib/auth-redirect';
 import type { Organization } from '@/lib/types';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const { data: session, isPending } = useSession();
-
-  useEffect(() => {
-    if (!isPending && !session) router.replace('/login');
-    if (!isPending && session && isAdminRole(session.user.role)) router.replace('/dashboard');
-  }, [isPending, session, router]);
+  const { session, isLoading } = useRequireAuth({ redirectIf: redirectAdminFromPortal });
 
   const { data: org } = useQuery<Organization>({
     queryKey: ['organization', 'portal'],
@@ -26,7 +18,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     enabled: !!session,
   });
 
-  if (isPending || !session) {
+  if (isLoading || !session) {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">A carregar...</div>;
   }
 

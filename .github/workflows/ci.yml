@@ -80,5 +80,18 @@ jobs:
       - name: Build Web
         run: pnpm --filter @clubos/web build
 
+      - name: Build API
+        run: pnpm --filter @clubos/api build
+
       - name: Test API (unit + E2E)
         run: pnpm --filter @clubos/api test
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @clubos/web exec playwright install --with-deps chromium
+
+      - name: E2E Web (Playwright)
+        run: pnpm --filter @clubos/web test:e2e
+        env:
+          E2E_USER_EMAIL: admin@crcvale.pt
+          E2E_USER_PASSWORD: ${{ env.SEED_DEMO_PASSWORD }}
+          CI: true
