@@ -9,4 +9,4 @@ export const authClient = createAuthClient({
   plugins: [passkeyClient(), adminClient()],
 });
 
-export const { signIn, signOut, signUp, useSession, passkey, changePassword } = authClient;
+export const { signIn, signOut, signUp, useSession, passkey, changePassword, updateUser, useListPasskeys } = authClient;
