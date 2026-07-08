@@ -1,4 +1,4 @@
-import { IsArray, IsHexColor, IsOptional, IsString, MinLength } from 'class-validator';
+import { Allow, IsArray, IsHexColor, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateOrganizationDto {
   @IsString()
@@ -41,5 +41,6 @@ export class SetSettingDto {
   @IsString()
   key!: string;
 
+  @Allow()
   value!: unknown;
 }
