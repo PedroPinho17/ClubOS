@@ -7,6 +7,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export const authClient = createAuthClient({
   baseURL: `${API_URL}/api/auth`,
   plugins: [passkeyClient(), adminClient()],
+  sessionOptions: {
+    refetchOnWindowFocus: false,
+  },
 });
 
 export const { signIn, signOut, signUp, useSession, passkey, changePassword, updateUser, useListPasskeys } = authClient;

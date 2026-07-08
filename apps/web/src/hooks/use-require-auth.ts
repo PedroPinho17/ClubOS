@@ -16,10 +16,10 @@ type UseRequireAuthOptions = {
 export function useRequireAuth(options: UseRequireAuthOptions = {}) {
   const router = useRouter();
   const { data: session, isPending, isRefetching } = useSession();
-  const checking = isPending || isRefetching;
+  const awaitingSession = isPending || (isRefetching && !session);
 
   useEffect(() => {
-    if (checking) return;
+    if (awaitingSession) return;
 
     if (!session) {
       router.replace('/login');
@@ -28,10 +28,10 @@ export function useRequireAuth(options: UseRequireAuthOptions = {}) {
 
     const redirect = options.redirectIf?.(session.user.role ?? '');
     if (redirect) router.replace(redirect);
-  }, [checking, session, router, options.redirectIf]);
+  }, [awaitingSession, session, router, options.redirectIf]);
 
   return {
     session,
-    isLoading: !session && checking,
+    isLoading: awaitingSession && !session,
   };
 }
