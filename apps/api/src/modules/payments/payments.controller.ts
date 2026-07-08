@@ -4,6 +4,7 @@ import type { Response } from 'express';
 import { CurrentUser, OrgId, RequireModule } from '../../common/decorators';
 import type { AuthUser } from '../../common/types';
 import { ModuleGuard } from '../../common/guards/module.guard';
+import { STAFF_ROLES } from '../../common/roles';
 import { AuditService } from '../../core/audit/audit.service';
 import { CreatePaymentDto } from './dto';
 import { PaymentsService } from './payments.service';
@@ -11,6 +12,7 @@ import { PaymentsService } from './payments.service';
 @Controller('api/payments')
 @RequireModule('payments')
 @UseGuards(ModuleGuard)
+@Roles([...STAFF_ROLES])
 export class PaymentsController {
   constructor(
     private readonly payments: PaymentsService,
@@ -46,7 +48,7 @@ export class PaymentsController {
   }
 
   @Post()
-  @Roles(['imperador', 'administrador', 'tesoureiro'])
+  @Roles([...STAFF_ROLES])
   async create(
     @OrgId() organizationId: string,
     @CurrentUser() user: AuthUser,

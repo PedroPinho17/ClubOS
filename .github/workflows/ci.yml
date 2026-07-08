@@ -41,6 +41,8 @@ jobs:
       BETTER_AUTH_SECRET: ci-test-secret-with-at-least-32-characters
       BETTER_AUTH_URL: http://localhost:4000
       WEB_ORIGIN: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_STANDALONE: 'true'
       SEED_DEMO_PASSWORD: CiSeedPass1!
       NODE_ENV: test
 
@@ -74,6 +76,9 @@ jobs:
 
       - name: Typecheck Web
         run: pnpm --filter @clubos/web typecheck
+
+      - name: Build Web
+        run: pnpm --filter @clubos/web build
 
       - name: Test API (unit + E2E)
         run: pnpm --filter @clubos/api test

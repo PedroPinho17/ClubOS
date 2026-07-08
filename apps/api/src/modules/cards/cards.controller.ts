@@ -3,12 +3,14 @@ import { Roles } from '@thallesp/nestjs-better-auth';
 import { CurrentUser, OrgId, RequireModule } from '../../common/decorators';
 import type { AuthUser } from '../../common/types';
 import { ModuleGuard } from '../../common/guards/module.guard';
+import { ADMIN_ROLES } from '../../common/roles';
 import { CardsService } from './cards.service';
 import { UpdateCardSettingsDto } from './dto';
 
 @Controller('api/cards')
 @RequireModule('cards')
 @UseGuards(ModuleGuard)
+@Roles([...ADMIN_ROLES])
 export class CardsController {
   constructor(private readonly cards: CardsService) {}
 
@@ -18,7 +20,7 @@ export class CardsController {
   }
 
   @Put('settings')
-  @Roles(['imperador', 'administrador'])
+  @Roles([...ADMIN_ROLES])
   updateSettings(
     @OrgId() organizationId: string,
     @CurrentUser() user: AuthUser,

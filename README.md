@@ -291,15 +291,16 @@ pnpm --filter @clubos/api test
 | `auth-rate-limit.e2e-spec.ts` | Rate limit em `/api/auth` |
 | `crc-vale-flow.e2e-spec.ts` | **Fluxo negocio:** login → import dry-run → pagamento → portal socio |
 | `member-gdpr.e2e-spec.ts` | Export RGPD JSON + anonimizacao de dados pessoais |
+| `rbac-isolation.e2e-spec.ts` | Socio bloqueado no backoffice + isolamento entre orgs |
 
 Os E2E saltam automaticamente se `DATABASE_URL` nao estiver disponivel. `protected-routes` e `crc-vale-flow` assumem `pnpm db:seed` ja corrido (org `crc-vale`).
 
-**CI (GitHub Actions):** `.github/workflows/ci.yml` — Postgres + Redis, seed, typecheck, testes em cada push/PR.
+**CI (GitHub Actions):** `.github/workflows/ci.yml` — Postgres + Redis, seed, typecheck, build web, testes em cada push/PR.
 
 ```powershell
 pnpm --filter @clubos/api test:unit   # 45 testes
-pnpm --filter @clubos/api test:e2e    # 11 testes HTTP
-pnpm --filter @clubos/api test        # ambos (56 no total)
+pnpm --filter @clubos/api test:e2e    # 14 testes HTTP
+pnpm --filter @clubos/api test        # ambos (59 no total)
 ```
 
 ---
@@ -339,6 +340,14 @@ Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
 - **UI:** area RGPD na edicao de membro + acao rapida de export na tabela (`/members`).
 - **Paginas publicas:** `/privacidade` (politica modelo) e `/dpa` (acordo de tratamento modelo).
 - **Auditoria:** acoes `member.gdpr_export` e `member.gdpr_erased` em `/audit`.
+
+---
+
+## Seguranca (baseline)
+
+- **RBAC:** endpoints do backoffice exigem role `imperador`, `administrador` ou `tesoureiro`; portal socio limitado a `/api/portal/*`.
+- **Isolamento multi-tenant:** org activa validada por membership (`OrganizationMember`) ou `Member` (socio).
+- **Health:** `GET /api/health` (liveness) e `GET /api/ready` (PostgreSQL + Redis) — publicos, sem auth.
 
 ---
 

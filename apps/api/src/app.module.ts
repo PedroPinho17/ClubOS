@@ -20,6 +20,7 @@ import { MembersModule } from './modules/members/members.module';
 import { MembershipPlansModule } from './modules/membership-plans/membership-plans.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ValidationModule } from './modules/qr-validation/validation.module';
+import { HealthModule } from './core/health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { StorageModule } from './storage/storage.module';
@@ -32,6 +33,7 @@ import { StorageModule } from './storage/storage.module';
     // (todas as rotas protegidas por omissao; usar @AllowAnonymous p/ publicas).
     AuthModule.forRoot({ auth }),
     OrganizationContextModule,
+    HealthModule,
     PrismaModule,
     RedisModule,
     StorageModule,

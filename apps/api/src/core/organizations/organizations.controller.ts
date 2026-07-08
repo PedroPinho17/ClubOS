@@ -13,6 +13,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { Roles } from '@thallesp/nestjs-better-auth';
 import { OrgId } from '../../common/decorators';
+import { ADMIN_ROLES, STAFF_ROLES } from '../../common/roles';
 import { OrganizationsService } from './organizations.service';
 import { SetSettingDto, UpdateOrganizationDto } from './dto';
 
@@ -21,12 +22,14 @@ export class OrganizationsController {
   constructor(private readonly organizations: OrganizationsService) {}
 
   @Get()
+  @Roles([...STAFF_ROLES])
   current(@OrgId() organizationId: string) {
     return this.organizations.findById(organizationId);
   }
 
   /** Logotipo binario (favicon / mesma origem via proxy do Next). */
   @Get('logo')
+  @Roles([...STAFF_ROLES])
   async logo(@OrgId() organizationId: string, @Res() res: Response) {
     const { buffer, contentType } = await this.organizations.getLogoBuffer(organizationId);
     res.set({
@@ -37,13 +40,13 @@ export class OrganizationsController {
   }
 
   @Patch()
-  @Roles(['imperador', 'administrador'])
+  @Roles([...ADMIN_ROLES])
   update(@OrgId() organizationId: string, @Body() dto: UpdateOrganizationDto) {
     return this.organizations.update(organizationId, dto);
   }
 
   @Post('logo')
-  @Roles(['imperador', 'administrador'])
+  @Roles([...ADMIN_ROLES])
   @UseInterceptors(FileInterceptor('file'))
   uploadLogo(
     @OrgId() organizationId: string,
@@ -53,12 +56,13 @@ export class OrganizationsController {
   }
 
   @Get('settings')
+  @Roles([...STAFF_ROLES])
   settings(@OrgId() organizationId: string) {
     return this.organizations.getSettings(organizationId);
   }
 
   @Put('settings')
-  @Roles(['imperador', 'administrador'])
+  @Roles([...ADMIN_ROLES])
   setSetting(@OrgId() organizationId: string, @Body() dto: SetSettingDto) {
     return this.organizations.setSetting(organizationId, dto.key, dto.value);
   }

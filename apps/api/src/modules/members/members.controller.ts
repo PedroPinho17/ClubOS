@@ -18,6 +18,7 @@ import type { Response } from 'express';
 import { Roles } from '@thallesp/nestjs-better-auth';
 import { CurrentUser, OrgId, RequireModule } from '../../common/decorators';
 import { ModuleGuard } from '../../common/guards/module.guard';
+import { ADMIN_ROLES, STAFF_ROLES } from '../../common/roles';
 import type { AuthUser } from '../../common/types';
 import { AuditService } from '../../core/audit/audit.service';
 import { CreateMemberDto, GdprEraseDto, UpdateMemberDto } from './dto';
@@ -40,12 +41,13 @@ export class MembersController {
   ) {}
 
   @Get()
+  @Roles([...STAFF_ROLES])
   list(@OrgId() organizationId: string, @Query('search') search?: string) {
     return this.members.list(organizationId, search);
   }
 
   @Get('import/template')
-  @Roles(['imperador', 'administrador'])
+  @Roles([...ADMIN_ROLES])
   downloadImportTemplate(@Res() res: Response) {
     const buffer = buildImportTemplateBuffer();
     res.set({
@@ -149,6 +151,7 @@ export class MembersController {
   }
 
   @Get(':id')
+  @Roles([...STAFF_ROLES])
   findOne(@OrgId() organizationId: string, @Param('id') id: string) {
     return this.members.findOne(organizationId, id);
   }
