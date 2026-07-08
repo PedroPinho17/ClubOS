@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 import { MemberStatus } from '@clubos/database';
 
 export class CreateMemberDto {
@@ -60,4 +60,9 @@ export class UpdateMemberDto {
   @IsOptional()
   @IsString()
   cardRole?: string;
+}
+
+export class GdprEraseDto {
+  @IsBoolean()
+  confirm!: boolean;
 }

@@ -280,6 +280,7 @@ pnpm --filter @clubos/api test
 | `portal.service.spec.ts` | `getMe`, `getReceipt`, `grantAccess` |
 | `whatsapp.util.spec.ts` | Normalizacao telefone PT + URL `wa.me` |
 | `org-reminder-settings.spec.ts` | Settings de lembretes por org |
+| `member-gdpr.service.spec.ts` | Detecao de membro apagado RGPD |
 
 ### E2E HTTP (`test/e2e/*.e2e-spec.ts`)
 
@@ -289,15 +290,16 @@ pnpm --filter @clubos/api test
 | `protected-routes.e2e-spec.ts` | `/api/members` com org activa; `/api/validate` publico |
 | `auth-rate-limit.e2e-spec.ts` | Rate limit em `/api/auth` |
 | `crc-vale-flow.e2e-spec.ts` | **Fluxo negocio:** login → import dry-run → pagamento → portal socio |
+| `member-gdpr.e2e-spec.ts` | Export RGPD JSON + anonimizacao de dados pessoais |
 
 Os E2E saltam automaticamente se `DATABASE_URL` nao estiver disponivel. `protected-routes` e `crc-vale-flow` assumem `pnpm db:seed` ja corrido (org `crc-vale`).
 
 **CI (GitHub Actions):** `.github/workflows/ci.yml` — Postgres + Redis, seed, typecheck, testes em cada push/PR.
 
 ```powershell
-pnpm --filter @clubos/api test:unit   # 44 testes
-pnpm --filter @clubos/api test:e2e    # 10 testes HTTP
-pnpm --filter @clubos/api test        # ambos (54 no total)
+pnpm --filter @clubos/api test:unit   # 45 testes
+pnpm --filter @clubos/api test:e2e    # 11 testes HTTP
+pnpm --filter @clubos/api test        # ambos (56 no total)
 ```
 
 ---
@@ -327,6 +329,16 @@ Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
 | `REMINDERS_ENABLED` | Lembretes automaticos |
 | `RATE_LIMIT_AUTH_PER_MIN` | Limite pedidos/min em `/api/auth` (default 15) |
 | `RATE_LIMIT_VALIDATE_PER_MIN` | Limite pedidos/min em `/api/validate` (default 60) |
+
+---
+
+## RGPD (baseline)
+
+- **Export:** `GET /api/members/:id/gdpr-export` — JSON com dados do socio, plano e pagamentos (imperador/administrador).
+- **Apagamento:** `POST /api/members/:id/gdpr-erase` com `{ "confirm": true }` — anonimiza o membro, remove contactos/foto, desativa portal; mantem pagamentos para contabilidade.
+- **UI:** area RGPD na edicao de membro + acao rapida de export na tabela (`/members`).
+- **Paginas publicas:** `/privacidade` (politica modelo) e `/dpa` (acordo de tratamento modelo).
+- **Auditoria:** acoes `member.gdpr_export` e `member.gdpr_erased` em `/audit`.
 
 ---
 

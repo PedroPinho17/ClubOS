@@ -20,10 +20,11 @@ import { CurrentUser, OrgId, RequireModule } from '../../common/decorators';
 import { ModuleGuard } from '../../common/guards/module.guard';
 import type { AuthUser } from '../../common/types';
 import { AuditService } from '../../core/audit/audit.service';
-import { CreateMemberDto, UpdateMemberDto } from './dto';
+import { CreateMemberDto, GdprEraseDto, UpdateMemberDto } from './dto';
 import { buildImportTemplateBuffer } from './import/member-spreadsheet';
 import { MemberExportService } from './import/member-export.service';
 import { MemberImportService } from './import/member-import.service';
+import { MemberGdprService } from './member-gdpr.service';
 import { MembersService } from './members.service';
 
 @Controller('api/members')
@@ -34,6 +35,7 @@ export class MembersController {
     private readonly members: MembersService,
     private readonly memberImport: MemberImportService,
     private readonly memberExport: MemberExportService,
+    private readonly memberGdpr: MemberGdprService,
     private readonly audit: AuditService,
   ) {}
 
@@ -95,6 +97,53 @@ export class MembersController {
         skipped: result.skipped,
         errors: result.errors.length,
       },
+    });
+    return result;
+  }
+
+  @Get(':id/gdpr-export')
+  @Roles(['imperador', 'administrador'])
+  async gdprExport(
+    @OrgId() organizationId: string,
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const payload = await this.memberGdpr.buildExport(organizationId, id);
+    await this.audit.log({
+      organizationId,
+      userId: user.id,
+      action: 'member.gdpr_export',
+      entity: 'Member',
+      entityId: id,
+    });
+    const json = JSON.stringify(payload, null, 2);
+    res.set({
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="gdpr-export-${id}.json"`,
+    });
+    res.send(json);
+  }
+
+  @Post(':id/gdpr-erase')
+  @Roles(['imperador', 'administrador'])
+  async gdprErase(
+    @OrgId() organizationId: string,
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: GdprEraseDto,
+  ) {
+    if (!dto.confirm) {
+      throw new BadRequestException('Confirme o pedido de apagamento (confirm: true).');
+    }
+    const result = await this.memberGdpr.erasePersonalData(organizationId, id);
+    await this.audit.log({
+      organizationId,
+      userId: user.id,
+      action: 'member.gdpr_erased',
+      entity: 'Member',
+      entityId: id,
+      meta: { portalUserAnonymized: result.portalUserAnonymized },
     });
     return result;
   }

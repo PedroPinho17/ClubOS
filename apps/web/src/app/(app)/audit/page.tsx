@@ -12,6 +12,10 @@ const ACTION_LABEL: Record<string, string> = {
   'member.updated': 'Membro atualizado',
   'member.deleted': 'Membro apagado',
   'member.photo_updated': 'Foto atualizada',
+  'member.gdpr_export': 'Export RGPD',
+  'member.gdpr_erased': 'Dados apagados (RGPD)',
+  'member.import_dry_run': 'Importacao (simulacao)',
+  'member.imported': 'Importacao concluida',
   'payment.created': 'Pagamento registado',
   'user.invited': 'Utilizador convidado',
 };

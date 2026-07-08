@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -50,7 +51,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <div className="mb-2 text-2xl font-bold text-primary">ClubOS</div>
@@ -90,6 +91,15 @@ export default function LoginPage() {
           </Button>
         </CardContent>
       </Card>
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        <Link href="/privacidade" className="underline hover:text-foreground">
+          Politica de privacidade
+        </Link>
+        {' · '}
+        <Link href="/dpa" className="underline hover:text-foreground">
+          DPA
+        </Link>
+      </p>
     </div>
   );
 }

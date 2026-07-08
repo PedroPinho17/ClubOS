@@ -1,13 +1,13 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileSpreadsheet, FileText, ImagePlus, Pencil, Trash2, UserPlus, X } from 'lucide-react';
+import { Download, FileDown, FileSpreadsheet, FileText, ImagePlus, Pencil, ShieldAlert, Trash2, UserPlus, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { api, downloadBlob, uploadFile } from '@/lib/api';
+import { api, downloadBlob, downloadJson, uploadFile } from '@/lib/api';
 import { useSession } from '@/lib/auth-client';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { Member, MemberImportResult, MembershipPlan, QuotaStatus } from '@/lib/types';
@@ -44,6 +44,10 @@ function memberToForm(m: Member): EditForm {
     cardRole: m.cardRole ?? '',
     notes: m.notes ?? '',
   };
+}
+
+function isGdprErased(m: Member): boolean {
+  return m.name === 'Apagado RGPD';
 }
 
 export default function MembersPage() {
@@ -156,6 +160,25 @@ export default function MembersPage() {
     },
     onError: (err: Error) => alert(err.message),
   });
+
+  const gdprErase = useMutation({
+    mutationFn: (memberId: string) => api.post(`/members/${memberId}/gdpr-erase`, { confirm: true }),
+    onSuccess: () => {
+      setEditingId(null);
+      invalidate();
+    },
+    onError: (err: Error) => alert(err.message),
+  });
+
+  function confirmGdprErase(m: Member) {
+    const msg =
+      `Apagar dados pessoais de "${m.name}" (n.º ${m.number})?\n\n` +
+      'O nome sera anonimizado, contactos removidos e o acesso ao portal desativado. ' +
+      'Os registos de pagamento mantem-se para contabilidade. Esta acao e irreversivel.';
+    if (window.confirm(msg) && window.confirm('Confirmar definitivamente o apagamento RGPD?')) {
+      gdprErase.mutate(m.id);
+    }
+  }
 
   function memberInitials(name: string): string {
     return name
@@ -407,6 +430,40 @@ export default function MembersPage() {
                   Cancelar
                 </Button>
               </div>
+              {canManage && editingId && editForm.name !== 'Apagado RGPD' && (
+                <div className="mt-4 rounded-lg border border-dashed p-4 sm:col-span-2">
+                  <h3 className="mb-1 text-sm font-semibold">RGPD</h3>
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Exportar ou apagar dados pessoais deste socio (administradores).
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        void downloadJson(`/members/${editingId}/gdpr-export`, `gdpr-export-${editingId}.json`)
+                      }
+                    >
+                      <FileDown className="h-4 w-4" />
+                      Exportar RGPD
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={gdprErase.isPending}
+                      onClick={() => {
+                        const m = members?.find((x) => x.id === editingId);
+                        if (m) confirmGdprErase(m);
+                      }}
+                    >
+                      <ShieldAlert className="h-4 w-4" />
+                      {gdprErase.isPending ? 'A apagar...' : 'Apagar dados RGPD'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>
@@ -496,7 +553,7 @@ export default function MembersPage() {
                             type="file"
                             accept="image/png,image/jpeg,image/webp"
                             className="hidden"
-                            disabled={uploadPhoto.isPending}
+                            disabled={uploadPhoto.isPending || isGdprErased(m)}
                             onChange={(e) => {
                               const f = e.target.files?.[0];
                               if (f) uploadPhoto.mutate({ memberId: m.id, file: f });
@@ -506,7 +563,14 @@ export default function MembersPage() {
                         </label>
                       </div>
                     </td>
-                    <td className="p-3 font-medium">{m.name}</td>
+                    <td className="p-3 font-medium">
+                      {m.name}
+                      {isGdprErased(m) && (
+                        <Badge variant="muted" className="ml-2">
+                          RGPD
+                        </Badge>
+                      )}
+                    </td>
                     <td className="p-3 text-muted-foreground">{m.email ?? '-'}</td>
                     <td className="p-3">{m.quotaPlan?.name ?? '-'}</td>
                     <td className="p-3">
@@ -528,21 +592,33 @@ export default function MembersPage() {
                         <Button variant="ghost" size="sm" onClick={() => startEdit(m)} title="Editar">
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => confirmDelete(m)}
-                          disabled={deleteMember.isPending}
-                          title="Apagar"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!isGdprErased(m) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => confirmDelete(m)}
+                            disabled={deleteMember.isPending}
+                            title="Apagar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canManage && !isGdprErased(m) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Exportar RGPD"
+                            onClick={() => void downloadJson(`/members/${m.id}/gdpr-export`, `gdpr-export-${m.id}.json`)}
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </Button>
+                        )}
                         {m.userId ? (
                           <Badge variant="success" className="ml-1">
                             Portal
                           </Badge>
-                        ) : m.email ? (
+                        ) : m.email && !isGdprErased(m) ? (
                           <Button
                             variant="outline"
                             size="sm"

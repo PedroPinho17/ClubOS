@@ -105,6 +105,22 @@ export async function downloadBlob(path: string, filename: string): Promise<void
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+/** Descarrega JSON autenticado (ex.: export RGPD). */
+export async function downloadJson(path: string, filename: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api${path}`, {
+    credentials: 'include',
+    headers: orgRequestHeaders(),
+  });
+  if (!res.ok) throw new ApiError(res.status, 'Falha ao descarregar o ficheiro.');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /** Descarrega CSV autenticado (relatórios). */
 export async function downloadCsv(path: string, filename: string): Promise<void> {
   const res = await fetch(`${API_URL}/api${path}`, {
