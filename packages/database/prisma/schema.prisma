@@ -35,6 +35,9 @@ model User {
   banReason  String?
   banExpires DateTime?
 
+  /// Obriga alteracao de password no primeiro login (portal / convites).
+  mustChangePassword Boolean @default(false)
+
   organizationMemberships OrganizationMember[]
 
   // Ligacao opcional ao socio correspondente (Member Portal).

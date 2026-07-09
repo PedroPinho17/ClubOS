@@ -1,14 +1,20 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { KeyRound } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { postLoginPath } from '@/lib/auth-redirect';
-import { authClient, signIn, useSession } from '@/lib/auth-client';
+import Link from "next/link";
+import { KeyRound } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { postLoginPath } from "@/lib/auth-redirect";
+import { authClient, signIn, useSession } from "@/lib/auth-client";
 
 async function redirectAfterLogin(
   router: ReturnType<typeof useRouter>,
@@ -17,15 +23,19 @@ async function redirectAfterLogin(
   await refetch();
   const { data } = await authClient.getSession();
   if (!data) return false;
-  router.replace(postLoginPath(data.user.role));
+  const user = data.user as {
+    role?: string | null;
+    mustChangePassword?: boolean | null;
+  };
+  router.replace(postLoginPath(user.role, user.mustChangePassword));
   return true;
 }
 
 export default function LoginPage() {
   const router = useRouter();
   const { refetch } = useSession();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -36,11 +46,11 @@ export default function LoginPage() {
     const { error } = await signIn.email({ email, password });
     if (error) {
       setLoading(false);
-      setError(error.message ?? 'Credenciais invalidas.');
+      setError(error.message ?? "Credenciais invalidas.");
       return;
     }
     const ok = await redirectAfterLogin(router, refetch);
-    if (!ok) setError('Sessao nao iniciada. Tenta novamente.');
+    if (!ok) setError("Sessao nao iniciada. Tenta novamente.");
     setLoading(false);
   }
 
@@ -50,11 +60,11 @@ export default function LoginPage() {
     const res = await signIn.passkey();
     if (res?.error) {
       setLoading(false);
-      setError(res.error.message ?? 'Falha na autenticacao com passkey.');
+      setError(res.error.message ?? "Falha na autenticacao com passkey.");
       return;
     }
     const ok = await redirectAfterLogin(router, refetch);
-    if (!ok) setError('Sessao nao iniciada. Tenta novamente.');
+    if (!ok) setError("Sessao nao iniciada. Tenta novamente.");
     setLoading(false);
   }
 
@@ -64,7 +74,9 @@ export default function LoginPage() {
         <CardHeader>
           <div className="mb-2 text-2xl font-bold text-primary">ClubOS</div>
           <CardTitle>Entrar</CardTitle>
-          <CardDescription>Acede ao backoffice ou portal do sócio.</CardDescription>
+          <CardDescription>
+            Acede ao backoffice ou portal do sócio.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -97,8 +109,12 @@ export default function LoginPage() {
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="min-h-11 w-full text-base" disabled={loading}>
-              {loading ? 'A entrar...' : 'Entrar'}
+            <Button
+              type="submit"
+              className="min-h-11 w-full text-base"
+              disabled={loading}
+            >
+              {loading ? "A entrar..." : "Entrar"}
             </Button>
           </form>
 
@@ -121,11 +137,17 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <p className="mt-6 max-w-sm text-center text-xs text-muted-foreground">
-        <Link href="/privacidade" className="inline-block py-2 underline hover:text-foreground">
+        <Link
+          href="/privacidade"
+          className="inline-block py-2 underline hover:text-foreground"
+        >
           Política de privacidade
         </Link>
-        {' · '}
-        <Link href="/dpa" className="inline-block py-2 underline hover:text-foreground">
+        {" · "}
+        <Link
+          href="/dpa"
+          className="inline-block py-2 underline hover:text-foreground"
+        >
           DPA
         </Link>
       </p>

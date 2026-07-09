@@ -94,4 +94,18 @@ export class MeService {
     );
     return { organizationId, name: org.name };
   }
+
+  /** Limpa o flag apos o utilizador alterar a password no primeiro login. */
+  async completePasswordChange(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException("Utilizador nao encontrado.");
+    if (!user.mustChangePassword) {
+      return { mustChangePassword: false };
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mustChangePassword: false },
+    });
+    return { mustChangePassword: false };
+  }
 }
