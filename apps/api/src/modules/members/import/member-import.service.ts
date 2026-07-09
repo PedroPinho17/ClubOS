@@ -1,28 +1,33 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@clubos/database';
-import { MemberStatus, PaymentMethod, PaymentStatus, type Member, type QuotaPlan } from '@clubos/database';
+import type { Member } from '@clubos/database';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { ImportDryRunService } from './import-dry-run';
+import { ImportMemberUpsertService } from './import-member-upsert';
+import { ImportPaymentUpsertService } from './import-payment-upsert';
 import {
   columnMapHasIdentity,
   mapHeaderIndexes,
-  MEMBER_FIELDS,
 } from './member-import-column-map';
 import {
-  cellWasExplicitlyEmpty,
-  formatYearMonth,
-  nullableString,
-  parseBoolean,
-  parseDate,
-  parseDecimal,
-} from './member-import-parse';
-import { emptyImportResult, type ImportRowData, type MemberImportResult } from './member-import.types';
+  buildMemberPayload,
+  extractRowData,
+  isPaymentOnlyRow,
+  rowIsEmpty,
+} from './import-row-validator';
+import { emptyImportResult, type MemberImportResult } from './member-import.types';
+import { nullableString } from './member-import-parse';
 import { readSpreadsheetRows } from './member-spreadsheet';
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
 @Injectable()
 export class MemberImportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly memberUpsert: ImportMemberUpsertService,
+    private readonly paymentUpsert: ImportPaymentUpsertService,
+    private readonly dryRun: ImportDryRunService,
+  ) {}
 
   async importFromBuffer(
     organizationId: string,
@@ -66,12 +71,21 @@ export class MemberImportService {
 
     for (let i = 0; i < rows.length; i++) {
       const excelRow = i + 2;
-      const data = this.extractRowData(rows[i], columnMap);
+      const data = extractRowData(rows[i], columnMap);
 
-      if (this.rowIsEmpty(data)) continue;
+      if (rowIsEmpty(data)) continue;
 
-      if (this.isPaymentOnlyRow(data)) {
-        await this.importPaymentOnlyRow(organizationId, data, excelRow, membersInSession, result, dryRun);
+      if (isPaymentOnlyRow(data)) {
+        await this.paymentUpsert.importPaymentOnlyRow(
+          organizationId,
+          data,
+          excelRow,
+          membersInSession,
+          result,
+          dryRun,
+          (orgId, member, rowData, importResult) =>
+            this.dryRun.simulatePaymentForMember(orgId, member, rowData, importResult),
+        );
         continue;
       }
 
@@ -82,9 +96,9 @@ export class MemberImportService {
         continue;
       }
 
-      let memberPayload: MemberPayload;
+      let memberPayload;
       try {
-        memberPayload = this.buildMemberPayload(data, plans);
+        memberPayload = buildMemberPayload(data, plans);
       } catch (e) {
         result.errors.push({ row: excelRow, message: (e as Error).message });
         result.skipped++;
@@ -107,7 +121,7 @@ export class MemberImportService {
 
       try {
         if (dryRun) {
-          await this.simulateMemberRow(
+          await this.dryRun.simulateMemberRow(
             organizationId,
             existing,
             memberPayload,
@@ -117,47 +131,15 @@ export class MemberImportService {
           );
         } else {
           await this.prisma.$transaction(async (tx) => {
-            let member: Member;
+            const member = await this.memberUpsert.upsert(tx, organizationId, existing, memberPayload);
             if (existing) {
-              member = await tx.member.update({
-              where: { id: existing.id },
-              data: {
-                name: memberPayload.name,
-                email: memberPayload.email,
-                phone: memberPayload.phone,
-                joinedAt: memberPayload.joinedAt,
-                cardRole: memberPayload.cardRole,
-                cardValidUntil: memberPayload.cardValidUntil,
-                status: memberPayload.status,
-                notes: memberPayload.notes,
-                quotaPlanId: memberPayload.quotaPlanId,
-              },
-            });
-            result.updated++;
-          } else {
-            const number =
-              memberPayload.number ?? (await this.nextNumber(tx, organizationId));
-            member = await tx.member.create({
-              data: {
-                organizationId,
-                number,
-                name: memberPayload.name,
-                email: memberPayload.email,
-                phone: memberPayload.phone,
-                joinedAt: memberPayload.joinedAt,
-                cardRole: memberPayload.cardRole,
-                cardValidUntil: memberPayload.cardValidUntil,
-                status: memberPayload.status,
-                notes: memberPayload.notes,
-                quotaPlanId: memberPayload.quotaPlanId,
-              },
-            });
-            result.created++;
-          }
-
-          membersInSession.set(member.number, member);
-          await this.importPaymentForMember(tx, organizationId, member, data, result);
-        });
+              result.updated++;
+            } else {
+              result.created++;
+            }
+            membersInSession.set(member.number, member);
+            await this.paymentUpsert.importForMember(tx, organizationId, member, data, result);
+          });
         }
       } catch (e) {
         result.errors.push({ row: excelRow, message: (e as Error).message });
@@ -168,301 +150,4 @@ export class MemberImportService {
     if (dryRun) result.dryRun = true;
     return result;
   }
-
-  private async simulateMemberRow(
-    organizationId: string,
-    existing: Member | null,
-    memberPayload: MemberPayload,
-    data: ImportRowData,
-    membersInSession: Map<string, Member>,
-    result: MemberImportResult,
-  ): Promise<void> {
-    let member: Member;
-    if (existing) {
-      member = {
-        ...existing,
-        name: memberPayload.name,
-        email: memberPayload.email,
-        phone: memberPayload.phone,
-        joinedAt: memberPayload.joinedAt,
-        cardRole: memberPayload.cardRole,
-        cardValidUntil: memberPayload.cardValidUntil ?? existing.cardValidUntil,
-        status: memberPayload.status,
-        notes: memberPayload.notes,
-        quotaPlanId: memberPayload.quotaPlanId ?? existing.quotaPlanId,
-      };
-      result.updated++;
-    } else {
-      const number = memberPayload.number ?? (await this.nextNumber(this.prisma, organizationId));
-      member = {
-        id: `dry-${number}`,
-        organizationId,
-        number,
-        name: memberPayload.name,
-        email: memberPayload.email,
-        phone: memberPayload.phone,
-        joinedAt: memberPayload.joinedAt,
-        cardRole: memberPayload.cardRole,
-        cardValidUntil: memberPayload.cardValidUntil ?? null,
-        status: memberPayload.status,
-        notes: memberPayload.notes,
-        photoKey: null,
-        userId: null,
-        quotaPlanId: memberPayload.quotaPlanId ?? null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      result.created++;
-    }
-
-    membersInSession.set(member.number, member);
-    await this.simulatePaymentForMember(organizationId, member, data, result);
-  }
-
-  private async simulatePaymentForMember(
-    organizationId: string,
-    member: Member,
-    data: ImportRowData,
-    result: MemberImportResult,
-  ): Promise<void> {
-    if (!this.hasPaymentData(data)) return;
-    this.buildPaymentPayload(data);
-    if (!member.id.startsWith('dry-')) {
-      const reference =
-        nullableString(data.pagamento_referencia) ??
-        formatYearMonth(parseDate(data.pagamento_data) ?? new Date());
-      await this.prisma.payment.findFirst({
-        where: { organizationId, memberId: member.id, reference },
-      });
-    }
-    result.payments++;
-  }
-
-  private extractRowData(row: unknown[], columnMap: Record<number, string>): ImportRowData {
-    const data: ImportRowData = {};
-    for (const [index, field] of Object.entries(columnMap)) {
-      data[field] = row[Number(index)] ?? null;
-    }
-    return data;
-  }
-
-  private rowIsEmpty(data: ImportRowData): boolean {
-    return Object.values(data).every(
-      (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === ''),
-    );
-  }
-
-  private isPaymentOnlyRow(data: ImportRowData): boolean {
-    const numero = nullableString(data.numero);
-    if (!numero) return false;
-    if (nullableString(data.nome)) return false;
-
-    for (const field of MEMBER_FIELDS) {
-      if (field === 'nome') continue;
-      if (this.fieldHasValue(data[field])) return false;
-    }
-    return true;
-  }
-
-  private fieldHasValue(value: unknown): boolean {
-    if (value === null || value === undefined || value === '') return false;
-    if (typeof value === 'string') return value.trim() !== '';
-    return true;
-  }
-
-  private hasPaymentData(data: ImportRowData): boolean {
-    return (
-      this.fieldHasValue(data.pagamento_data) ||
-      this.fieldHasValue(data.pagamento_valor) ||
-      this.fieldHasValue(data.pagamento_referencia) ||
-      this.fieldHasValue(data.pagamento_notas)
-    );
-  }
-
-  private buildMemberPayload(data: ImportRowData, plans: QuotaPlan[]): MemberPayload {
-    const joinedAt = parseDate(data.data_adesao);
-    if (!joinedAt) {
-      throw new Error('A data de adesão é obrigatória (formato dd/mm/aaaa).');
-    }
-
-    const email = nullableString(data.email);
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new Error(`Email inválido: «${email}».`);
-    }
-
-    let quotaPlanId: string | null | undefined = undefined;
-    const planName = nullableString(data.quota_plan);
-    if (planName) {
-      const plan = plans.find((p) => p.name.localeCompare(planName, 'pt', { sensitivity: 'accent' }) === 0);
-      if (!plan) throw new Error(`Plano de quota «${planName}» não encontrado.`);
-      quotaPlanId = plan.id;
-    } else if ('quota_plan' in data && cellWasExplicitlyEmpty(data.quota_plan)) {
-      quotaPlanId = null;
-    }
-
-    let cardValidUntil: Date | null | undefined = undefined;
-    const validade = parseDate(data.validade_manual);
-    if (validade) {
-      cardValidUntil = validade;
-    } else if ('validade_manual' in data && cellWasExplicitlyEmpty(data.validade_manual)) {
-      cardValidUntil = null;
-    }
-
-    return {
-      number: nullableString(data.numero) ?? undefined,
-      name: String(data.nome).trim(),
-      email,
-      phone: nullableString(data.telefone),
-      joinedAt,
-      cardRole: nullableString(data.cargo_cartao),
-      notes: nullableString(data.notas),
-      status: parseBoolean(data.ativo, true) ? MemberStatus.ACTIVE : MemberStatus.INACTIVE,
-      quotaPlanId,
-      cardValidUntil,
-    };
-  }
-
-  private buildPaymentPayload(data: ImportRowData): PaymentPayload {
-    const paidAt = parseDate(data.pagamento_data);
-    if (!paidAt) {
-      throw new Error('Para registar pagamento, indique a data do pagamento.');
-    }
-    const amount = parseDecimal(data.pagamento_valor);
-    if (amount === null || amount <= 0) {
-      throw new Error('Para registar pagamento, indique um valor maior que zero.');
-    }
-    const reference = nullableString(data.pagamento_referencia) ?? formatYearMonth(paidAt);
-    return { paidAt, amount, reference };
-  }
-
-  private async importPaymentOnlyRow(
-    organizationId: string,
-    data: ImportRowData,
-    excelRow: number,
-    membersInSession: Map<string, Member>,
-    result: MemberImportResult,
-    dryRun: boolean,
-  ): Promise<void> {
-    const numero = nullableString(data.numero);
-    if (!numero) {
-      result.errors.push({
-        row: excelRow,
-        message: 'Linha de pagamento extra: o número de sócio é obrigatório.',
-      });
-      result.skipped++;
-      return;
-    }
-    if (!this.hasPaymentData(data)) {
-      result.errors.push({
-        row: excelRow,
-        message:
-          'Linha com número repetido sem dados de sócio: indique pelo menos um campo de pagamento.',
-      });
-      result.skipped++;
-      return;
-    }
-
-    const member =
-      membersInSession.get(numero) ??
-      (await this.prisma.member.findFirst({ where: { organizationId, number: numero } }));
-
-    if (!member) {
-      result.errors.push({
-        row: excelRow,
-        message: `Sócio n.º «${numero}» não encontrado. A primeira linha desse sócio deve ter o nome e os dados completos.`,
-      });
-      result.skipped++;
-      return;
-    }
-
-    try {
-      if (dryRun) {
-        membersInSession.set(member.number, member);
-        await this.simulatePaymentForMember(organizationId, member, data, result);
-      } else {
-        await this.prisma.$transaction(async (tx) => {
-          membersInSession.set(member.number, member);
-          await this.importPaymentForMember(tx, organizationId, member, data, result);
-        });
-      }
-    } catch (e) {
-      result.errors.push({ row: excelRow, message: (e as Error).message });
-      result.skipped++;
-    }
-  }
-
-  private async importPaymentForMember(
-    tx: Prisma.TransactionClient,
-    organizationId: string,
-    member: Member,
-    data: ImportRowData,
-    result: MemberImportResult,
-  ): Promise<void> {
-    if (!this.hasPaymentData(data)) return;
-
-    const payload = this.buildPaymentPayload(data);
-    const existing = await tx.payment.findFirst({
-      where: { organizationId, memberId: member.id, reference: payload.reference },
-    });
-
-    if (existing) {
-      await tx.payment.update({
-        where: { id: existing.id },
-        data: {
-          amount: payload.amount,
-          paidAt: payload.paidAt,
-          status: PaymentStatus.PAID,
-          method: PaymentMethod.OTHER,
-        },
-      });
-    } else {
-      await tx.payment.create({
-        data: {
-          organizationId,
-          memberId: member.id,
-          quotaPlanId: member.quotaPlanId,
-          amount: payload.amount,
-          paidAt: payload.paidAt,
-          reference: payload.reference,
-          status: PaymentStatus.PAID,
-          method: PaymentMethod.OTHER,
-        },
-      });
-    }
-    result.payments++;
-  }
-
-  private async nextNumber(
-    tx: Prisma.TransactionClient | PrismaService,
-    organizationId: string,
-  ): Promise<string> {
-    const members = await tx.member.findMany({
-      where: { organizationId },
-      select: { number: true },
-    });
-    const max = members.reduce((acc, m) => {
-      const n = Number.parseInt(m.number, 10);
-      return Number.isFinite(n) && n > acc ? n : acc;
-    }, 0);
-    return String(max + 1);
-  }
-}
-
-interface MemberPayload {
-  number?: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  joinedAt: Date;
-  cardRole: string | null;
-  notes: string | null;
-  status: MemberStatus;
-  quotaPlanId?: string | null;
-  cardValidUntil?: Date | null;
-}
-
-interface PaymentPayload {
-  paidAt: Date;
-  amount: number;
-  reference: string;
 }

@@ -8,10 +8,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { Roles } from '@thallesp/nestjs-better-auth';
-import { OrgId, RequireModule } from '../../common/decorators';
+import { OrgId, AdminOnly, RequireModule, StaffOnly } from '../../common/decorators';
 import { ModuleGuard } from '../../common/guards/module.guard';
-import { ADMIN_ROLES, STAFF_ROLES } from '../../common/roles';
 import { CreateMembershipPlanDto, UpdateMembershipPlanDto } from './dto';
 import { MembershipPlansService } from './membership-plans.service';
 
@@ -22,25 +20,25 @@ export class MembershipPlansController {
   constructor(private readonly plans: MembershipPlansService) {}
 
   @Get()
-  @Roles([...STAFF_ROLES])
+  @StaffOnly()
   list(@OrgId() organizationId: string) {
     return this.plans.list(organizationId);
   }
 
   @Get(':id')
-  @Roles([...STAFF_ROLES])
+  @StaffOnly()
   findOne(@OrgId() organizationId: string, @Param('id') id: string) {
     return this.plans.findOne(organizationId, id);
   }
 
   @Post()
-  @Roles([...ADMIN_ROLES])
+  @AdminOnly()
   create(@OrgId() organizationId: string, @Body() dto: CreateMembershipPlanDto) {
     return this.plans.create(organizationId, dto);
   }
 
   @Patch(':id')
-  @Roles([...ADMIN_ROLES])
+  @AdminOnly()
   update(
     @OrgId() organizationId: string,
     @Param('id') id: string,
@@ -50,7 +48,7 @@ export class MembershipPlansController {
   }
 
   @Delete(':id')
-  @Roles([...ADMIN_ROLES])
+  @AdminOnly()
   remove(@OrgId() organizationId: string, @Param('id') id: string) {
     return this.plans.remove(organizationId, id);
   }

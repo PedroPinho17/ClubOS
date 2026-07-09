@@ -1,8 +1,6 @@
 import { Body, Controller, Get, Param, Put } from '@nestjs/common';
-import { Roles } from '@thallesp/nestjs-better-auth';
 import { IsBoolean } from 'class-validator';
-import { OrgId } from '../../common/decorators';
-import { STAFF_ROLES } from '../../common/roles';
+import { ImperadorOnly, OrgId, StaffOnly } from '../../common/decorators';
 import { ModulesService } from './modules.service';
 
 class ToggleModuleDto {
@@ -15,19 +13,19 @@ export class ModulesController {
   constructor(private readonly modules: ModulesService) {}
 
   @Get()
-  @Roles([...STAFF_ROLES])
+  @StaffOnly()
   list(@OrgId() organizationId: string) {
     return this.modules.listForOrganization(organizationId);
   }
 
   @Get('enabled')
-  @Roles([...STAFF_ROLES])
+  @StaffOnly()
   enabled(@OrgId() organizationId: string) {
     return this.modules.enabledSlugs(organizationId);
   }
 
   @Put(':slug')
-  @Roles(['imperador'])
+  @ImperadorOnly()
   toggle(
     @OrgId() organizationId: string,
     @Param('slug') slug: string,

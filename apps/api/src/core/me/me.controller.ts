@@ -1,12 +1,13 @@
 import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, NoOrgContext } from '../../common/decorators';
 import { ACTIVE_ORG_COOKIE } from '../../common/organization-context.service';
 import type { AuthUser } from '../../common/types';
 import { SetActiveOrganizationDto } from './dto';
 import { MeService } from './me.service';
 
 @Controller('api/me')
+@NoOrgContext()
 export class MeController {
   constructor(private readonly me: MeService) {}
 

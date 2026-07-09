@@ -1,9 +1,7 @@
 import { Controller, Get, Res, UseGuards } from '@nestjs/common';
-import { Roles } from '@thallesp/nestjs-better-auth';
 import type { Response } from 'express';
-import { OrgId, RequireModule } from '../../common/decorators';
+import { OrgId, RequireModule, StaffOnly } from '../../common/decorators';
 import { ModuleGuard } from '../../common/guards/module.guard';
-import { STAFF_ROLES } from '../../common/roles';
 import { MemberListPdfService } from './member-list-pdf.service';
 import { MemberQuotaReportService } from './member-quota-report.service';
 import { ReportsService } from './reports.service';
@@ -16,7 +14,7 @@ function semicolonCsv(headers: string[], rows: string[][]): string {
 @Controller('api/reports')
 @RequireModule('reports')
 @UseGuards(ModuleGuard)
-@Roles([...STAFF_ROLES])
+@StaffOnly()
 export class ReportsController {
   constructor(
     private readonly reports: ReportsService,

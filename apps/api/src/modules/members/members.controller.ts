@@ -15,10 +15,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { Roles } from '@thallesp/nestjs-better-auth';
-import { CurrentUser, OrgId, RequireModule } from '../../common/decorators';
+import { AdminOnly, CurrentUser, OrgId, RequireModule, StaffOnly } from '../../common/decorators';
 import { ModuleGuard } from '../../common/guards/module.guard';
-import { ADMIN_ROLES, STAFF_ROLES } from '../../common/roles';
 import type { AuthUser } from '../../common/types';
 import { AuditService } from '../../core/audit/audit.service';
 import { CreateMemberDto, GdprEraseDto, UpdateMemberDto } from './dto';
@@ -41,13 +39,13 @@ export class MembersController {
   ) {}
 
   @Get()
-  @Roles([...STAFF_ROLES])
+  @StaffOnly()
   list(@OrgId() organizationId: string, @Query('search') search?: string) {
     return this.members.list(organizationId, search);
   }
 
   @Get('import/template')
-  @Roles([...ADMIN_ROLES])
+  @AdminOnly()
   downloadImportTemplate(@Res() res: Response) {
     const buffer = buildImportTemplateBuffer();
     res.set({
@@ -58,7 +56,7 @@ export class MembersController {
   }
 
   @Get('export')
-  @Roles(['imperador', 'administrador', 'tesoureiro'])
+  @StaffOnly()
   async exportMembers(@OrgId() organizationId: string, @Res() res: Response) {
     const buffer = await this.memberExport.exportBuffer(organizationId);
     res.set({
@@ -69,7 +67,7 @@ export class MembersController {
   }
 
   @Post('import')
-  @Roles(['imperador', 'administrador'])
+  @AdminOnly()
   @UseInterceptors(FileInterceptor('file'))
   async importSpreadsheet(
     @OrgId() organizationId: string,
@@ -104,7 +102,7 @@ export class MembersController {
   }
 
   @Get(':id/gdpr-export')
-  @Roles(['imperador', 'administrador'])
+  @AdminOnly()
   async gdprExport(
     @OrgId() organizationId: string,
     @CurrentUser() user: AuthUser,
@@ -128,7 +126,7 @@ export class MembersController {
   }
 
   @Post(':id/gdpr-erase')
-  @Roles(['imperador', 'administrador'])
+  @AdminOnly()
   async gdprErase(
     @OrgId() organizationId: string,
     @CurrentUser() user: AuthUser,
@@ -151,13 +149,13 @@ export class MembersController {
   }
 
   @Get(':id')
-  @Roles([...STAFF_ROLES])
+  @StaffOnly()
   findOne(@OrgId() organizationId: string, @Param('id') id: string) {
     return this.members.findOne(organizationId, id);
   }
 
   @Post()
-  @Roles(['imperador', 'administrador'])
+  @AdminOnly()
   async create(
     @OrgId() organizationId: string,
     @CurrentUser() user: AuthUser,
@@ -175,7 +173,7 @@ export class MembersController {
   }
 
   @Post(':id/photo')
-  @Roles(['imperador', 'administrador'])
+  @AdminOnly()
   @UseInterceptors(FileInterceptor('file'))
   async uploadPhoto(
     @OrgId() organizationId: string,
@@ -195,7 +193,7 @@ export class MembersController {
   }
 
   @Patch(':id')
-  @Roles(['imperador', 'administrador'])
+  @AdminOnly()
   async update(
     @OrgId() organizationId: string,
     @CurrentUser() user: AuthUser,
@@ -214,7 +212,7 @@ export class MembersController {
   }
 
   @Delete(':id')
-  @Roles(['imperador', 'administrador'])
+  @AdminOnly()
   async remove(
     @OrgId() organizationId: string,
     @CurrentUser() user: AuthUser,

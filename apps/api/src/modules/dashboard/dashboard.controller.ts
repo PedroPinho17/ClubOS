@@ -1,15 +1,13 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { Roles } from '@thallesp/nestjs-better-auth';
 import { PaymentStatus } from '@clubos/database';
-import { OrgId, RequireModule } from '../../common/decorators';
+import { OrgId, RequireModule, StaffOnly } from '../../common/decorators';
 import { ModuleGuard } from '../../common/guards/module.guard';
-import { STAFF_ROLES } from '../../common/roles';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('api/dashboard')
 @RequireModule('dashboard')
 @UseGuards(ModuleGuard)
-@Roles([...STAFF_ROLES])
+@StaffOnly()
 export class DashboardController {
   constructor(private readonly prisma: PrismaService) {}
 
