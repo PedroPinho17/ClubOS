@@ -65,6 +65,9 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      - name: Build Database package
+        run: pnpm --filter @clubos/database build
+
       - name: Push database schema
         run: pnpm db:push
 

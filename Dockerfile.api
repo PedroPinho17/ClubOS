@@ -12,6 +12,7 @@ FROM deps AS build
 COPY apps/api ./apps/api
 COPY packages/database ./packages/database
 RUN pnpm db:generate
+RUN pnpm --filter @clubos/database build
 RUN pnpm --filter @clubos/api build
 
 FROM node:22-alpine AS runner

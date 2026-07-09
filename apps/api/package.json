@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "nest build",
+    "build": "pnpm --filter @clubos/database build && nest build",
     "dev": "nest start --watch",
+    "predev": "pnpm --filter @clubos/database build",
     "start": "node dist/main.js",
     "seed:users": "tsx src/scripts/seed-users.ts",
     "reminders:run": "tsx src/scripts/run-reminders.ts",
