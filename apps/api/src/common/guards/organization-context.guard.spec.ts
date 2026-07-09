@@ -1,9 +1,15 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NO_ORG_CONTEXT_KEY } from '../decorators/no-org-context';
 import { OrganizationContextGuard } from './organization-context.guard';
+
+type MockRequest = Request & {
+  activeOrganizationId?: string;
+  user?: { id: string };
+};
 
 describe('OrganizationContextGuard', () => {
   const orgContext = {
@@ -19,14 +25,18 @@ describe('OrganizationContextGuard', () => {
       getAllAndOverride: vi.fn((key: string) => metadata[key]),
     };
     const guard = new OrganizationContextGuard(orgContext as never, reflector as unknown as Reflector);
-    const request = { user: { id: 'user-1' }, headers: {} } as unknown as Request & {
-      activeOrganizationId?: string;
-    };
+
+    const request: MockRequest = {
+      user: { id: 'user-1' },
+      headers: {},
+    } as MockRequest;
+
     const context = {
-      switchToHttp: () => ({ getRequest: () => request }),
+      switchToHttp: () => ({ getRequest: (): MockRequest => request }),
       getHandler: () => ({}),
       getClass: () => ({}),
-    } as never;
+    } as unknown as ExecutionContext;
+
     return { guard, request, context, reflector };
   }
 
