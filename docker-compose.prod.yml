@@ -4,7 +4,7 @@
 # Antes do primeiro arranque:
 #   1. Copiar .env.example para .env e preencher segredos de producao
 #   2. docker compose up -d postgres redis minio
-#   3. pnpm db:push && pnpm db:seed (ou migrate deploy em CI)
+#   3. pnpm db:deploy && pnpm db:seed (primeiro arranque; API corre migrate no entrypoint)
 
 services:
   api:

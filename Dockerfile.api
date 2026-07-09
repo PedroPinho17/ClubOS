@@ -25,7 +25,9 @@ COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/package.json ./apps/api/
 COPY --from=build /app/packages ./packages
 COPY package.json pnpm-workspace.yaml ./
+COPY scripts/docker-api-entrypoint.sh /docker-api-entrypoint.sh
+RUN chmod +x /docker-api-entrypoint.sh
 
 WORKDIR /app/apps/api
 EXPOSE 4000
-CMD ["node", "dist/main.js"]
+ENTRYPOINT ["/docker-api-entrypoint.sh"]

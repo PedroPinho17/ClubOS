@@ -1,11 +1,12 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
@@ -42,6 +43,8 @@ export default function CommunicationsPage() {
   const [planId, setPlanId] = useState('');
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [whatsappLinks, setWhatsappLinks] = useState<WhatsappLink[]>([]);
+  const [emailPreviewHtml, setEmailPreviewHtml] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const communicationsKey = useTenantQueryKey(['communications']);
   const plansKey = useTenantQueryKey(['membership-plans']);
@@ -67,7 +70,21 @@ export default function CommunicationsPage() {
       .then((r) => setPreviewCount(r.count))
       .catch(() => setPreviewCount(null));
     setWhatsappLinks([]);
+    setEmailPreviewHtml(null);
   }, [audience, planId, channel]);
+
+  const previewEmail = useMutation({
+    mutationFn: () =>
+      api.post<{ html: string; text: string; sampleName: string }>('/communications/preview/email', {
+        subject,
+        body,
+      }),
+    onSuccess: (res) => {
+      setEmailPreviewHtml(res.html);
+      setShowPreview(true);
+    },
+    onError: (err: Error) => alert(err.message),
+  });
 
   const sendEmail = useMutation({
     mutationFn: () =>
@@ -80,6 +97,8 @@ export default function CommunicationsPage() {
     onSuccess: () => {
       setSubject('');
       setBody('');
+      setEmailPreviewHtml(null);
+      setShowPreview(false);
       queryClient.invalidateQueries({ queryKey: ['communications'] });
     },
   });
@@ -177,12 +196,22 @@ export default function CommunicationsPage() {
           </div>
 
           {channel === 'email' ? (
-            <Button
-              disabled={sendEmail.isPending || !subject.trim() || !body.trim() || (audience === 'PLAN' && !planId)}
-              onClick={() => sendEmail.mutate()}
-            >
-              {sendEmail.isPending ? 'A enviar...' : 'Enviar email'}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={previewEmail.isPending || !subject.trim() || !body.trim()}
+                onClick={() => previewEmail.mutate()}
+              >
+                {previewEmail.isPending ? 'A gerar...' : 'Pré-visualizar email'}
+              </Button>
+              <Button
+                disabled={sendEmail.isPending || !subject.trim() || !body.trim() || (audience === 'PLAN' && !planId)}
+                onClick={() => sendEmail.mutate()}
+              >
+                {sendEmail.isPending ? 'A enviar...' : 'Enviar email'}
+              </Button>
+            </div>
           ) : (
             <Button
               variant="secondary"
@@ -191,6 +220,21 @@ export default function CommunicationsPage() {
             >
               {generateWhatsapp.isPending ? 'A gerar...' : 'Gerar links WhatsApp'}
             </Button>
+          )}
+
+          {showPreview && emailPreviewHtml && channel === 'email' && (
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Pré-visualização do email</p>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+                  Fechar
+                </Button>
+              </div>
+              <div
+                className="max-h-96 overflow-auto rounded-lg border bg-white p-4 text-sm"
+                dangerouslySetInnerHTML={{ __html: emailPreviewHtml }}
+              />
+            </div>
           )}
 
           {whatsappLinks.length > 0 && (
@@ -224,21 +268,33 @@ export default function CommunicationsPage() {
           {isLoading ? (
             <p className="text-muted-foreground">A carregar...</p>
           ) : list && list.length > 0 ? (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
+                  <th className="pb-2 font-medium">Data</th>
                   <th className="pb-2 font-medium">Assunto</th>
                   <th className="pb-2 font-medium">Audiência</th>
-                  <th className="pb-2 font-medium">Destinatários</th>
+                  <th className="pb-2 font-medium">Progresso</th>
                   <th className="pb-2 font-medium">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {list.map((c) => (
                   <tr key={c.id} className="border-b last:border-0">
+                    <td className="py-3 text-muted-foreground">
+                      {new Date(c.createdAt).toLocaleString('pt-PT')}
+                    </td>
                     <td className="py-3 font-medium">{c.subject}</td>
                     <td className="py-3">{AUDIENCE_LABEL[c.audience]}</td>
-                    <td className="py-3">{c.totalRecipients}</td>
+                    <td className="py-3">
+                      <span className="text-green-700">{c.sentCount}</span>
+                      {' / '}
+                      {c.totalRecipients}
+                      {c.failedCount > 0 && (
+                        <span className="ml-1 text-destructive">({c.failedCount} falhou)</span>
+                      )}
+                    </td>
                     <td className="py-3">
                       <Badge variant={STATUS_BADGE[c.status].variant}>{STATUS_BADGE[c.status].label}</Badge>
                     </td>
@@ -246,8 +302,13 @@ export default function CommunicationsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
-            <p className="text-muted-foreground">Sem comunicações por email.</p>
+            <EmptyState
+              icon={Mail}
+              title="Ainda não enviou comunicações"
+              description="Envie o primeiro email aos sócios usando o formulário acima."
+            />
           )}
         </CardContent>
       </Card>

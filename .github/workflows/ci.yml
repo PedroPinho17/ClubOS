@@ -69,7 +69,7 @@ jobs:
         run: pnpm --filter @clubos/database build
 
       - name: Push database schema
-        run: pnpm db:push
+        run: pnpm db:deploy
 
       - name: Seed database
         run: pnpm db:seed
@@ -79,6 +79,12 @@ jobs:
 
       - name: Typecheck Web
         run: pnpm --filter @clubos/web typecheck
+
+      - name: Lint API
+        run: pnpm --filter @clubos/api lint
+
+      - name: Lint Web
+        run: pnpm --filter @clubos/web lint
 
       - name: Build Web
         run: pnpm --filter @clubos/web build

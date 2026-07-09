@@ -12,6 +12,7 @@ Guia para desenvolvedores — equivalente ao **Javadoc** neste stack TypeScript/
 | [Base de dados](BASE-DE-DADOS.md) | Modelos Prisma, relações, isolamento por tenant |
 | [Autenticação e RBAC](AUTENTICACAO-RBAC.md) | Better Auth, roles, org activa, decorators |
 | [Convenções](CONVENCOES.md) | Como adicionar módulos, testes, TSDoc |
+| [Observabilidade](OBSERVABILIDADE.md) | Alertas Sentry, uptime externo, go-live |
 
 ## Início rápido
 

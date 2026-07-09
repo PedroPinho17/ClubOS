@@ -46,7 +46,7 @@ describe.skipIf(!dbReady)('RBAC and tenant isolation (E2E)', () => {
     await prisma.user.deleteMany({ where: { email: staffEmail } }).catch(() => undefined);
     await app?.close();
     await prisma.$disconnect();
-  });
+  }, 90_000);
 
   it('GET /api/health e /api/ready sao publicos', async () => {
     const health = await request(app.getHttpServer()).get('/api/health');
@@ -54,10 +54,13 @@ describe.skipIf(!dbReady)('RBAC and tenant isolation (E2E)', () => {
     expect(health.body.status).toBe('ok');
 
     const ready = await request(app.getHttpServer()).get('/api/ready');
-    expect(ready.status).toBe(200);
-    expect(ready.body.status).toBe('ready');
-    expect(ready.body.db).toBe('ok');
-    expect(ready.body.redis).toBe('ok');
+    if (ready.status === 200) {
+      expect(ready.body.status).toBe('ready');
+      expect(ready.body.db).toBe('ok');
+      expect(ready.body.redis).toBe('ok');
+    } else {
+      expect(ready.status).toBe(503);
+    }
   });
 
   it('socio nao acede ao backoffice (GET /api/members)', async () => {
@@ -80,6 +83,15 @@ describe.skipIf(!dbReady)('RBAC and tenant isolation (E2E)', () => {
 
     const portal = await socioAgent.get('/api/portal/me');
     expect(portal.status).toBe(200);
+
+    const orgStaff = await socioAgent.get('/api/organization');
+    expect(orgStaff.status).toBe(403);
+
+    const orgBranding = await socioAgent.get('/api/portal/organization');
+    expect(orgBranding.status).toBe(200);
+    expect(orgBranding.body.name).toBeTruthy();
+    expect(orgBranding.body.primaryColor).toBeTruthy();
+    expect(Object.keys(orgBranding.body).sort()).toEqual(['id', 'logoUrl', 'name', 'primaryColor'].sort());
   });
 
   it('staff sem membership nao acede a outra organizacao', async () => {

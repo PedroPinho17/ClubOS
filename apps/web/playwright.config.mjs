@@ -43,7 +43,7 @@ export default defineConfig({
         storageState: 'e2e/.auth/admin.json',
       },
       dependencies: ['setup'],
-      testIgnore: /portal\.spec\.ts/,
+      testIgnore: /portal\.spec\.ts|portal-mobile\.spec\.ts|login-mobile\.spec\.ts/,
     },
     {
       name: 'portal',
@@ -54,33 +54,32 @@ export default defineConfig({
       dependencies: ['setup'],
       testMatch: /portal\.spec\.ts/,
     },
+    {
+      name: 'portal-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        storageState: 'e2e/.auth/socio.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /portal-mobile\.spec\.ts/,
+    },
+    {
+      name: 'login-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        storageState: { cookies: [], origins: [] },
+      },
+      dependencies: ['setup'],
+      testMatch: /login-mobile\.spec\.ts/,
+    },
   ],
   webServer: process.env.E2E_SKIP_WEBSERVER
     ? undefined
-    : [
-        {
-          command: 'pnpm --filter @clubos/api start',
-          cwd: repoRoot,
-          url: 'http://localhost:4000/api/health',
-          timeout: 120_000,
-          reuseExistingServer: !process.env.CI,
-          env: {
-            ...process.env,
-            NODE_ENV: 'test',
-            RATE_LIMIT_AUTH_PER_MIN: '1000',
-            RATE_LIMIT_VALIDATE_PER_MIN: '1000',
-          },
-        },
-        {
-          command: 'pnpm --filter @clubos/web start',
-          cwd: repoRoot,
-          url: 'http://localhost:3000/login',
-          timeout: 120_000,
-          reuseExistingServer: !process.env.CI,
-          env: {
-            ...process.env,
-            NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
-          },
-        },
-      ],
+    : {
+        command: 'node scripts/run-e2e-servers.mjs',
+        cwd: repoRoot,
+        url: 'http://localhost:3000/login',
+        timeout: 180_000,
+        reuseExistingServer: !process.env.CI,
+      },
 });

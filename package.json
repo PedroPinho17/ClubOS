@@ -15,6 +15,7 @@
     "test": "turbo run test",
     "db:generate": "pnpm --filter @clubos/database generate",
     "db:migrate": "pnpm --filter @clubos/database migrate",
+    "db:deploy": "pnpm --filter @clubos/database run migrate:deploy",
     "db:push": "pnpm --filter @clubos/database push",
     "db:seed": "pnpm --filter @clubos/database seed && pnpm --filter @clubos/api seed:users",
     "db:studio": "pnpm --filter @clubos/database studio",
@@ -22,9 +23,15 @@
     "docker:down": "docker compose down",
     "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build",
     "db:backup": "node scripts/run-backup.mjs",
-    "db:restore": "node scripts/run-backup.mjs restore"
+    "db:restore": "node scripts/run-backup.mjs restore",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,json,md,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.4.2",
     "turbo": "^2.10.4",
     "typescript": "^5.7.2"

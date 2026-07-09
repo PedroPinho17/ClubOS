@@ -1,15 +1,16 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText } from 'lucide-react';
+import { CreditCard, FileText } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { api, openBlob } from '@/lib/api';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
-import type { Member, MembershipPlan, Payment, PaymentMethod, PaymentStatus } from '@/lib/types';
+import type { Member, MembershipPlan, PaginatedResult, Payment, PaymentMethod, PaymentStatus } from '@/lib/types';
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
   CASH: 'Numerário',
@@ -41,10 +42,11 @@ export default function PaymentsPage() {
     queryFn: () => api.get<Payment[]>('/payments'),
   });
 
-  const { data: members } = useQuery<Member[]>({
+  const { data: membersPage } = useQuery<PaginatedResult<Member>>({
     queryKey: membersKey,
-    queryFn: () => api.get<Member[]>('/members'),
+    queryFn: () => api.get<PaginatedResult<Member>>('/members?limit=500&page=1'),
   });
+  const members = membersPage?.items;
 
   const { data: plans } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
@@ -86,7 +88,7 @@ export default function PaymentsPage() {
         Regista pagamentos de quotas e emite comprovativos em PDF.
       </p>
 
-      <Card className="mb-6">
+      <Card id="register-payment-form" className="mb-6">
         <CardContent className="pt-6">
           <form
             onSubmit={(e) => {
@@ -149,7 +151,22 @@ export default function PaymentsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          {!isLoading && payments && payments.length === 0 ? (
+            <EmptyState
+              icon={CreditCard}
+              title="Sem pagamentos registados"
+              description="Registe o primeiro pagamento de quota para começar o histórico."
+              actions={[
+                {
+                  label: 'Registar pagamento',
+                  onClick: () =>
+                    document.getElementById('register-payment-form')?.scrollIntoView({ behavior: 'smooth' }),
+                },
+              ]}
+            />
+          ) : (
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b bg-muted/50">
               <tr className="text-left">
                 <th className="p-3 font-medium">Data</th>
@@ -189,15 +206,11 @@ export default function PaymentsPage() {
                     </td>
                   </tr>
                 ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
-                    Sem pagamentos registados.
-                  </td>
-                </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
+          </div>
+          )}
         </CardContent>
       </Card>
     </div>

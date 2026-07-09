@@ -40,8 +40,13 @@ export class MembersController {
 
   @Get()
   @StaffOnly()
-  list(@OrgId() organizationId: string, @Query('search') search?: string) {
-    return this.members.list(organizationId, search);
+  list(
+    @OrgId() organizationId: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.members.list(organizationId, { search, page, limit });
   }
 
   @Get('import/template')

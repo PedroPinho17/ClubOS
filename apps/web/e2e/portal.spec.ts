@@ -8,6 +8,10 @@ test.describe('Portal do socio', () => {
     await expect(page.getByRole('heading', { name: 'Joao Silva' })).toBeVisible({ timeout: 20_000 });
   });
 
+  test('mostra branding da organizacao no header', async ({ page }) => {
+    await expect(page.getByText('CRC Vale').first()).toBeVisible();
+  });
+
   test('mostra dados do socio e pagamentos', async ({ page }) => {
     await expect(page.getByText('Quota Mensal')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Os meus pagamentos' })).toBeVisible();

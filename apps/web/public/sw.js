@@ -1,6 +1,11 @@
-const CACHE = 'clubos-static-v2';
+const CACHE = 'clubos-static-v3';
 
-const PRECACHE_URLS = ['/clubos-icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
+const PRECACHE_URLS = [
+  '/clubos-icon.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/portal.webmanifest',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

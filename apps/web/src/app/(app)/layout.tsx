@@ -45,9 +45,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const visibleNav = filterNavItems(NAV_ITEMS, enabledSet, role);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <OrgDocumentBranding name={org?.name} logoUrl={org?.logoUrl} organizationId={org?.id} />
-      <aside className="flex w-64 flex-col border-r bg-card">
+      <aside className="hidden w-64 flex-col border-r bg-card md:flex">
         <div className="border-b p-4">
           <OrgBrandHeader name={org?.name} logoUrl={org?.logoUrl} />
         </div>
@@ -73,10 +73,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-end border-b bg-card px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-card px-4 md:justify-end md:px-6">
+          <div className="min-w-0 md:hidden">
+            <OrgBrandHeader name={org?.name} logoUrl={org?.logoUrl} />
+          </div>
           <UserMenu name={session.user?.name} email={session.user?.email} />
         </header>
-        <main key={activeOrgId ?? 'org'} className="flex-1 overflow-auto bg-muted/20 p-8">
+        <nav className="flex gap-1 overflow-x-auto border-b bg-card p-2 md:hidden">
+          {visibleNav.map((item) => {
+            const active = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  active ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <main key={activeOrgId ?? 'org'} className="flex-1 overflow-x-hidden overflow-y-auto bg-muted/20 p-4 md:p-8">
           {children}
         </main>
       </div>

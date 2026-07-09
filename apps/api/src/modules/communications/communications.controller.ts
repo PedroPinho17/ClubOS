@@ -4,7 +4,7 @@ import { AdminOnly, CurrentUser, OrgId, RequireModule } from '../../common/decor
 import type { AuthUser } from '../../common/types';
 import { ModuleGuard } from '../../common/guards/module.guard';
 import { CommunicationsService } from './communications.service';
-import { CreateCommunicationDto, WhatsappLinksDto } from './dto';
+import { CreateCommunicationDto, EmailPreviewDto, WhatsappLinksDto } from './dto';
 
 @Controller('api/communications')
 @RequireModule('communications')
@@ -27,11 +27,6 @@ export class CommunicationsController {
     return this.communications.previewCount(organizationId, audience, planId);
   }
 
-  @Get(':id')
-  findOne(@OrgId() organizationId: string, @Param('id') id: string) {
-    return this.communications.findOne(organizationId, id);
-  }
-
   @Get('preview/whatsapp')
   previewWhatsapp(
     @OrgId() organizationId: string,
@@ -39,6 +34,16 @@ export class CommunicationsController {
     @Query('planId') planId?: string,
   ) {
     return this.communications.previewWhatsappCount(organizationId, audience, planId);
+  }
+
+  @Post('preview/email')
+  previewEmail(@OrgId() organizationId: string, @Body() dto: EmailPreviewDto) {
+    return this.communications.previewEmail(organizationId, dto);
+  }
+
+  @Get(':id')
+  findOne(@OrgId() organizationId: string, @Param('id') id: string) {
+    return this.communications.findOne(organizationId, id);
   }
 
   @Post('whatsapp')

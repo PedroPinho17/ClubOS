@@ -24,7 +24,7 @@ export class HealthController {
   async ready() {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      const pong = await this.redis.ping();
+      const pong = await this.pingRedis(2_000);
       if (pong !== 'PONG') {
         throw new ServiceUnavailableException('Redis indisponivel.');
       }
@@ -33,5 +33,14 @@ export class HealthController {
       if (e instanceof ServiceUnavailableException) throw e;
       throw new ServiceUnavailableException('Dependencias indisponiveis.');
     }
+  }
+
+  private pingRedis(timeoutMs: number): Promise<string> {
+    return Promise.race([
+      this.redis.ping(),
+      new Promise<string>((_, reject) => {
+        setTimeout(() => reject(new Error('Redis timeout')), timeoutMs);
+      }),
+    ]);
   }
 }

@@ -29,7 +29,8 @@ export function requireE2EPassword(): string {
 }
 
 async function submitLogin(page: Page, email: string, password: string) {
-  await page.goto('/login');
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible({ timeout: 30_000 });
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();

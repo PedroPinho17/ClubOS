@@ -68,12 +68,65 @@ describe('PortalService', () => {
   const cards = { getCardData: vi.fn() };
   const mail = { send: vi.fn() };
   const payments = { getReceipt: vi.fn() };
+  const storage = { getUrl: vi.fn() };
 
-  const service = new PortalService(prisma as never, cards as never, mail as never, payments as never);
+  const service = new PortalService(
+    prisma as never,
+    cards as never,
+    mail as never,
+    payments as never,
+    storage as never,
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();
     mail.send.mockResolvedValue(undefined);
+    storage.getUrl.mockResolvedValue('https://cdn.example/logo.png');
+  });
+
+  describe('getOrganizationBranding', () => {
+    it('devolve nome e cor para socio com member', async () => {
+      prisma.member.findFirst.mockResolvedValue({ organizationId: 'org-1' });
+      prisma.organization.findUnique.mockResolvedValue({
+        id: 'org-1',
+        name: 'CRC Vale',
+        logoKey: 'orgs/org-1/logo.png',
+        primaryColor: '#1d4ed8',
+      });
+
+      const result = await service.getOrganizationBranding('user-1');
+
+      expect(result).toEqual({
+        id: 'org-1',
+        name: 'CRC Vale',
+        primaryColor: '#1d4ed8',
+        logoUrl: 'https://cdn.example/logo.png',
+      });
+      expect(storage.getUrl).toHaveBeenCalledWith('orgs/org-1/logo.png');
+    });
+
+    it('logoUrl fica null sem logoKey', async () => {
+      prisma.member.findFirst.mockResolvedValue({ organizationId: 'org-1' });
+      prisma.organization.findUnique.mockResolvedValue({
+        id: 'org-1',
+        name: 'CRC Vale',
+        logoKey: null,
+        primaryColor: '#1d4ed8',
+      });
+
+      const result = await service.getOrganizationBranding('user-1');
+
+      expect(result.logoUrl).toBeNull();
+      expect(storage.getUrl).not.toHaveBeenCalled();
+    });
+
+    it('rejeita user sem socio associado', async () => {
+      prisma.member.findFirst.mockResolvedValue(null);
+
+      await expect(service.getOrganizationBranding('user-x')).rejects.toThrow(
+        new NotFoundException('Socio nao encontrado.'),
+      );
+    });
   });
 
   describe('getMe', () => {

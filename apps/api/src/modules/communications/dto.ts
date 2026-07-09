@@ -33,3 +33,20 @@ export class WhatsappLinksDto {
   @IsString()
   planId?: string;
 }
+
+export class EmailPreviewDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(150)
+  subject!: string;
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(5000)
+  body!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  sampleName?: string;
+}

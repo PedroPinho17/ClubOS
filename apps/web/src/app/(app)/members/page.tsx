@@ -1,17 +1,20 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileDown, FileSpreadsheet, FileText, ImagePlus, Pencil, ShieldAlert, Trash2, UserPlus, X } from 'lucide-react';
+import { Download, FileDown, FileSpreadsheet, FileText, ImagePlus, Pencil, ShieldAlert, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { ImportResultPanel } from '@/components/members/import-result-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { api, downloadBlob, downloadJson, uploadFile } from '@/lib/api';
 import { useSession } from '@/lib/auth-client';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
-import type { Member, MemberImportResult, MembershipPlan, QuotaStatus } from '@/lib/types';
+import type { Member, MemberImportResult, MembershipPlan, PaginatedResult, QuotaStatus } from '@/lib/types';
+
+const PAGE_SIZE = 25;
 
 const QUOTA_BADGE: Record<QuotaStatus, { label: string; variant: 'success' | 'muted' | 'secondary' | 'default' | 'warning' }> = {
   up_to_date: { label: 'Em dia', variant: 'success' },
@@ -62,19 +65,26 @@ export default function MembersPage() {
   const [importDryRun, setImportDryRun] = useState(false);
   const [importResult, setImportResult] = useState<MemberImportResult | null>(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [quotaPlanId, setQuotaPlanId] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>(emptyEditForm());
 
-  const membersKey = useTenantQueryKey(['members', search]);
+  const membersKey = useTenantQueryKey(['members', search, page]);
   const plansKey = useTenantQueryKey(['membership-plans']);
 
-  const { data: members, isLoading } = useQuery<Member[]>({
+  const { data: membersPage, isLoading } = useQuery<PaginatedResult<Member>>({
     queryKey: membersKey,
-    queryFn: () => api.get<Member[]>(`/members${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+      if (search) params.set('search', search);
+      return api.get<PaginatedResult<Member>>(`/members?${params}`);
+    },
   });
+
+  const members = membersPage?.items;
 
   const { data: plans } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
@@ -493,7 +503,7 @@ export default function MembersPage() {
         </Card>
       )}
 
-      <Card className="mb-6">
+      <Card id="create-member-form" className="mb-6">
         <CardContent className="pt-6">
           <form
             onSubmit={(e) => {
@@ -531,13 +541,51 @@ export default function MembersPage() {
         </CardContent>
       </Card>
 
-      <div className="mb-4 max-w-sm">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar membros..." />
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="max-w-sm flex-1">
+          <Input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Pesquisar membros..."
+          />
+        </div>
+        {membersPage && membersPage.total > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {membersPage.total} membro{membersPage.total !== 1 ? 's' : ''}
+          </p>
+        )}
       </div>
 
       <Card>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          {!isLoading && membersPage?.total === 0 && !search ? (
+            <EmptyState
+              icon={Users}
+              title="Ainda não há sócios nesta organização"
+              description="Importe a lista do Excel ou crie o primeiro sócio."
+              actions={[
+                ...(canManage
+                  ? [
+                      {
+                        label: 'Importar Excel',
+                        variant: 'outline' as const,
+                        onClick: () => importInputRef.current?.click(),
+                      },
+                      {
+                        label: 'Criar sócio',
+                        onClick: () =>
+                          document.getElementById('create-member-form')?.scrollIntoView({ behavior: 'smooth' }),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          ) : (
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="border-b bg-muted/50">
               <tr className="text-left">
                 <th className="p-3 font-medium">Nº</th>
@@ -659,14 +707,42 @@ export default function MembersPage() {
               ) : (
                 <tr>
                   <td colSpan={8} className="p-6 text-center text-muted-foreground">
-                    Sem membros.
+                    {search ? 'Nenhum sócio encontrado para esta pesquisa.' : 'Sem sócios.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
+          )}
         </CardContent>
       </Card>
+
+      {membersPage && membersPage.totalPages > 1 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Página {membersPage.page} de {membersPage.totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= membersPage.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Seguinte
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

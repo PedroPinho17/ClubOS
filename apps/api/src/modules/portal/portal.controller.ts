@@ -11,6 +11,12 @@ import { PortalService } from './portal.service';
 export class PortalController {
   constructor(private readonly portal: PortalService) {}
 
+  @Get('organization')
+  @PortalOnly()
+  organizationBranding(@CurrentUser() user: AuthUser) {
+    return this.portal.getOrganizationBranding(user.id);
+  }
+
   @Get('me')
   @PortalOnly()
   me(@CurrentUser() user: AuthUser) {

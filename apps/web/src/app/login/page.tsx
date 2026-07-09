@@ -59,12 +59,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center overflow-x-hidden bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <div className="mb-2 text-2xl font-bold text-primary">ClubOS</div>
           <CardTitle>Entrar</CardTitle>
-          <CardDescription>Acede ao backoffice ou portal do socio.</CardDescription>
+          <CardDescription>Acede ao backoffice ou portal do sócio.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -79,6 +79,7 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 required
+                className="h-11 text-base"
               />
             </div>
             <div className="space-y-1">
@@ -92,10 +93,11 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
+                className="h-11 text-base"
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="min-h-11 w-full text-base" disabled={loading}>
               {loading ? 'A entrar...' : 'Entrar'}
             </Button>
           </form>
@@ -106,18 +108,24 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          <Button type="button" variant="outline" className="w-full" onClick={onPasskey} disabled={loading}>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 w-full text-base"
+            onClick={onPasskey}
+            disabled={loading}
+          >
             <KeyRound className="h-4 w-4" />
             Entrar com passkey
           </Button>
         </CardContent>
       </Card>
-      <p className="mt-6 text-center text-xs text-muted-foreground">
-        <Link href="/privacidade" className="underline hover:text-foreground">
-          Politica de privacidade
+      <p className="mt-6 max-w-sm text-center text-xs text-muted-foreground">
+        <Link href="/privacidade" className="inline-block py-2 underline hover:text-foreground">
+          Política de privacidade
         </Link>
         {' · '}
-        <Link href="/dpa" className="underline hover:text-foreground">
+        <Link href="/dpa" className="inline-block py-2 underline hover:text-foreground">
           DPA
         </Link>
       </p>

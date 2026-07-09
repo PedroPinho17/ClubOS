@@ -1,3 +1,11 @@
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -16,6 +24,14 @@ export interface Organization {
   logoUrl?: string | null;
   locale?: string | null;
   timezone?: string | null;
+}
+
+/** Branding mínimo da org exposto ao portal do sócio. */
+export interface PortalOrganizationBranding {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  primaryColor: string;
 }
 
 export interface OrganizationSummary {
@@ -196,11 +212,31 @@ export interface CardData {
   qrPayload: string;
 }
 
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface DashboardStats {
   members: number;
   activeMembers: number;
   payments: number;
   revenue: number;
+  overdue: number;
+  dueSoon: number;
+  revenueThisMonth: number;
+  revenuePrevMonth: number;
+  revenueMonthChangePct: number | null;
+  recentPayments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    memberName: string;
+    memberNumber: string;
+  }[];
 }
 
 export type CommunicationAudience = 'ALL' | 'ACTIVE' | 'OVERDUE' | 'PLAN';

@@ -74,7 +74,7 @@ describe.skipIf(!dbReady)('Protected API routes (E2E)', () => {
 
     const members = await agent.get('/api/members').set('x-organization-id', organizationId);
     expect(members.status).toBe(200);
-    expect(Array.isArray(members.body)).toBe(true);
+    expect(members.body).toMatchObject({ items: expect.any(Array), total: expect.any(Number) });
   });
 
   it('GET /api/validate/:id sem assinatura e publico mas rejeita token invalido', async () => {

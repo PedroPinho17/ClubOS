@@ -1,8 +1,10 @@
 'use client';
 
+import { ClipboardList } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { api } from '@/lib/api';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
 import type { AuditLogEntry } from '@/lib/types';
@@ -36,7 +38,15 @@ export default function AuditPage() {
 
       <Card>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          {!isLoading && data && data.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="Sem registos de auditoria"
+              description="As acções na organização aparecerão aqui à medida que forem realizadas."
+            />
+          ) : (
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
             <thead className="border-b bg-muted/50">
               <tr className="text-left">
                 <th className="p-3 font-medium">Data</th>
@@ -85,15 +95,11 @@ export default function AuditPage() {
                     </td>
                   </tr>
                 ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="p-6 text-center text-muted-foreground">
-                    Sem registos de auditoria.
-                  </td>
-                </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
+          </div>
+          )}
         </CardContent>
       </Card>
     </div>

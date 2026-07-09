@@ -6,6 +6,7 @@ import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
 import { CommunicationsQueue } from './communications.queue';
 import { CreateCommunicationDto, WhatsappLinksDto } from './dto';
 import { buildWhatsappUrl, normalizeWhatsappPhone } from './whatsapp.util';
+import { communicationEmail } from '../../core/mail/templates/communication';
 
 export interface WhatsappLink {
   name: string;
@@ -122,6 +123,23 @@ export class CommunicationsService {
     return members
       .filter((m) => m.email)
       .map((m) => ({ name: m.name, email: m.email! }));
+  }
+
+  async previewEmail(
+    organizationId: string,
+    input: { subject: string; body: string; sampleName?: string },
+  ) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true, primaryColor: true },
+    });
+    const rendered = communicationEmail({
+      branding: { name: org?.name ?? 'ClubOS', primaryColor: org?.primaryColor },
+      memberName: input.sampleName?.trim() || 'João Exemplo',
+      subject: input.subject,
+      body: input.body,
+    });
+    return { html: rendered.html, text: rendered.text, sampleName: input.sampleName?.trim() || 'João Exemplo' };
   }
 
   async create(organizationId: string, userId: string, dto: CreateCommunicationDto) {

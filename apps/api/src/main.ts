@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import './env';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -52,10 +53,23 @@ async function bootstrap() {
     app.useGlobalFilters(new SentryExceptionFilter());
   }
 
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('ClubOS API')
+    .setDescription('API REST do ClubOS — gestao multi-tenant de organizacoes.')
+    .setVersion('1.0')
+    .addCookieAuth('better-auth.session_token')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: { persistAuthorization: true },
+  });
+
   const port = Number(process.env.API_PORT ?? 4000);
   await app.listen(port);
   // eslint-disable-next-line no-console
   console.log(`ClubOS API a correr em http://localhost:${port}`);
+  // eslint-disable-next-line no-console
+  console.log(`Documentacao OpenAPI: http://localhost:${port}/api/docs`);
 }
 
 void bootstrap();

@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { api, uploadFile } from '@/lib/api';
 import { useSession } from '@/lib/auth-client';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
-import type { CardData, CardLayout, CardSettings, CardTemplate, Member, QrContent } from '@/lib/types';
+import type { CardData, CardLayout, CardSettings, CardTemplate, Member, PaginatedResult, QrContent } from '@/lib/types';
 
 async function waitForImages(el: HTMLElement | null): Promise<void> {
   if (!el) return;
@@ -65,10 +65,11 @@ export default function CardsPage() {
     queryFn: () => api.get<CardSettings>('/cards/settings'),
   });
 
-  const { data: members } = useQuery<Member[]>({
+  const { data: membersPage } = useQuery<PaginatedResult<Member>>({
     queryKey: membersKey,
-    queryFn: () => api.get<Member[]>('/members'),
+    queryFn: () => api.get<PaginatedResult<Member>>('/members?limit=500&page=1'),
   });
+  const members = membersPage?.items;
 
   useEffect(() => {
     if (settings && !layout) setLayout(settings.layout);

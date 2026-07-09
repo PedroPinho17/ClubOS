@@ -5,6 +5,7 @@ import { auth } from '../../auth/auth';
 import { MailService } from '../../core/mail/mail.service';
 import { portalAccessEmail } from '../../core/mail/templates/portal-access';
 import { PrismaService } from '../../prisma/prisma.service';
+import { StorageService } from '../../storage/storage.service';
 import { CardsService } from '../cards/cards.service';
 import { PaymentsService } from '../payments/payments.service';
 import { computeQuotaSituation } from '../members/quota.util';
@@ -17,7 +18,34 @@ export class PortalService {
     private readonly cards: CardsService,
     private readonly mail: MailService,
     private readonly payments: PaymentsService,
+    private readonly storage: StorageService,
   ) {}
+
+  /** Branding público da organização do sócio autenticado (sem dados admin). */
+  async getOrganizationBranding(userId: string) {
+    const member = await this.prisma.member.findFirst({
+      where: { userId },
+      select: { organizationId: true },
+    });
+    if (!member) {
+      throw new NotFoundException('Socio nao encontrado.');
+    }
+
+    const org = await this.prisma.organization.findUnique({
+      where: { id: member.organizationId },
+      select: { id: true, name: true, logoKey: true, primaryColor: true },
+    });
+    if (!org) {
+      throw new NotFoundException('Organizacao nao encontrada.');
+    }
+
+    return {
+      id: org.id,
+      name: org.name,
+      primaryColor: org.primaryColor,
+      logoUrl: org.logoKey ? await this.storage.getUrl(org.logoKey) : null,
+    };
+  }
 
   async getMe(userId: string) {
     const member = await this.prisma.member.findFirst({

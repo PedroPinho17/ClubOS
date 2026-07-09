@@ -6,7 +6,7 @@ test.describe('Login', () => {
   test('pagina de login renderiza', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Politica de privacidade' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Política de privacidade|Politica de privacidade/i })).toBeVisible();
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
   });

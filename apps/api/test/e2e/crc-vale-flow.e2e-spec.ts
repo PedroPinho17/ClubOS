@@ -61,7 +61,7 @@ describe.skipIf(!dbReady)('CRC Vale business flow (E2E)', () => {
 
     const membersRes = await agent.get('/api/members').set('x-organization-id', organizationId);
     expect(membersRes.status).toBe(200);
-    const joao = (membersRes.body as { id: string; number: string }[]).find((m) => m.number === '1');
+    const joao = (membersRes.body.items as { id: string; number: string }[]).find((m) => m.number === '1');
     expect(joao).toBeTruthy();
 
     const paymentRes = await agent

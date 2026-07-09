@@ -1,8 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Download } from 'lucide-react';
+import { BarChart3, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Card, CardContent } from '@/components/ui/card';
 import { api, downloadCsv } from '@/lib/api';
 import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
@@ -46,6 +47,17 @@ export default function ReportsPage() {
 
       {isLoading || !data ? (
         <p className="text-muted-foreground">A carregar...</p>
+      ) : data.members.total === 0 && data.revenue.paymentsCount === 0 ? (
+        <Card>
+          <CardContent>
+            <EmptyState
+              icon={BarChart3}
+              title="Sem dados para este relatório"
+              description="Adicione sócios e registe pagamentos para ver estatísticas aqui."
+              actions={[{ label: 'Ir a Membros', href: '/members' }]}
+            />
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>

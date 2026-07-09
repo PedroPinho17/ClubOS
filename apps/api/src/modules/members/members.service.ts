@@ -7,6 +7,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma, PaymentStatus } from '@clubos/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
+import { paginated, parsePagination } from '../../common/pagination';
 import { CreateMemberDto, UpdateMemberDto } from './dto';
 import { computeQuotaSituation } from './quota.util';
 import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
@@ -25,7 +26,16 @@ export class MembersService {
     private readonly storage: StorageService,
   ) {}
 
-  async list(organizationId: string, search?: string) {
+  async list(
+    organizationId: string,
+    opts: { search?: string; page?: string; limit?: string } = {},
+  ) {
+    const { search, page: pageRaw, limit: limitRaw } = opts;
+    const { page, limit, skip } = parsePagination(
+      { page: pageRaw, limit: limitRaw },
+      { limit: 25, maxLimit: 500 },
+    );
+
     const where: Prisma.MemberWhereInput = {
       organizationId,
       ...(search
@@ -39,22 +49,27 @@ export class MembersService {
         : {}),
     };
 
-    const members = await this.prisma.member.findMany({
-      where,
-      include: {
-        quotaPlan: true,
-        payments: {
-          where: { status: PaymentStatus.PAID },
-          orderBy: { paidAt: 'desc' },
-          take: 1,
+    const [total, members] = await Promise.all([
+      this.prisma.member.count({ where }),
+      this.prisma.member.findMany({
+        where,
+        include: {
+          quotaPlan: true,
+          payments: {
+            where: { status: PaymentStatus.PAID },
+            orderBy: { paidAt: 'desc' },
+            take: 1,
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
 
     const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
 
-    return Promise.all(
+    const items = await Promise.all(
       members.map(async ({ payments, ...member }) => ({
         ...member,
         photoUrl: await this.storage.getUrl(member.photoKey),
@@ -67,6 +82,8 @@ export class MembersService {
         }),
       })),
     );
+
+    return paginated(items, total, page, limit);
   }
 
   async findOne(organizationId: string, id: string) {
