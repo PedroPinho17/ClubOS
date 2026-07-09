@@ -1,11 +1,13 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import type { AuthUser } from './types';
+import { ForbiddenException } from "@nestjs/common";
+import type { AuthUser } from "./types";
 
-const HEADER = 'x-organization-id';
+const HEADER = "x-organization-id";
 
-export function readOrgHeader(headers: Record<string, string | string[] | undefined>): string | undefined {
+export function readOrgHeader(
+  headers: Record<string, string | string[] | undefined>,
+): string | undefined {
   const raw = headers[HEADER];
-  if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  if (typeof raw === "string" && raw.trim()) return raw.trim();
   if (Array.isArray(raw) && raw[0]?.trim()) return raw[0].trim();
   return undefined;
 }
@@ -18,5 +20,5 @@ export function getActiveOrganizationId(request: {
   if (request.activeOrganizationId) {
     return request.activeOrganizationId;
   }
-  throw new ForbiddenException('Contexto de organizacao em falta.');
+  throw new ForbiddenException("Contexto de organizacao em falta.");
 }

@@ -1,8 +1,12 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { StorageService } from '../../storage/storage.service';
-import { OrganizationContextService } from '../../common/organization-context.service';
-import type { AuthUser } from '../../common/types';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { StorageService } from "../../storage/storage.service";
+import { OrganizationContextService } from "../../common/organization-context.service";
+import type { AuthUser } from "../../common/types";
 
 @Injectable()
 export class MeService {
@@ -13,7 +17,7 @@ export class MeService {
   ) {}
 
   async listOrganizations(user: AuthUser) {
-    if (user.role === 'socio') {
+    if (user.role === "socio") {
       const member = await this.prisma.member.findFirst({
         where: { userId: user.id },
         include: { organization: true },
@@ -29,7 +33,7 @@ export class MeService {
           status: org.status,
           primaryColor: org.primaryColor,
           logoUrl: await this.storage.getUrl(org.logoKey),
-          orgRole: 'socio',
+          orgRole: "socio",
         },
       ];
     }
@@ -37,7 +41,7 @@ export class MeService {
     const memberships = await this.prisma.organizationMember.findMany({
       where: { userId: user.id },
       include: { organization: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
 
     return Promise.all(
@@ -49,30 +53,45 @@ export class MeService {
         status: m.organization.status,
         primaryColor: m.organization.primaryColor,
         logoUrl: await this.storage.getUrl(m.organization.logoKey),
-        orgRole: user.role === 'imperador' ? 'imperador' : m.orgRole,
+        orgRole: user.role === "imperador" ? "imperador" : m.orgRole,
       })),
     );
   }
 
-  async setActiveOrganization(user: AuthUser, organizationId: string, sessionToken?: string) {
-    if (user.role === 'socio') {
-      const member = await this.prisma.member.findFirst({ where: { userId: user.id } });
+  async setActiveOrganization(
+    user: AuthUser,
+    organizationId: string,
+    sessionToken?: string,
+  ) {
+    if (user.role === "socio") {
+      const member = await this.prisma.member.findFirst({
+        where: { userId: user.id },
+      });
       if (member?.organizationId !== organizationId) {
-        throw new ForbiddenException('Sem permissao para aceder a esta organizacao.');
+        throw new ForbiddenException(
+          "Sem permissao para aceder a esta organizacao.",
+        );
       }
     } else {
       const ok = await this.orgContext.hasMembership(user.id, organizationId);
       if (!ok) {
-        throw new ForbiddenException('Sem permissao para aceder a esta organizacao.');
+        throw new ForbiddenException(
+          "Sem permissao para aceder a esta organizacao.",
+        );
       }
     }
 
-    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
     if (!org) {
-      throw new NotFoundException('Organizacao nao encontrada.');
+      throw new NotFoundException("Organizacao nao encontrada.");
     }
 
-    await this.orgContext.setSessionActiveOrganization(sessionToken, organizationId);
+    await this.orgContext.setSessionActiveOrganization(
+      sessionToken,
+      organizationId,
+    );
     return { organizationId, name: org.name };
   }
 }
