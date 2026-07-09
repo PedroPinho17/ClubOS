@@ -68,7 +68,7 @@ describe("PortalService", () => {
   const cards = { getCardData: vi.fn() };
   const mail = { send: vi.fn() };
   const payments = { getReceipt: vi.fn() };
-  const storage = { getUrl: vi.fn() };
+  const storage = { getUrl: vi.fn(), getObject: vi.fn() };
 
   const service = new PortalService(
     prisma as never,
@@ -81,11 +81,14 @@ describe("PortalService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mail.send.mockResolvedValue(undefined);
-    storage.getUrl.mockResolvedValue("https://cdn.example/logo.png");
+    storage.getObject.mockResolvedValue({
+      buffer: Buffer.from("logo"),
+      contentType: "image/png",
+    });
   });
 
   describe("getOrganizationBranding", () => {
-    it("devolve nome e cor para socio com member", async () => {
+    it("devolve nome, cor e hasLogo para socio com member", async () => {
       prisma.member.findFirst.mockResolvedValue({ organizationId: "org-1" });
       prisma.organization.findUnique.mockResolvedValue({
         id: "org-1",
@@ -100,12 +103,13 @@ describe("PortalService", () => {
         id: "org-1",
         name: "CRC Vale",
         primaryColor: "#1d4ed8",
-        logoUrl: "https://cdn.example/logo.png",
+        hasLogo: true,
+        logoUrl: null,
       });
-      expect(storage.getUrl).toHaveBeenCalledWith("orgs/org-1/logo.png");
+      expect(storage.getUrl).not.toHaveBeenCalled();
     });
 
-    it("logoUrl fica null sem logoKey", async () => {
+    it("hasLogo fica false sem logoKey", async () => {
       prisma.member.findFirst.mockResolvedValue({ organizationId: "org-1" });
       prisma.organization.findUnique.mockResolvedValue({
         id: "org-1",
@@ -116,6 +120,7 @@ describe("PortalService", () => {
 
       const result = await service.getOrganizationBranding("user-1");
 
+      expect(result.hasLogo).toBe(false);
       expect(result.logoUrl).toBeNull();
       expect(storage.getUrl).not.toHaveBeenCalled();
     });
@@ -129,9 +134,38 @@ describe("PortalService", () => {
     });
   });
 
+  describe("getLogoBuffer", () => {
+    it("devolve buffer do logotipo da organizacao do socio", async () => {
+      prisma.member.findFirst.mockResolvedValue({ organizationId: "org-1" });
+      prisma.organization.findUnique.mockResolvedValue({
+        logoKey: "orgs/org-1/logo.png",
+      });
+
+      const result = await service.getLogoBuffer("user-1");
+
+      expect(storage.getObject).toHaveBeenCalledWith("orgs/org-1/logo.png");
+      expect(result.buffer).toEqual(Buffer.from("logo"));
+    });
+
+    it("rejeita organizacao sem logotipo", async () => {
+      prisma.member.findFirst.mockResolvedValue({ organizationId: "org-1" });
+      prisma.organization.findUnique.mockResolvedValue({ logoKey: null });
+
+      await expect(service.getLogoBuffer("user-1")).rejects.toThrow(
+        new NotFoundException("Logotipo nao definido."),
+      );
+    });
+  });
+
   describe("getMe", () => {
-    it("devolve dados do socio, quota e pagamentos", async () => {
+    it("devolve dados do socio, quota, pagamentos e organizacao", async () => {
       prisma.member.findFirst.mockResolvedValue(memberBase);
+      prisma.organization.findUnique.mockResolvedValue({
+        id: "org-1",
+        name: "CRC Vale",
+        primaryColor: "#1d4ed8",
+        logoKey: "orgs/org-1/logo.png",
+      });
       cards.getCardData.mockResolvedValue({
         layout: "crc_vale",
         memberName: "Maria Portal",
@@ -143,6 +177,12 @@ describe("PortalService", () => {
       expect(result.member.planName).toBe("Quota mensal");
       expect(result.payments).toHaveLength(1);
       expect(result.payments[0].amount).toBe("15.00");
+      expect(result.organization).toEqual({
+        id: "org-1",
+        name: "CRC Vale",
+        primaryColor: "#1d4ed8",
+        hasLogo: true,
+      });
       expect(result.card).toEqual({
         layout: "crc_vale",
         memberName: "Maria Portal",
@@ -151,6 +191,12 @@ describe("PortalService", () => {
 
     it("card fica null quando o modulo de cartoes falha", async () => {
       prisma.member.findFirst.mockResolvedValue(memberBase);
+      prisma.organization.findUnique.mockResolvedValue({
+        id: "org-1",
+        name: "CRC Vale",
+        primaryColor: "#1d4ed8",
+        logoKey: null,
+      });
       cards.getCardData.mockRejectedValue(new Error("modulo inactivo"));
 
       const result = await service.getMe("user-1");

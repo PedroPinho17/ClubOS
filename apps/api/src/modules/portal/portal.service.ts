@@ -75,8 +75,27 @@ export class PortalService {
       id: org.id,
       name: org.name,
       primaryColor: org.primaryColor,
-      logoUrl: org.logoKey ? await this.storage.getUrl(org.logoKey) : null,
+      hasLogo: !!org.logoKey,
+      logoUrl: null,
     };
+  }
+
+  /** Logotipo da organização do sócio (proxy autenticado). */
+  async getLogoBuffer(userId: string) {
+    const member = await this.prisma.member.findFirst({
+      where: { userId },
+      select: { organizationId: true },
+    });
+    if (!member) throw new NotFoundException("Socio nao encontrado.");
+
+    const org = await this.prisma.organization.findUnique({
+      where: { id: member.organizationId },
+      select: { logoKey: true },
+    });
+    if (!org?.logoKey) {
+      throw new NotFoundException("Logotipo nao definido.");
+    }
+    return this.storage.getObject(org.logoKey);
   }
 
   async getMe(userId: string) {
@@ -115,6 +134,12 @@ export class PortalService {
       // modulo cards pode estar inativo
     }
 
+    const org = await this.prisma.organization.findUnique({
+      where: { id: member.organizationId },
+      select: { id: true, name: true, primaryColor: true, logoKey: true },
+    });
+    if (!org) throw new NotFoundException("Organizacao nao encontrada.");
+
     return {
       member: {
         id: member.id,
@@ -136,6 +161,12 @@ export class PortalService {
         createdAt: p.createdAt.toISOString(),
       })),
       card,
+      organization: {
+        id: org.id,
+        name: org.name,
+        primaryColor: org.primaryColor,
+        hasLogo: !!org.logoKey,
+      },
     };
   }
 

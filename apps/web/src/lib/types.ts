@@ -30,8 +30,16 @@ export interface Organization {
 export interface PortalOrganizationBranding {
   id: string;
   name: string;
-  logoUrl: string | null;
   primaryColor: string;
+  hasLogo: boolean;
+  logoUrl: string | null;
+}
+
+export interface PortalOrganizationSummary {
+  id: string;
+  name: string;
+  primaryColor: string;
+  hasLogo: boolean;
 }
 
 export interface OrganizationSummary {
@@ -64,7 +72,7 @@ export interface WhatsappLink {
   url: string;
 }
 
-export type StaffRole = 'imperador' | 'administrador' | 'tesoureiro';
+export type StaffRole = "imperador" | "administrador" | "tesoureiro";
 
 export interface StaffUser {
   id: string;
@@ -90,15 +98,17 @@ export interface PlatformModule {
   slug: string;
   name: string;
   description: string | null;
-  category: 'CORE' | 'BASE' | 'PLUGIN';
+  category: "CORE" | "BASE" | "PLUGIN";
   isCore: boolean;
   sortOrder: number;
   enabled: boolean;
 }
 
-export type Periodicity = 'MONTHLY' | 'QUARTERLY' | 'BIANNUAL' | 'ANNUAL' | 'ONCE';
+export type Periodicity =
+  "MONTHLY" | "QUARTERLY" | "BIANNUAL" | "ANNUAL" | "ONCE";
 
-export type QuotaStatus = 'up_to_date' | 'due_soon' | 'overdue' | 'no_plan' | 'pending';
+export type QuotaStatus =
+  "up_to_date" | "due_soon" | "overdue" | "no_plan" | "pending";
 
 export interface QuotaSituation {
   status: QuotaStatus;
@@ -124,7 +134,7 @@ export interface Member {
   name: string;
   email: string | null;
   phone: string | null;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
   userId?: string | null;
   photoUrl?: string | null;
   cardRole?: string | null;
@@ -134,8 +144,8 @@ export interface Member {
   createdAt: string;
 }
 
-export type PaymentMethod = 'CASH' | 'TRANSFER' | 'CARD' | 'MBWAY' | 'OTHER';
-export type PaymentStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'REFUNDED';
+export type PaymentMethod = "CASH" | "TRANSFER" | "CARD" | "MBWAY" | "OTHER";
+export type PaymentStatus = "PENDING" | "PAID" | "CANCELLED" | "REFUNDED";
 
 export interface Payment {
   id: string;
@@ -149,8 +159,8 @@ export interface Payment {
   quotaPlan: { id: string; name: string } | null;
 }
 
-export type CardTemplate = 'classic' | 'modern' | 'minimal' | 'crc_vale';
-export type QrContent = 'validacao' | 'numero' | 'dados';
+export type CardTemplate = "classic" | "modern" | "minimal" | "crc_vale";
+export type QrContent = "validacao" | "numero" | "dados";
 
 export interface CardLayout {
   template: CardTemplate;
@@ -179,7 +189,7 @@ export interface CardLayout {
 export interface CardTemplateInfo {
   key: CardTemplate;
   label: string;
-  group: 'base' | 'clube';
+  group: "base" | "clube";
   description: string;
 }
 
@@ -199,7 +209,7 @@ export interface CardData {
     email: string | null;
     phone: string | null;
     cardRole: string | null;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     joinedAt: string;
     planName: string | null;
     photoUrl: string | null;
@@ -239,8 +249,8 @@ export interface DashboardStats {
   }[];
 }
 
-export type CommunicationAudience = 'ALL' | 'ACTIVE' | 'OVERDUE' | 'PLAN';
-export type CommunicationStatus = 'QUEUED' | 'SENDING' | 'SENT' | 'FAILED';
+export type CommunicationAudience = "ALL" | "ACTIVE" | "OVERDUE" | "PLAN";
+export type CommunicationStatus = "QUEUED" | "SENDING" | "SENT" | "FAILED";
 
 export interface Communication {
   id: string;
@@ -258,7 +268,11 @@ export interface Communication {
 export interface ReportsOverview {
   members: { total: number; active: number; inactive: number };
   quotaBreakdown: Record<QuotaStatus, number>;
-  revenue: { total: number; paymentsCount: number; monthly: { month: string; total: number }[] };
+  revenue: {
+    total: number;
+    paymentsCount: number;
+    monthly: { month: string; total: number }[];
+  };
   membersByPlan: { plan: string; count: number }[];
 }
 
@@ -269,7 +283,7 @@ export interface PortalMe {
     name: string;
     email: string | null;
     phone: string | null;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     joinedAt: string;
     planName: string | null;
   };
@@ -283,4 +297,5 @@ export interface PortalMe {
     createdAt: string;
   }[];
   card: CardData | null;
+  organization: PortalOrganizationSummary;
 }

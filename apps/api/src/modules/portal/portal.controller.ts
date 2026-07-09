@@ -32,6 +32,17 @@ export class PortalController {
     return this.portal.getOrganizationBranding(user.id);
   }
 
+  @Get("organization/logo")
+  @PortalOnly()
+  async organizationLogo(@CurrentUser() user: AuthUser, @Res() res: Response) {
+    const { buffer, contentType } = await this.portal.getLogoBuffer(user.id);
+    res.set({
+      "Content-Type": contentType,
+      "Cache-Control": "private, max-age=300",
+    });
+    res.send(buffer);
+  }
+
   @Get("me")
   @PortalOnly()
   me(@CurrentUser() user: AuthUser) {
