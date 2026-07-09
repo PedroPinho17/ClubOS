@@ -27,7 +27,11 @@ export class PaymentsService {
   async findOne(organizationId: string, id: string) {
     const payment = await this.prisma.payment.findFirst({
       where: { id, organizationId },
-      include: { member: true, quotaPlan: true },
+      include: {
+        member: true,
+        quotaPlan: true,
+        organization: { select: { name: true, primaryColor: true } },
+      },
     });
     if (!payment) {
       throw new NotFoundException('Pagamento nao encontrado.');
@@ -74,7 +78,14 @@ export class PaymentsService {
 
     // Gera o recibo (PDF) e envia o email em background via BullMQ.
     if (status === PaymentStatus.PAID) {
-      await this.receiptQueue.enqueue({ organizationId, paymentId: payment.id });
+      void Promise.race([
+        this.receiptQueue.enqueue({ organizationId, paymentId: payment.id }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Redis timeout ao enfileirar recibo')), 3_000),
+        ),
+      ]).catch(() => {
+        // Redis indisponivel nao deve bloquear o registo do pagamento.
+      });
     }
 
     return payment;

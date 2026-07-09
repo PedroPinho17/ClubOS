@@ -26,7 +26,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : 2,
   reporter: process.env.CI ? 'github' : 'list',
   timeout: 60_000,
   use: {
@@ -43,6 +43,16 @@ export default defineConfig({
         storageState: 'e2e/.auth/admin.json',
       },
       dependencies: ['setup'],
+      testIgnore: /portal\.spec\.ts/,
+    },
+    {
+      name: 'portal',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/socio.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /portal\.spec\.ts/,
     },
   ],
   webServer: process.env.E2E_SKIP_WEBSERVER

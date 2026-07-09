@@ -64,7 +64,7 @@ Endpoints:
 | Auth          | **Better Auth** (email+password, passkey/WebAuthn, roles/admin) |
 | PWA           | Manifest Next.js + service worker (`/sw.js`) |
 | Testes        | Vitest (API, unitarios)                     |
-| Observabilidade | Sentry *(preparado)*                      |
+| Observabilidade | Sentry (activo com `SENTRY_DSN`)            |
 | Deploy        | Docker / Coolify                            |
 
 ## Estado do projeto
@@ -87,14 +87,15 @@ Endpoints:
 | Auth | Better Auth — email+password, passkey, roles (`imperador`, `administrador`, `tesoureiro`, `socio`) |
 | Multi-tenant | `organizationId` por linha + `OrganizationMember` N:N + org activa na sessao |
 | Core | Organizacoes, utilizadores, convites, auditoria, definicoes (nome, cor, logotipo) |
-| Membros | CRUD, foto, quota em tempo real, **import/export Excel**, **import dry-run** |
+| Membros | CRUD, foto, quota em tempo real, **import/export Excel**, **import dry-run com painel de erros** |
 | Planos | Quotas por periodicidade (mensal, trimestral, etc.) |
 | Pagamentos | Registo, recibos PDF (fila BullMQ), estado de emissao |
 | Cartoes | Layout CRC Vale, export PNG/PDF em lote, QR assinado |
 | Comunicacoes | Email em massa (fila) + **WhatsApp `wa.me`** (links por socio) |
 | Relatorios | Overview, CSV generico, **pagantes / em atraso** (PDF + Excel) |
 | Portal socio | Quotas, cartao, recibos PDF, concessao de acesso pelo admin |
-| Lembretes | Cron diario 09:00, `QuotaReminderSent`, email a vencer + atraso |
+| Lembretes | Cron diario 09:00, `QuotaReminderSent`, **emails HTML** a vencer + atraso |
+| Observabilidade | **Sentry** API + Web (so activa com `SENTRY_DSN`) |
 | Seguranca | **Rate limit** login (`/api/auth`) e validacao QR publica |
 | Branding | Logotipo na sidebar + titulo/favicon dinamicos por organizacao |
 | PWA | Instalavel no telemovel (manifest + cache de assets estaticos) |
@@ -108,7 +109,6 @@ Endpoints:
 | Redis + MinIO | `docker-compose.yml`; Redis usado em lembretes e filas |
 | BullMQ | Recibos PDF + comunicacoes + lembretes |
 | Plugins (football, padel, …) | Registados no seed; **zero codigo** de modalidade |
-| Sentry | Variavel `SENTRY_DSN`; nao integrado no runtime |
 | OAuth Google/GitHub | Variaveis no `.env.example`; opcional |
 
 ### Por fazer
@@ -118,14 +118,15 @@ Endpoints:
 | **Paridade quotas (CRC Vale)** | ✅ Planos mensal/anual, atribuicao ao socio, pagamentos, badges, relatorios, lembretes |
 | **Eventos / Documentos** | Modulos futuros — **nao estao no menu** |
 | **Testes e2e API** | ✅ Vitest HTTP (`apps/api/test/e2e`) |
-| **Testes e2e Web** | ✅ Playwright (`apps/web/e2e`) |
+| **Testes e2e Web** | ✅ Playwright — login, membros, import, public, **portal**, **pagamentos** |
 | **Migracao CRC Vale** | Aguardar 1–2 meses; manter `gestao_socios` em producao |
 | **PWA offline** | V1 so cache estatico; paginas e API precisam de rede |
+| **Domínios custom / billing** | Fora do scope MVP (ex.: `app.clubos.pt`, Stripe) |
 
 ### Proximos passos (ordem sugerida)
 
 1. **CRC Vale** — validar em paralelo; nao migrar ate o ClubOS amadurecer (1–2 meses).
-2. **Testes e2e** — fluxos criticos (login, import, portal, pagamentos). ✅ API + Playwright web
+2. **Testes e2e** — API: `crc-vale-flow`, RBAC, import. Web Playwright: login, import, **portal**, **pagamentos**. ✅
 3. **Plugins** — primeira modalidade quando houver cliente.
 4. **Quotas avancadas** *(opcional)* — dia fixo de vencimento, alerta "a vencer em X dias" (extras do Laravel).
 
@@ -144,7 +145,7 @@ Paridade com `gestao_socios` — modelo Excel de **14 colunas** (socio + linhas 
 | Em atraso PDF/Excel | `GET /api/reports/members/overdue.pdf` / `.csv` |
 
 UI em **Membros**:
-- **Importar / Exportar** — modelo, import (com **simulacao dry-run**), export completo
+- **Importar / Exportar** — modelo, simulacao dry-run com **painel de erros por linha**, import real, export completo
 - **Relatorios de quota** — pagantes e em atraso (imperador, administrador, tesoureiro)
 
 ---
@@ -303,29 +304,35 @@ Os E2E saltam automaticamente se `DATABASE_URL` nao estiver disponivel. `protect
 ```powershell
 pnpm --filter @clubos/api test:unit   # 45 testes
 pnpm --filter @clubos/api test:e2e    # 14 testes HTTP
-pnpm --filter @clubos/api test        # ambos (59 no total)
+pnpm --filter @clubos/api test        # ambos (61+ no total)
 ```
 
 ### Playwright (`apps/web/e2e/*.spec.ts`)
 
-Requer `pnpm db:seed` e `SEED_DEMO_PASSWORD` no `.env`. O `pretest:e2e` gera o fixture Excel automaticamente.
+Requer `pnpm db:seed`, `seed:users` e **Redis** (`docker compose up -d redis`) para o teste de pagamentos.
 
 | Ficheiro | Cobertura |
 |----------|-----------|
 | `login.spec.ts` | Login valido + credenciais invalidas |
 | `members.spec.ts` | Lista de socios + navegacao |
-| `import-dry-run.spec.ts` | Simulacao de import Excel |
+| `import-dry-run.spec.ts` | Simulacao de import Excel + painel de resultado |
+| `portal.spec.ts` | Portal do socio (quota, pagamentos, isolamento backoffice) |
+| `payments.spec.ts` | Registar pagamento no backoffice |
 | `public.spec.ts` | `/privacidade` e `/dpa` |
 
 ```powershell
-# Com API+Web ja a correr (pnpm dev):
-$env:E2E_SKIP_WEBSERVER="true"
-$env:E2E_USER_PASSWORD=$env:SEED_DEMO_PASSWORD
-pnpm --filter @clubos/web test:e2e
-
-# Ou deixa o Playwright arrancar API+Web (apos build):
+# Opcao A — Playwright arranca API+Web (apos build; sem pnpm dev)
 pnpm --filter @clubos/api build
 pnpm --filter @clubos/web build
+Remove-Item Env:E2E_SKIP_WEBSERVER -ErrorAction SilentlyContinue
+pnpm --filter @clubos/web test:e2e
+
+# Opcao B — Com pnpm dev (e Redis opcional) ja a correr noutro terminal
+# Recomendado para E2E: aumentar rate limit de auth no .env local
+# RATE_LIMIT_AUTH_PER_MIN=1000
+pnpm dev
+# noutro terminal:
+$env:E2E_SKIP_WEBSERVER="true"
 pnpm --filter @clubos/web test:e2e
 ```
 
@@ -393,6 +400,7 @@ Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
 - **RBAC:** endpoints do backoffice exigem role `imperador`, `administrador` ou `tesoureiro`; portal socio limitado a `/api/portal/*`.
 - **Isolamento multi-tenant:** org activa validada por membership (`OrganizationMember`) ou `Member` (socio).
 - **Health:** `GET /api/health` (liveness) e `GET /api/ready` (PostgreSQL + Redis) — publicos, sem auth.
+- **Sentry:** activo apenas com `SENTRY_DSN` (API: filtro global; Web: `@sentry/nextjs`). Sem DSN = zero impacto em dev/CI.
 
 ---
 

@@ -5,8 +5,12 @@ import { NestFactory } from '@nestjs/core';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
+import { initSentry } from './sentry';
 
 async function bootstrap() {
+  initSentry();
+
   // bodyParser desativado: o Better Auth precisa do corpo cru; a lib
   // @thallesp/nestjs-better-auth volta a adicionar os parsers para as
   // restantes rotas.
@@ -43,6 +47,10 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  if (process.env.SENTRY_DSN?.trim()) {
+    app.useGlobalFilters(new SentryExceptionFilter());
+  }
 
   const port = Number(process.env.API_PORT ?? 4000);
   await app.listen(port);

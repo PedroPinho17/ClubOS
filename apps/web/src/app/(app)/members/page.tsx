@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, FileDown, FileSpreadsheet, FileText, ImagePlus, Pencil, ShieldAlert, Trash2, UserPlus, X } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { ImportResultPanel } from '@/components/members/import-result-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -56,8 +57,10 @@ export default function MembersPage() {
   const canManage = ['imperador', 'administrador'].includes(session?.user?.role ?? '');
   const canExportReports = ['imperador', 'administrador', 'tesoureiro'].includes(session?.user?.role ?? '');
   const importInputRef = useRef<HTMLInputElement>(null);
+  const pendingImportFileRef = useRef<File | null>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
   const [importDryRun, setImportDryRun] = useState(false);
+  const [importResult, setImportResult] = useState<MemberImportResult | null>(null);
   const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -140,26 +143,31 @@ export default function MembersPage() {
   });
 
   const importMembers = useMutation({
-    mutationFn: (file: File) =>
+    mutationFn: ({ file, dryRun }: { file: File; dryRun: boolean }) =>
       uploadFile<MemberImportResult>('/members/import', file, {
         updateExisting: updateExisting ? 'true' : 'false',
-        dryRun: importDryRun ? 'true' : 'false',
+        dryRun: dryRun ? 'true' : 'false',
       }),
     onSuccess: (res) => {
-      if (!res.dryRun) invalidate();
-      const errLines =
-        res.errors.length > 0
-          ? `\n\nErros (${res.errors.length}):\n${res.errors
-              .slice(0, 8)
-              .map((e) => `Linha ${e.row}: ${e.message}`)
-              .join('\n')}${res.errors.length > 8 ? '\n...' : ''}`
-          : '';
-      alert(
-        `${res.dryRun ? 'Simulação (dry-run)' : 'Importação concluída'}.\nCriados: ${res.created}\nAtualizados: ${res.updated}\nPagamentos: ${res.payments}\nIgnorados: ${res.skipped}${errLines}`,
-      );
+      if (!res.dryRun) {
+        invalidate();
+        pendingImportFileRef.current = null;
+      }
+      setImportResult(res);
     },
     onError: (err: Error) => alert(err.message),
   });
+
+  function runImport(file: File, dryRun: boolean) {
+    pendingImportFileRef.current = file;
+    importMembers.mutate({ file, dryRun });
+  }
+
+  function confirmRealImport() {
+    const file = pendingImportFileRef.current;
+    if (!file) return;
+    importMembers.mutate({ file, dryRun: false });
+  }
 
   const gdprErase = useMutation({
     mutationFn: (memberId: string) => api.post(`/members/${memberId}/gdpr-erase`, { confirm: true }),
@@ -316,7 +324,7 @@ export default function MembersPage() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) importMembers.mutate(file);
+                if (file) runImport(file, importDryRun);
                 e.target.value = '';
               }}
             />
@@ -338,6 +346,22 @@ export default function MembersPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {importResult && (
+        <div className="mb-6">
+          <ImportResultPanel
+            result={importResult}
+            isConfirming={importMembers.isPending}
+            onDismiss={() => {
+              setImportResult(null);
+              pendingImportFileRef.current = null;
+            }}
+            onConfirmImport={
+              importResult.dryRun && pendingImportFileRef.current ? confirmRealImport : undefined
+            }
+          />
+        </div>
       )}
 
       {editingId && (

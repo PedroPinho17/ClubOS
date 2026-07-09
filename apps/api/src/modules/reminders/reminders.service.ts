@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OrganizationStatus, PaymentStatus, QuotaReminderKind } from '@clubos/database';
 import { pingQuotaRemindersHealthcheck } from '../../common/healthcheck';
 import { MailService } from '../../core/mail/mail.service';
+import { quotaDueSoonEmail } from '../../core/mail/templates/quota-due-soon';
+import { quotaOverdueEmail } from '../../core/mail/templates/quota-overdue';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeQuotaSituation } from '../members/quota.util';
 import {
@@ -43,7 +45,10 @@ export class RemindersService {
   }
 
   async runForOrganization(organizationId: string): Promise<ReminderRunResult> {
-    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true, name: true, primaryColor: true },
+    });
     if (!org) {
       return emptyResult(organizationId, '—', ['Organizacao nao encontrada.']);
     }
@@ -119,16 +124,30 @@ export class RemindersService {
           ? `A sua quota em ${org.name} vence em ${days} dia(s).\nData de vencimento: ${dueLabel}`
           : `A sua quota em ${org.name} encontra-se em atraso há ${days} dia(s).\nVencimento: ${dueLabel}`;
 
+      const branding = { name: org.name, primaryColor: org.primaryColor };
+      const rendered =
+        kind === QuotaReminderKind.DUE_SOON
+          ? quotaDueSoonEmail({
+              branding,
+              memberName: member.name,
+              days,
+              dueDate: dueLabel,
+              portalUrl: `${origin}/portal`,
+            })
+          : quotaOverdueEmail({
+              branding,
+              memberName: member.name,
+              days,
+              dueDate: dueLabel,
+              portalUrl: `${origin}/portal`,
+            });
+
       try {
         await this.mail.send({
           to: email,
           subject,
-          text:
-            `Ola ${member.name},\n\n` +
-            `${bodyIntro}\n\n` +
-            `Por favor regularize a situacao o mais breve possivel.\n` +
-            `Portal do socio: ${origin}/portal\n\n` +
-            `Com os melhores cumprimentos,\n${org.name}`,
+          text: `Ola ${member.name},\n\n${bodyIntro}\n\n${rendered.text}`,
+          html: rendered.html,
         });
 
         await this.prisma.quotaReminderSent.create({

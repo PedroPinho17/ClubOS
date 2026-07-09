@@ -3,6 +3,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PaymentStatus } from '@clubos/database';
 import { auth } from '../../auth/auth';
 import { MailService } from '../../core/mail/mail.service';
+import { portalAccessEmail } from '../../core/mail/templates/portal-access';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CardsService } from '../cards/cards.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -78,6 +79,12 @@ export class PortalService {
     if (!member.email) throw new BadRequestException('O socio nao tem email definido.');
     if (member.userId) throw new BadRequestException('Este socio ja tem acesso ao portal.');
 
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true, primaryColor: true },
+    });
+    if (!org) throw new NotFoundException('Organizacao nao encontrada.');
+
     const tempPassword = `Cv${randomBytes(6).toString('base64url')}!9`;
 
     let user = await this.prisma.user.findUnique({ where: { email: member.email } });
@@ -96,16 +103,18 @@ export class PortalService {
     await this.prisma.member.update({ where: { id: member.id }, data: { userId: user.id } });
 
     const origin = (process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(',')[0].trim();
+    const rendered = portalAccessEmail({
+      branding: { name: org.name, primaryColor: org.primaryColor },
+      memberName: member.name,
+      email: member.email,
+      tempPassword,
+      loginUrl: `${origin}/login`,
+    });
     await this.mail.send({
       to: member.email,
       subject: 'Acesso ao Portal do Sócio',
-      text:
-        `Ola ${member.name},\n\n` +
-        `A sua conta de acesso ao Portal do Socio foi criada.\n\n` +
-        `Email: ${member.email}\n` +
-        `Password temporaria: ${tempPassword}\n\n` +
-        `Aceda em: ${origin}/login\n\n` +
-        `Recomendamos que altere a password apos o primeiro acesso.`,
+      text: rendered.text,
+      html: rendered.html,
     });
 
     return { email: member.email, tempPassword };

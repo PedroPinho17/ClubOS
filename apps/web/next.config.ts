@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 /**
  * Standalone gera symlinks em `.next/standalone` (necessario para Docker).
@@ -14,4 +15,12 @@ const nextConfig: NextConfig = {
   ...(useStandalone ? { output: 'standalone' as const } : {}),
 };
 
-export default nextConfig;
+const sentryEnabled = Boolean(process.env.SENTRY_DSN?.trim() || process.env.NEXT_PUBLIC_SENTRY_DSN?.trim());
+
+export default sentryEnabled
+  ? withSentryConfig(nextConfig, {
+      silent: true,
+      disableLogger: true,
+      widenClientFileUpload: false,
+    })
+  : nextConfig;

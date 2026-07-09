@@ -20,17 +20,3 @@ export function getActiveOrganizationId(request: {
   }
   throw new ForbiddenException('Contexto de organizacao em falta.');
 }
-
-/**
- * @deprecated Usar OrganizationContextService + OrganizationContextGuard.
- * Mantido para compatibilidade pontual.
- */
-export function resolveOrganizationId(
-  _user: AuthUser | undefined,
-  headerOrgId: string | undefined,
-): string {
-  if (!headerOrgId) {
-    throw new ForbiddenException('Contexto de organizacao em falta.');
-  }
-  return headerOrgId;
-}

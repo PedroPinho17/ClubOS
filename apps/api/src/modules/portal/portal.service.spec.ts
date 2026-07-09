@@ -62,6 +62,7 @@ describe('PortalService', () => {
     member: { findFirst: vi.fn(), update: vi.fn() },
     payment: { findFirst: vi.fn() },
     user: { findUnique: vi.fn(), update: vi.fn() },
+    organization: { findUnique: vi.fn() },
     organizationSetting: { findMany: vi.fn().mockResolvedValue([]) },
   };
   const cards = { getCardData: vi.fn() };
@@ -149,6 +150,11 @@ describe('PortalService', () => {
 
     it('cria conta, associa socio e envia email', async () => {
       prisma.member.findFirst.mockResolvedValue(memberWithoutAccess);
+      prisma.organization.findUnique.mockResolvedValue({
+        name: 'CRC Vale',
+        primaryColor: '#1d4ed8',
+        logoUrl: null,
+      });
       prisma.user.findUnique
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({ id: 'user-new', email: 'joao@clube.pt' });
@@ -163,7 +169,11 @@ describe('PortalService', () => {
         data: { userId: 'user-new' },
       });
       expect(mail.send).toHaveBeenCalledWith(
-        expect.objectContaining({ to: 'joao@clube.pt', subject: 'Acesso ao Portal do Sócio' }),
+        expect.objectContaining({
+          to: 'joao@clube.pt',
+          subject: 'Acesso ao Portal do Sócio',
+          html: expect.stringContaining('joao@clube.pt'),
+        }),
       );
     });
 

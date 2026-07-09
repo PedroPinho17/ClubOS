@@ -1,5 +1,7 @@
 import '../env';
+import { randomUUID } from 'node:crypto';
 import { prisma } from '@clubos/database';
+import { hashPassword } from 'better-auth/crypto';
 import { auth } from '../auth/auth';
 
 function requireSeedPassword(): string {
@@ -17,6 +19,26 @@ async function ensureMembership(userId: string, organizationId: string, orgRole:
     where: { userId_organizationId: { userId, organizationId } },
     update: { orgRole },
     create: { userId, organizationId, orgRole },
+  });
+}
+
+async function syncCredentialPassword(userId: string, email: string, password: string) {
+  const hashed = await hashPassword(password);
+  const account = await prisma.account.findFirst({
+    where: { userId, providerId: 'credential' },
+  });
+  if (account) {
+    await prisma.account.update({ where: { id: account.id }, data: { password: hashed } });
+    return;
+  }
+  await prisma.account.create({
+    data: {
+      id: randomUUID(),
+      accountId: email,
+      providerId: 'credential',
+      userId,
+      password: hashed,
+    },
   });
 }
 
@@ -48,6 +70,9 @@ async function ensureUser(opts: {
 
   const user = await prisma.user.findUnique({ where: { email: opts.email } });
   if (!user) return;
+
+  // Sincroniza password demo em contas ja existentes (re-seed seguro).
+  await syncCredentialPassword(user.id, opts.email, opts.password);
 
   for (const m of opts.memberships ?? []) {
     await ensureMembership(user.id, m.organizationId, m.orgRole);
