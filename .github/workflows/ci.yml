@@ -68,7 +68,7 @@ jobs:
       - name: Build Database package
         run: pnpm --filter @clubos/database build
 
-      - name: Push database schema
+      - name: Deploy database migrations
         run: pnpm db:deploy
 
       - name: Seed database
