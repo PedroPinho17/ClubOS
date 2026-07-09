@@ -1,3 +1,8 @@
+/**
+ * @module ImportRowValidator
+ * Funcoes puras de validacao e mapeamento de linhas Excel de importacao de socios.
+ * Sem acesso a base de dados — facil de testar unitariamente.
+ */
 import { MemberStatus, type QuotaPlan } from '@clubos/database';
 import { MEMBER_FIELDS } from './member-import-column-map';
 import {

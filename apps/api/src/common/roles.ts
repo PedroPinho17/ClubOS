@@ -1,3 +1,9 @@
+/**
+ * @module Roles
+ * Constantes de roles da plataforma ClubOS.
+ * Usar com `@StaffOnly()`, `@AdminOnly()`, etc. em vez de arrays inline.
+ */
+
 /** Staff do backoffice (exclui socio do portal). */
 export const STAFF_ROLES = ['imperador', 'administrador', 'tesoureiro'] as const;
 

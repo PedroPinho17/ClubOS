@@ -2,5 +2,8 @@ import { SetMetadata } from '@nestjs/common';
 
 export const NO_ORG_CONTEXT_KEY = 'noOrgContext';
 
-/** Rota autenticada que nao exige tenant activo (ex.: listar orgs do utilizador). */
+/**
+ * Marca rota autenticada que **nao** exige tenant activo resolvido.
+ * Ex.: listar orgs do utilizador (`/api/me/organizations`).
+ */
 export const NoOrgContext = () => SetMetadata(NO_ORG_CONTEXT_KEY, true);

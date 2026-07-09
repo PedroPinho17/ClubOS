@@ -1,3 +1,8 @@
+/**
+ * @module Decorators
+ * Decorators NestJS partilhados: `@OrgId`, `@CurrentUser`, `@RequireModule`
+ * e re-exports de shortcuts RBAC e `@NoOrgContext`.
+ */
 import {
   createParamDecorator,
   ExecutionContext,
@@ -16,10 +21,18 @@ export {
 } from './decorators/roles-shortcuts';
 
 export const REQUIRED_MODULE_KEY = 'requiredModule';
-/** Exige que o modulo esteja ativo na organizacao atual (ex.: 'members'). */
+
+/**
+ * Exige que o modulo esteja activo na organizacao actual.
+ * Combinar com `ModuleGuard` no controller.
+ *
+ * @param slug - Slug do modulo (ex.: `'members'`, `'payments'`)
+ */
 export const RequireModule = (slug: string) => SetMetadata(REQUIRED_MODULE_KEY, slug);
 
-/** Injeta o utilizador autenticado (Better Auth). */
+/**
+ * Injeta o utilizador autenticado (Better Auth) a partir de `req.user`.
+ */
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthUser => {
     const request = ctx.switchToHttp().getRequest<Request>();
@@ -27,7 +40,11 @@ export const CurrentUser = createParamDecorator(
   },
 );
 
-/** Injeta o organizationId do contexto (tenant atual). */
+/**
+ * Injeta o `organizationId` do tenant actual (ja validado pelo guard).
+ *
+ * @throws {ForbiddenException} Se o contexto de org nao foi resolvido
+ */
 export const OrgId = createParamDecorator((_data: unknown, ctx: ExecutionContext): string => {
   const request = ctx.switchToHttp().getRequest<Request>();
   return getActiveOrganizationId(request);

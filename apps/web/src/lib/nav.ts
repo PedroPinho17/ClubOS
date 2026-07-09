@@ -1,3 +1,7 @@
+/**
+ * @module Nav
+ * Itens de navegacao do backoffice, filtrados por modulos activos e role.
+ */
 import {
   BarChart3,
   ClipboardList,

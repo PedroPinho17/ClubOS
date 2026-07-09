@@ -1,3 +1,7 @@
+/**
+ * @module UseRequireAuth
+ * Hook de protecao de rotas no frontend. Espera sessao valida antes de renderizar.
+ */
 'use client';
 
 import { useRouter } from 'next/navigation';

@@ -1,3 +1,9 @@
+/**
+ * @module OrganizationContextService
+ * Resolve e valida a organizacao activa (tenant) por pedido HTTP.
+ *
+ * @see {@link OrganizationContextGuard} Aplica esta logica globalmente
+ */
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,7 +26,12 @@ function parseCookies(header: string | undefined): Record<string, string> {
 export class OrganizationContextService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Lista memberships do utilizador (staff/imperador). Socios usam Member. */
+  /**
+   * Lista IDs de organizacoes onde o utilizador tem membership (staff).
+   *
+   * @param userId - ID do utilizador Better Auth
+   * @returns IDs ordenados por data de criacao da membership
+   */
   async listMembershipOrganizationIds(userId: string): Promise<string[]> {
     const rows = await this.prisma.organizationMember.findMany({
       where: { userId },
@@ -30,7 +41,16 @@ export class OrganizationContextService {
     return rows.map((r) => r.organizationId);
   }
 
-  /** Resolve org activa validando membership (ou Member para socios). */
+  /**
+   * Resolve a organizacao activa para o pedido actual.
+   *
+   * Prioridade: header `x-organization-id` → cookie → sessao → primeira membership.
+   * Socios (`role: socio`) usam o `Member` ligado ao user.
+   *
+   * @param request - Pedido Express com `user` autenticado
+   * @returns ID da organizacao activa validada
+   * @throws {ForbiddenException} Sem auth, sem membership ou org nao autorizada
+   */
   async resolveActiveOrganizationId(request: Request): Promise<string> {
     const user = request.user as AuthUser | undefined;
     if (!user?.id) {

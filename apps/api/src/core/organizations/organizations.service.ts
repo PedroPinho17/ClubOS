@@ -1,3 +1,7 @@
+/**
+ * @module OrganizationsService
+ * Perfil, branding e settings da organizacao activa; listagem/criacao (imperador).
+ */
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { OrganizationPlan, OrganizationStatus } from '@clubos/database';
 import { PrismaService } from '../../prisma/prisma.service';

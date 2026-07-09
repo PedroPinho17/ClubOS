@@ -1,3 +1,8 @@
+/**
+ * @module MembersService
+ * CRUD de socios, fotos e calculo de situacao de quota por organizacao.
+ * Import/export Excel delegado a `MemberImportService` / `MemberExportService`.
+ */
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PaymentStatus } from '@clubos/database';
 import { PrismaService } from '../../prisma/prisma.service';

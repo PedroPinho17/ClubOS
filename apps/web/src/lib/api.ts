@@ -1,3 +1,9 @@
+/**
+ * @module ApiClient
+ * Cliente HTTP para a API NestJS. Envia cookies de sessao e header de org activa.
+ *
+ * @see {@link ../../../docs/FRONTEND.md} Documentacao do frontend
+ */
 import { orgRequestHeaders } from './org-context';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';

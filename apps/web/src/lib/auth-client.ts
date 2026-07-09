@@ -1,3 +1,8 @@
+/**
+ * @module AuthClient
+ * Cliente Better Auth para o browser (sessao, login, passkeys).
+ * Base URL: `{NEXT_PUBLIC_API_URL}/api/auth`
+ */
 import { createAuthClient } from 'better-auth/react';
 import { adminClient } from 'better-auth/client/plugins';
 import { passkeyClient } from '@better-auth/passkey/client';

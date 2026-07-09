@@ -1,3 +1,10 @@
+/**
+ * @module Database
+ * Cliente Prisma partilhado (`@clubos/database`).
+ * Re-exporta todos os tipos gerados a partir de `schema.prisma`.
+ *
+ * @see {@link ../docs/BASE-DE-DADOS.md} Modelos e relacoes
+ */
 import { PrismaClient } from '@prisma/client';
 
 export * from '@prisma/client';

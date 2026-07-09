@@ -2,6 +2,8 @@
 
 Plataforma **SaaS modular multi-tenant** para gestao de organizacoes (clubes, academias, associacoes, escolas). Uma unica aplicacao e base de dados servem todos os clientes; cada cliente e uma **Organization** (tenant). As funcionalidades sao entregues como **modulos** que se ativam por organizacao.
 
+> **Documentacao para desenvolvedores:** [docs/README.md](docs/README.md) — arquitectura, API, frontend, base de dados, auth/RBAC e convencoes (estilo Javadoc/TSDoc).
+
 Sucessor do projeto `gestao_socios` (Laravel/Filament), reconstruido com uma stack moderna e escalavel.
 
 ## Arquitetura

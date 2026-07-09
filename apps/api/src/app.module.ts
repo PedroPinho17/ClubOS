@@ -1,3 +1,11 @@
+/**
+ * @module AppModule
+ * Modulo raiz da API NestJS. Regista infra (Prisma, Redis, S3, mail),
+ * Better Auth, contexto de organizacao, core da plataforma e modulos de negocio.
+ *
+ * @see {@link ../docs/ARQUITETURA.md} Visao geral da arquitectura
+ * @see {@link ../docs/API-BACKEND.md} Lista de modulos e endpoints
+ */
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';

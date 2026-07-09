@@ -1,3 +1,10 @@
+/**
+ * @module MemberImportService
+ * Orquestrador de importacao Excel de socios e pagamentos.
+ * Delega validacao, upsert e dry-run aos servicos em `import/`.
+ *
+ * @see {@link ../../../docs/API-BACKEND.md#members--members} Endpoints de import
+ */
 import { Injectable } from '@nestjs/common';
 import type { Member } from '@clubos/database';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -29,6 +36,15 @@ export class MemberImportService {
     private readonly dryRun: ImportDryRunService,
   ) {}
 
+  /**
+   * Importa socios e pagamentos a partir de um ficheiro Excel (.xlsx).
+   *
+   * @param organizationId - Tenant destino (ja validado pelo guard)
+   * @param buffer - Conteudo do ficheiro (max 10 MB)
+   * @param updateExisting - Se true, actualiza socios existentes pelo numero
+   * @param dryRun - Se true, simula sem gravar na BD
+   * @returns Contadores e lista de erros por linha Excel
+   */
   async importFromBuffer(
     organizationId: string,
     buffer: Buffer,
