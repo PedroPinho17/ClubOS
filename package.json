@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "next dev --turbopack -p 3000",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
