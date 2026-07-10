@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import {
   Download,
   FileDown,
@@ -14,7 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImportResultPanel } from "@/components/members/import-result-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +28,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { api, downloadBlob, downloadJson, uploadFile } from "@/lib/api";
 import { formatDateInput, todayDateInput } from "@/lib/date-input";
+import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type {
@@ -111,6 +117,7 @@ export default function MembersPage() {
   const [importResult, setImportResult] = useState<MemberImportResult | null>(
     null,
   );
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [name, setName] = useState("");
@@ -127,7 +134,20 @@ export default function MembersPage() {
   const membersKey = useTenantQueryKey(["members", search, page]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
 
-  const { data: membersPage, isLoading } = useQuery<PaginatedResult<Member>>({
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  const {
+    data: membersPage,
+    isPending,
+    isFetching,
+    isPlaceholderData,
+  } = useQuery<PaginatedResult<Member>>({
     queryKey: membersKey,
     queryFn: () => {
       const params = new URLSearchParams({
@@ -137,9 +157,12 @@ export default function MembersPage() {
       if (search) params.set("search", search);
       return api.get<PaginatedResult<Member>>(`/members?${params}`);
     },
+    placeholderData: keepPreviousData,
   });
 
-  const members = membersPage?.items;
+  const members = membersPage?.items ?? [];
+  const isInitialLoad = isPending && !membersPage;
+  const isPageTransition = isFetching && isPlaceholderData;
 
   const { data: plans } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
@@ -661,7 +684,7 @@ export default function MembersPage() {
                       size="sm"
                       disabled={gdprErase.isPending}
                       onClick={() => {
-                        const m = members?.find((x) => x.id === editingId);
+                        const m = members.find((x) => x.id === editingId);
                         if (m) confirmGdprErase(m);
                       }}
                     >
@@ -746,24 +769,22 @@ export default function MembersPage() {
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="max-w-sm flex-1">
           <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Pesquisar membros..."
           />
         </div>
         {membersPage && membersPage.total > 0 && (
           <p className="text-sm text-muted-foreground">
             {membersPage.total} membro{membersPage.total !== 1 ? "s" : ""}
+            {isPageTransition ? " · A actualizar..." : ""}
           </p>
         )}
       </div>
 
       <Card>
         <CardContent className="p-0">
-          {!isLoading && membersPage?.total === 0 && !search ? (
+          {!isInitialLoad && membersPage?.total === 0 && !search ? (
             <EmptyState
               icon={Users}
               title="Ainda não há sócios nesta organização"
@@ -788,7 +809,12 @@ export default function MembersPage() {
               ]}
             />
           ) : (
-            <div className="overflow-x-auto">
+            <div
+              className={cn(
+                "overflow-x-auto transition-opacity",
+                isPageTransition && "pointer-events-none opacity-60",
+              )}
+            >
               <table className="w-full min-w-[720px] text-sm">
                 <thead className="border-b bg-muted/50">
                   <tr className="text-left">
@@ -803,7 +829,7 @@ export default function MembersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoading ? (
+                  {isInitialLoad ? (
                     <tr>
                       <td
                         colSpan={8}
@@ -812,7 +838,7 @@ export default function MembersPage() {
                         A carregar...
                       </td>
                     </tr>
-                  ) : members && members.length > 0 ? (
+                  ) : members.length > 0 ? (
                     members.map((m) => (
                       <tr
                         key={m.id}
@@ -975,7 +1001,7 @@ export default function MembersPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={page <= 1}
+              disabled={page <= 1 || isPageTransition}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
               Anterior
@@ -983,10 +1009,10 @@ export default function MembersPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= membersPage.totalPages}
+              disabled={page >= membersPage.totalPages || isPageTransition}
               onClick={() => setPage((p) => p + 1)}
             >
-              Seguinte
+              {isPageTransition ? "A carregar..." : "Seguinte"}
             </Button>
           </div>
         </div>

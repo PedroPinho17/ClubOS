@@ -39,96 +39,97 @@ Base de dados unica, schema unico, isolamento por linha via `organizationId` em 
 
 Um utilizador staff pode pertencer a **varias organizacoes** via tabela `OrganizationMember` (N:N). A organizacao em que trabalha e a **organizacao activa**, guardada na sessao (`Session.activeOrganizationId`) e cookie `clubos_active_org`, validada em cada pedido API.
 
-| Cenario | Comportamento |
-|---------|---------------|
-| Imperador com 2+ orgs | Selector na sidebar; so ve orgs com membership |
-| Org partilhada (2 imperadores) | Cada um tem `OrganizationMember` na mesma org |
-| Admin / tesoureiro | Normalmente 1 membership; sem selector |
-| Socio (portal) | Org implicita via `Member.userId` |
+| Cenario                        | Comportamento                                  |
+| ------------------------------ | ---------------------------------------------- |
+| Imperador com 2+ orgs          | Selector na sidebar; so ve orgs com membership |
+| Org partilhada (2 imperadores) | Cada um tem `OrganizationMember` na mesma org  |
+| Admin / tesoureiro             | Normalmente 1 membership; sem selector         |
+| Socio (portal)                 | Org implicita via `Member.userId`              |
 
 Endpoints:
+
 - `GET /api/me/organizations` — orgs do utilizador
 - `POST /api/me/active-organization` — troca org activa
 - `POST /api/organizations` — criar org (imperador) + memberships
 
 ## Stack
 
-| Camada        | Tecnologia                                  |
-| ------------- | ------------------------------------------- |
-| Frontend      | Next.js 15 + React 19 + shadcn/ui + Tailwind |
-| Data fetching | TanStack Query                              |
-| Backend       | NestJS 11 (modular)                         |
-| ORM / BD      | **Prisma + PostgreSQL**                     |
-| Cache/filas   | Redis + BullMQ *(preparado)*                |
-| Ficheiros     | S3 / MinIO *(em uso: logotipos, fotos)*     |
-| Auth          | **Better Auth** (email+password, passkey/WebAuthn, roles/admin) |
-| PWA           | Manifest Next.js + service worker (`/sw.js`) |
-| Testes        | Vitest (API, unitarios)                     |
-| Observabilidade | Sentry (activo com `SENTRY_DSN`)            |
-| Deploy        | Docker / Coolify                            |
+| Camada          | Tecnologia                                                      |
+| --------------- | --------------------------------------------------------------- |
+| Frontend        | Next.js 15 + React 19 + shadcn/ui + Tailwind                    |
+| Data fetching   | TanStack Query                                                  |
+| Backend         | NestJS 11 (modular)                                             |
+| ORM / BD        | **Prisma + PostgreSQL**                                         |
+| Cache/filas     | Redis + BullMQ _(preparado)_                                    |
+| Ficheiros       | S3 / MinIO _(em uso: logotipos, fotos)_                         |
+| Auth            | **Better Auth** (email+password, passkey/WebAuthn, roles/admin) |
+| PWA             | Manifest Next.js + service worker (`/sw.js`)                    |
+| Testes          | Vitest (API, unitarios)                                         |
+| Observabilidade | Sentry (activo com `SENTRY_DSN`)                                |
+| Deploy          | Docker / Coolify                                                |
 
 ## Estado do projeto
 
 ### Checklist (ordem sugerida inicial)
 
-| # | Tarefa | Estado |
-|---|--------|--------|
-| 1 | Actualizar README (Postgres, Better Auth, feito vs preparado, sem passwords) | ✅ |
-| 2 | Testes (unit + E2E auth API) | ✅ ver secao Testes |
-| 3 | Import Excel (paridade `gestao_socios`) | ✅ |
-| 4 | Limpar nav (`/events`, `/documents`, `/football`) | ✅ |
-| 5 | Paridade quotas (CRC Vale: plano + pagamentos + situacao) | ✅ suficiente para o Vale |
-| 6 | Nao migrar CRC Vale ainda (1–2 meses em paralelo) | ⏳ decisao de produto |
+| #   | Tarefa                                                                       | Estado                    |
+| --- | ---------------------------------------------------------------------------- | ------------------------- |
+| 1   | Actualizar README (Postgres, Better Auth, feito vs preparado, sem passwords) | ✅                        |
+| 2   | Testes (unit + E2E auth API)                                                 | ✅ ver secao Testes       |
+| 3   | Import Excel (paridade `gestao_socios`)                                      | ✅                        |
+| 4   | Limpar nav (`/events`, `/documents`, `/football`)                            | ✅                        |
+| 5   | Paridade quotas (CRC Vale: plano + pagamentos + situacao)                    | ✅ suficiente para o Vale |
+| 6   | Nao migrar CRC Vale ainda (1–2 meses em paralelo)                            | ⏳ decisao de produto     |
 
 ### Implementado (MVP V1)
 
-| Area | Funcionalidade |
-|------|----------------|
-| Auth | Better Auth — email+password, passkey, roles (`imperador`, `administrador`, `tesoureiro`, `socio`) |
-| Multi-tenant | `organizationId` por linha + `OrganizationMember` N:N + org activa na sessao |
-| Core | Organizacoes, utilizadores, convites, auditoria, definicoes (nome, cor, logotipo) |
-| Membros | CRUD, foto, quota em tempo real, **import/export Excel**, **import dry-run com painel de erros** |
-| Planos | Quotas por periodicidade (mensal, trimestral, etc.) |
-| Pagamentos | Registo, recibos PDF (fila BullMQ), estado de emissao |
-| Cartoes | Layout CRC Vale, export PNG/PDF em lote, QR assinado |
-| Comunicacoes | Email em massa (fila) + **WhatsApp `wa.me`** (links por socio) |
-| Relatorios | Overview, CSV generico, **pagantes / em atraso** (PDF + Excel) |
-| Portal socio | Quotas, cartao, recibos PDF, concessao de acesso pelo admin |
-| Lembretes | Cron diario 09:00, `QuotaReminderSent`, **emails HTML** a vencer + atraso |
-| Observabilidade | **Sentry** API + Web (so activa com `SENTRY_DSN`) |
-| Seguranca | **Rate limit** login (`/api/auth`) e validacao QR publica |
-| Branding | Logotipo na sidebar + titulo/favicon dinamicos por organizacao |
-| PWA | Instalavel no telemovel (manifest + cache de assets estaticos) |
-| Nav | Apenas rotas com paginas reais (`apps/web/src/lib/nav.ts`) |
-| Deploy | `Dockerfile.api`, `Dockerfile.web`, `docker-compose.prod.yml` |
+| Area            | Funcionalidade                                                                                     |
+| --------------- | -------------------------------------------------------------------------------------------------- |
+| Auth            | Better Auth — email+password, passkey, roles (`imperador`, `administrador`, `tesoureiro`, `socio`) |
+| Multi-tenant    | `organizationId` por linha + `OrganizationMember` N:N + org activa na sessao                       |
+| Core            | Organizacoes, utilizadores, convites, auditoria, definicoes (nome, cor, logotipo)                  |
+| Membros         | CRUD, foto, quota em tempo real, **import/export Excel**, **import dry-run com painel de erros**   |
+| Planos          | Quotas por periodicidade (mensal, trimestral, etc.)                                                |
+| Pagamentos      | Registo, recibos PDF (fila BullMQ), estado de emissao                                              |
+| Cartoes         | Layout CRC Vale, export PNG/PDF em lote, QR assinado                                               |
+| Comunicacoes    | Email em massa (fila) + **WhatsApp `wa.me`** (links por socio)                                     |
+| Relatorios      | Overview, CSV generico, **pagantes / em atraso** (PDF + Excel)                                     |
+| Portal socio    | Quotas, cartao, recibos PDF, concessao de acesso pelo admin                                        |
+| Lembretes       | Cron diario 09:00, `QuotaReminderSent`, **emails HTML** a vencer + atraso                          |
+| Observabilidade | **Sentry** API + Web (so activa com `SENTRY_DSN`)                                                  |
+| Seguranca       | **Rate limit** login (`/api/auth`) e validacao QR publica                                          |
+| Branding        | Logotipo na sidebar + titulo/favicon dinamicos por organizacao                                     |
+| PWA             | Instalavel no telemovel (manifest + cache de assets estaticos)                                     |
+| Nav             | Apenas rotas com paginas reais (`apps/web/src/lib/nav.ts`)                                         |
+| Deploy          | `Dockerfile.api`, `Dockerfile.web`, `docker-compose.prod.yml`                                      |
 
 ### Preparado (infra / catalogo, sem UI ou logica completa)
 
-| Area | Estado |
-|------|--------|
-| Redis + MinIO | `docker-compose.yml`; Redis usado em lembretes e filas |
-| BullMQ | Recibos PDF + comunicacoes + lembretes |
-| Plugins (football, padel, …) | Registados no seed; **zero codigo** de modalidade |
-| OAuth Google/GitHub | Variaveis no `.env.example`; opcional |
+| Area                         | Estado                                                 |
+| ---------------------------- | ------------------------------------------------------ |
+| Redis + MinIO                | `docker-compose.yml`; Redis usado em lembretes e filas |
+| BullMQ                       | Recibos PDF + comunicacoes + lembretes                 |
+| Plugins (football, padel, …) | Registados no seed; **zero codigo** de modalidade      |
+| OAuth Google/GitHub          | Variaveis no `.env.example`; opcional                  |
 
 ### Por fazer
 
-| Funcionalidade | Notas |
-|----------------|-------|
+| Funcionalidade                 | Notas                                                                                  |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
 | **Paridade quotas (CRC Vale)** | ✅ Planos mensal/anual, atribuicao ao socio, pagamentos, badges, relatorios, lembretes |
-| **Eventos / Documentos** | Modulos futuros — **nao estao no menu** |
-| **Testes e2e API** | ✅ Vitest HTTP (`apps/api/test/e2e`) |
-| **Testes e2e Web** | ✅ Playwright — login, membros, import, public, **portal**, **pagamentos** |
-| **Migracao CRC Vale** | Aguardar 1–2 meses; manter `gestao_socios` em producao |
-| **PWA offline** | V1 so cache estatico; paginas e API precisam de rede |
-| **Domínios custom / billing** | Fora do scope MVP (ex.: `app.clubos.pt`, Stripe) |
+| **Eventos / Documentos**       | Modulos futuros — **nao estao no menu**                                                |
+| **Testes e2e API**             | ✅ Vitest HTTP (`apps/api/test/e2e`)                                                   |
+| **Testes e2e Web**             | ✅ Playwright — login, membros, import, public, **portal**, **pagamentos**             |
+| **Migracao CRC Vale**          | Aguardar 1–2 meses; manter `gestao_socios` em producao                                 |
+| **PWA offline**                | V1 so cache estatico; paginas e API precisam de rede                                   |
+| **Domínios custom / billing**  | Fora do scope MVP (ex.: `app.clubos.pt`, Stripe)                                       |
 
 ### Proximos passos (ordem sugerida)
 
 1. **CRC Vale** — validar em paralelo; nao migrar ate o ClubOS amadurecer (1–2 meses).
 2. **Testes e2e** — API: `crc-vale-flow`, RBAC, import. Web Playwright: login, import, **portal**, **pagamentos**. ✅
 3. **Plugins** — primeira modalidade quando houver cliente.
-4. **Quotas avancadas** *(opcional)* — dia fixo de vencimento, alerta "a vencer em X dias" (extras do Laravel).
+4. **Quotas avancadas** _(opcional)_ — dia fixo de vencimento, alerta "a vencer em X dias" (extras do Laravel).
 
 ---
 
@@ -136,15 +137,16 @@ Endpoints:
 
 Paridade com `gestao_socios` — modelo Excel de **14 colunas** (socio + linhas de pagamento).
 
-| Accao | Endpoint / UI |
-|-------|----------------|
-| Modelo importacao | `GET /api/members/import/template` |
-| Importar | `POST /api/members/import` (multipart: `file`, `updateExisting`, `dryRun`) |
-| Exportar todos | `GET /api/members/export` → `socios_YYYY-MM-DD.xlsx` |
-| Pagantes PDF/Excel | `GET /api/reports/members/paying.pdf` / `.csv` |
-| Em atraso PDF/Excel | `GET /api/reports/members/overdue.pdf` / `.csv` |
+| Accao               | Endpoint / UI                                                              |
+| ------------------- | -------------------------------------------------------------------------- |
+| Modelo importacao   | `GET /api/members/import/template`                                         |
+| Importar            | `POST /api/members/import` (multipart: `file`, `updateExisting`, `dryRun`) |
+| Exportar todos      | `GET /api/members/export` → `socios_YYYY-MM-DD.xlsx`                       |
+| Pagantes PDF/Excel  | `GET /api/reports/members/paying.pdf` / `.csv`                             |
+| Em atraso PDF/Excel | `GET /api/reports/members/overdue.pdf` / `.csv`                            |
 
 UI em **Membros**:
+
 - **Importar / Exportar** — modelo, simulacao dry-run com **painel de erros por linha**, import real, export completo
 - **Relatorios de quota** — pagantes e em atraso (imperador, administrador, tesoureiro)
 
@@ -156,30 +158,30 @@ Paridade com `gestao_socios` — **nao envia WhatsApp automaticamente**; gera li
 
 ### De onde vêm os numeros
 
-| Origem | Campo ClubOS | Coluna Excel import |
-|--------|--------------|---------------------|
-| Ficha do socio | `Member.phone` | **Telefone** |
-| Normalizacao | 9 digitos PT → prefixo `351` | Igual ao Laravel |
-| Link | `https://wa.me/{digits}?text=...` | Mensagem com «Olá {nome},» + texto |
+| Origem         | Campo ClubOS                      | Coluna Excel import                |
+| -------------- | --------------------------------- | ---------------------------------- |
+| Ficha do socio | `Member.phone`                    | **Telefone**                       |
+| Normalizacao   | 9 digitos PT → prefixo `351`      | Igual ao Laravel                   |
+| Link           | `https://wa.me/{digits}?text=...` | Mensagem com «Olá {nome},» + texto |
 
 So entram socios da **organizacao activa** com telemovel valido (audiencia seleccionada). Quem nao tem telefone ou tem numero invalido fica de fora — o preview mostra a contagem antes de gerar.
 
 ### Audiencias (iguais ao email)
 
-| Audiencia | Quem inclui |
-|-----------|-------------|
-| `ALL` | Todos os socios da org (com telemovel) |
-| `ACTIVE` | So `status = ACTIVE` |
-| `OVERDUE` | Quota em atraso |
-| `PLAN` | Socios do plano escolhido |
+| Audiencia | Quem inclui                            |
+| --------- | -------------------------------------- |
+| `ALL`     | Todos os socios da org (com telemovel) |
+| `ACTIVE`  | So `status = ACTIVE`                   |
+| `OVERDUE` | Quota em atraso                        |
+| `PLAN`    | Socios do plano escolhido              |
 
 ### API / UI
 
-| Accao | Onde |
-|-------|------|
-| Preview destinatarios | `GET /api/communications/preview/whatsapp?audience=...` |
-| Gerar links | `POST /api/communications/whatsapp` `{ body, audience, planId? }` |
-| UI | **Comunicacoes → WhatsApp → Gerar links** |
+| Accao                 | Onde                                                              |
+| --------------------- | ----------------------------------------------------------------- |
+| Preview destinatarios | `GET /api/communications/preview/whatsapp?audience=...`           |
+| Gerar links           | `POST /api/communications/whatsapp` `{ body, audience, planId? }` |
+| UI                    | **Comunicacoes → WhatsApp → Gerar links**                         |
 
 > Envio automatico em massa por WhatsApp/SMS exige fornecedor pago (Twilio/Meta). O `wa.me` e gratuito e semi-manual.
 
@@ -189,14 +191,15 @@ So entram socios da **organizacao activa** com telemovel valido (audiencia selec
 
 ### Settings por organizacao (Definicoes → Lembretes de quota)
 
-| Setting | Chave | Default |
-|---------|-------|---------|
-| Dias de aviso | `dias_aviso_quota` | 7 |
-| Lembretes on/off | `lembretes_automaticos` | false |
+| Setting          | Chave                   | Default |
+| ---------------- | ----------------------- | ------- |
+| Dias de aviso    | `dias_aviso_quota`      | 7       |
+| Lembretes on/off | `lembretes_automaticos` | false   |
 
 ### Job diario (cron 09:00)
 
 Para cada org com lembretes activos:
+
 - Socios activos com plano + email
 - `nextDueDate` nos proximos X dias → email **«A sua quota vence em…»** (`DUE_SOON`)
 - Quota em atraso → email **«Quota em atraso»** (`OVERDUE`)
@@ -204,14 +207,15 @@ Para cada org com lembretes activos:
 
 ### Servidor
 
-| Variavel | Descricao |
-|----------|-----------|
-| `REMINDERS_ENABLED=true` | Activa cron diario 09:00 |
-| `REMINDERS_CRON` | Opcional; override do schedule |
+| Variavel                          | Descricao                               |
+| --------------------------------- | --------------------------------------- |
+| `REMINDERS_ENABLED=true`          | Activa cron diario 09:00                |
+| `REMINDERS_CRON`                  | Opcional; override do schedule          |
 | `HEALTHCHECK_QUOTA_REMINDERS_URL` | Ping Healthchecks.io apos cada execucao |
-| SMTP configurado | Envio real; sem SMTP → apenas log |
+| SMTP configurado                  | Envio real; sem SMTP → apenas log       |
 
 Execucao manual:
+
 ```powershell
 pnpm --filter @clubos/api reminders:run
 # ou POST /api/reminders/run (autenticado)
@@ -223,11 +227,11 @@ Badge **A vencer** na lista de membros quando faltam ≤ X dias para o venciment
 
 ## Portal do socio
 
-| Endpoint | Descricao |
-|----------|-----------|
-| `GET /api/portal/me` | Dados do socio, quota, pagamentos, cartao |
-| `GET /api/portal/payments/:id/receipt` | Recibo PDF (so pagamentos PAID) |
-| `POST /api/portal/access/:memberId` | Admin cria conta + envia password temporaria |
+| Endpoint                               | Descricao                                    |
+| -------------------------------------- | -------------------------------------------- |
+| `GET /api/portal/me`                   | Dados do socio, quota, pagamentos, cartao    |
+| `GET /api/portal/payments/:id/receipt` | Recibo PDF (so pagamentos PAID)              |
+| `POST /api/portal/access/:memberId`    | Admin cria conta + envia password temporaria |
 
 Frontend: `/portal` (role `socio`). Concessao de acesso em **Membros → Acesso portal**.
 
@@ -248,14 +252,14 @@ Limitacao V1: sem offline para dados dinamicos nem push notifications.
 
 Modelo operacional ja suportado — sem portar o `QuotaService` completo do Laravel:
 
-| Passo | Onde |
-|-------|------|
-| Criar planos (mensal, anual, …) | **Planos** (`/membership-plans`) |
-| Atribuir plano ao socio | **Membros** — criar/editar, campo plano |
-| Registar pagamentos | **Pagamentos** ou import Excel |
-| Ver situacao | Badges **Em dia** / **Em atraso** / **Pendente** / **Sem plano** |
-| Relatorios | **Membros → Relatorios de quota** (pagantes / em atraso, PDF/Excel) |
-| Lembretes email | Cron com `REMINDERS_ENABLED=true` |
+| Passo                           | Onde                                                                |
+| ------------------------------- | ------------------------------------------------------------------- |
+| Criar planos (mensal, anual, …) | **Planos** (`/membership-plans`)                                    |
+| Atribuir plano ao socio         | **Membros** — criar/editar, campo plano                             |
+| Registar pagamentos             | **Pagamentos** ou import Excel                                      |
+| Ver situacao                    | Badges **Em dia** / **Em atraso** / **Pendente** / **Sem plano**    |
+| Relatorios                      | **Membros → Relatorios de quota** (pagantes / em atraso, PDF/Excel) |
+| Lembretes email                 | Cron com `REMINDERS_ENABLED=true`                                   |
 
 Calculo: ultimo pagamento (ou data de adesao) + periodicidade do plano. Validade manual do cartao pode prolongar "em dia".
 
@@ -274,28 +278,28 @@ pnpm --filter @clubos/api test
 
 ### Unitarios (`src/**/*.spec.ts`)
 
-| Ficheiro | Cobertura |
-|----------|-----------|
-| `quota.util.spec.ts` | Calculo de situacao de quota |
-| `member-import-*.spec.ts` | Mapa de colunas e parsing Excel |
-| `member-export-rows.spec.ts` | Linhas de exportacao (round-trip) |
-| `member-quota-report.util.spec.ts` | Dias em atraso nos relatorios |
-| `module.guard.spec.ts` | Modulo activo / core / forbidden |
-| `portal.service.spec.ts` | `getMe`, `getReceipt`, `grantAccess` |
-| `whatsapp.util.spec.ts` | Normalizacao telefone PT + URL `wa.me` |
-| `org-reminder-settings.spec.ts` | Settings de lembretes por org |
-| `member-gdpr.service.spec.ts` | Detecao de membro apagado RGPD |
+| Ficheiro                           | Cobertura                              |
+| ---------------------------------- | -------------------------------------- |
+| `quota.util.spec.ts`               | Calculo de situacao de quota           |
+| `member-import-*.spec.ts`          | Mapa de colunas e parsing Excel        |
+| `member-export-rows.spec.ts`       | Linhas de exportacao (round-trip)      |
+| `member-quota-report.util.spec.ts` | Dias em atraso nos relatorios          |
+| `module.guard.spec.ts`             | Modulo activo / core / forbidden       |
+| `portal.service.spec.ts`           | `getMe`, `getReceipt`, `grantAccess`   |
+| `whatsapp.util.spec.ts`            | Normalizacao telefone PT + URL `wa.me` |
+| `org-reminder-settings.spec.ts`    | Settings de lembretes por org          |
+| `member-gdpr.service.spec.ts`      | Detecao de membro apagado RGPD         |
 
 ### E2E HTTP (`test/e2e/*.e2e-spec.ts`)
 
-| Ficheiro | Cobertura |
-|----------|-----------|
-| `auth.e2e-spec.ts` | Sign-up, sign-in, sign-out, rota protegida sem sessao |
-| `protected-routes.e2e-spec.ts` | `/api/members` com org activa; `/api/validate` publico |
-| `auth-rate-limit.e2e-spec.ts` | Rate limit em `/api/auth` |
-| `crc-vale-flow.e2e-spec.ts` | **Fluxo negocio:** login → import dry-run → pagamento → portal socio |
-| `member-gdpr.e2e-spec.ts` | Export RGPD JSON + anonimizacao de dados pessoais |
-| `rbac-isolation.e2e-spec.ts` | Socio bloqueado no backoffice + isolamento entre orgs |
+| Ficheiro                       | Cobertura                                                            |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `auth.e2e-spec.ts`             | Sign-up, sign-in, sign-out, rota protegida sem sessao                |
+| `protected-routes.e2e-spec.ts` | `/api/members` com org activa; `/api/validate` publico               |
+| `auth-rate-limit.e2e-spec.ts`  | Rate limit em `/api/auth`                                            |
+| `crc-vale-flow.e2e-spec.ts`    | **Fluxo negocio:** login → import dry-run → pagamento → portal socio |
+| `member-gdpr.e2e-spec.ts`      | Export RGPD JSON + anonimizacao de dados pessoais                    |
+| `rbac-isolation.e2e-spec.ts`   | Socio bloqueado no backoffice + isolamento entre orgs                |
 
 Os E2E saltam automaticamente se `DATABASE_URL` nao estiver disponivel. `protected-routes` e `crc-vale-flow` assumem `pnpm db:seed` ja corrido (org `crc-vale`).
 
@@ -311,14 +315,14 @@ pnpm --filter @clubos/api test        # ambos (61+ no total)
 
 Requer `pnpm db:seed`, `seed:users` e **Redis** (`docker compose up -d redis`) para o teste de pagamentos.
 
-| Ficheiro | Cobertura |
-|----------|-----------|
-| `login.spec.ts` | Login valido + credenciais invalidas |
-| `members.spec.ts` | Lista de socios + navegacao |
-| `import-dry-run.spec.ts` | Simulacao de import Excel + painel de resultado |
-| `portal.spec.ts` | Portal do socio (quota, pagamentos, isolamento backoffice) |
-| `payments.spec.ts` | Registar pagamento no backoffice |
-| `public.spec.ts` | `/privacidade` e `/dpa` |
+| Ficheiro                 | Cobertura                                                  |
+| ------------------------ | ---------------------------------------------------------- |
+| `login.spec.ts`          | Login valido + credenciais invalidas                       |
+| `members.spec.ts`        | Lista de socios + navegacao                                |
+| `import-dry-run.spec.ts` | Simulacao de import Excel + painel de resultado            |
+| `portal.spec.ts`         | Portal do socio (quota, pagamentos, isolamento backoffice) |
+| `payments.spec.ts`       | Registar pagamento no backoffice                           |
+| `public.spec.ts`         | `/privacidade` e `/dpa`                                    |
 
 ```powershell
 # Opcao A — Playwright arranca API+Web (apos build; sem pnpm dev)
@@ -369,19 +373,19 @@ pnpm db:restore -- backups/clubos-20260708-120000.dump
 
 Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
 
-| Variavel | Uso |
-|----------|-----|
-| `DATABASE_URL` | PostgreSQL |
-| `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` | Sessoes e auth |
-| `WEB_ORIGIN` | CORS + links em emails |
-| `NEXT_PUBLIC_API_URL` | Frontend → API |
-| `REDIS_*` | Filas, lembretes, dedupe |
-| `S3_*` / MinIO | Logotipos, fotos, recibos |
-| `SMTP_*` | Emails (portal, lembretes, comunicacoes) |
-| `QR_SIGNING_SECRET` | QR de validacao de cartoes |
-| `REMINDERS_ENABLED` | Lembretes automaticos |
-| `RATE_LIMIT_AUTH_PER_MIN` | Limite pedidos/min em `/api/auth` (default 15) |
-| `RATE_LIMIT_VALIDATE_PER_MIN` | Limite pedidos/min em `/api/validate` (default 60) |
+| Variavel                                 | Uso                                                |
+| ---------------------------------------- | -------------------------------------------------- |
+| `DATABASE_URL`                           | PostgreSQL                                         |
+| `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` | Sessoes e auth                                     |
+| `WEB_ORIGIN`                             | CORS + links em emails                             |
+| `NEXT_PUBLIC_API_URL`                    | Frontend → API                                     |
+| `REDIS_*`                                | Filas, lembretes, dedupe                           |
+| `S3_*` / MinIO                           | Logotipos, fotos, recibos                          |
+| `SMTP_*`                                 | Emails (portal, lembretes, comunicacoes)           |
+| `QR_SIGNING_SECRET`                      | QR de validacao de cartoes                         |
+| `REMINDERS_ENABLED`                      | Lembretes automaticos                              |
+| `RATE_LIMIT_AUTH_PER_MIN`                | Limite pedidos/min em `/api/auth` (default 15)     |
+| `RATE_LIMIT_VALIDATE_PER_MIN`            | Limite pedidos/min em `/api/validate` (default 60) |
 
 ---
 
@@ -432,46 +436,26 @@ Dashboard · Membros · Planos · Pagamentos · Cartoes · Comunicacoes · Relat
 
 Pre-requisitos: Node 20+, pnpm 9+, Docker (Postgres + Redis + MinIO).
 
+Guia completo com comandos do dia a dia, testes, backups e credenciais demo: **[docs/DESENVOLVIMENTO-LOCAL.md](docs/DESENVOLVIMENTO-LOCAL.md)**.
+
 ```powershell
-# 1. Instalar dependencias
 pnpm install
-
-# 2. Variaveis de ambiente
-Copy-Item .env.example .env
-# Editar DATABASE_URL, BETTER_AUTH_SECRET, SMTP se necessario
-
-# 3. Infra (Postgres, Redis, MinIO)
+Copy-Item .env.example .env   # SEED_DEMO_PASSWORD, BETTER_AUTH_SECRET, …
 pnpm docker:up
-
-# 4. Gerar client Prisma + criar schema na BD
-pnpm db:generate
-pnpm db:push
-
-# 5. Definir password dos utilizadores demo (apenas local; ver .env.example)
-#    SEED_DEMO_PASSWORD="..."
-
-# 6. Popular dados demo
-pnpm db:seed
-
-# 7. Arrancar API + Web
+pnpm db:generate && pnpm db:push && pnpm db:seed
 pnpm dev
-
-# 8. Testes (API — unit + E2E)
-pnpm --filter @clubos/api test
 ```
 
-- API: http://localhost:4000/api
+- API: http://localhost:4000/api — Swagger: http://localhost:4000/api/docs
 - Web: http://localhost:3000
 - MinIO console: http://localhost:9001
-
-**Credenciais:** nao documentadas neste README. Defina `SEED_DEMO_PASSWORD` no `.env` local antes de `pnpm db:seed`; use essa password no login. Nunca commitar `.env` com segredos reais.
 
 ---
 
 ## Roadmap por fases (conforme documento de stack)
 
-- **Fase 1 (MVP)** — Next.js + NestJS + PostgreSQL + Prisma + Better Auth. ✅ *(este repositorio)*
-- **Fase 2 (crescimento)** — Redis + BullMQ + S3. 🟡 *(parcialmente em uso)*
+- **Fase 1 (MVP)** — Next.js + NestJS + PostgreSQL + Prisma + Better Auth. ✅ _(este repositorio)_
+- **Fase 2 (crescimento)** — Redis + BullMQ + S3. 🟡 _(parcialmente em uso)_
 - **Fase 3 (escala)** — Sentry + WAF + backups + React Native.
 - **Fase 4 (enterprise)** — Keycloak + Kubernetes + microservicos.
 

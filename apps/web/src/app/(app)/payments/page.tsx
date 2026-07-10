@@ -10,11 +10,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { api, openBlob } from "@/lib/api";
 import { todayDateInput } from "@/lib/date-input";
+import { useMembersPicker } from "@/hooks/use-members-picker";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type {
-  Member,
   MembershipPlan,
-  PaginatedResult,
   Payment,
   PaymentMethod,
   PaymentStatus,
@@ -46,7 +45,6 @@ export default function PaymentsPage() {
   const [paidAt, setPaidAt] = useState(todayDateInput);
 
   const paymentsKey = useTenantQueryKey(["payments"]);
-  const membersKey = useTenantQueryKey(["members"]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
 
   const { data: payments, isLoading } = useQuery<Payment[]>({
@@ -54,12 +52,12 @@ export default function PaymentsPage() {
     queryFn: () => api.get<Payment[]>("/payments"),
   });
 
-  const { data: membersPage } = useQuery<PaginatedResult<Member>>({
-    queryKey: membersKey,
-    queryFn: () =>
-      api.get<PaginatedResult<Member>>("/members?limit=500&page=1"),
-  });
-  const members = membersPage?.items;
+  const {
+    members,
+    activate: activateMembersPicker,
+    isLoading: membersLoading,
+    hasMore: membersHasMore,
+  } = useMembersPicker();
 
   const { data: plans } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
@@ -67,7 +65,7 @@ export default function PaymentsPage() {
   });
 
   const selectedMember = useMemo(
-    () => members?.find((m) => m.id === memberId),
+    () => members.find((m) => m.id === memberId),
     [members, memberId],
   );
 
@@ -117,15 +115,27 @@ export default function PaymentsPage() {
               <select
                 value={memberId}
                 onChange={(e) => setMemberId(e.target.value)}
+                onFocus={activateMembersPicker}
+                onMouseDown={activateMembersPicker}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="">Selecionar sócio...</option>
-                {(members ?? []).map((m) => (
+                <option value="">
+                  {membersLoading
+                    ? "A carregar sócios..."
+                    : "Selecionar sócio..."}
+                </option>
+                {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.number} - {m.name}
                   </option>
                 ))}
               </select>
+              {membersHasMore ? (
+                <p className="text-xs text-muted-foreground">
+                  A mostrar os primeiros 100 sócios. Use Membros para pesquisar
+                  todos.
+                </p>
+              ) : null}
             </div>
             <div className="w-32 space-y-1">
               <label className="text-sm font-medium">Valor (€)</label>

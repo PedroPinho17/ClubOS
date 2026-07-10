@@ -1,23 +1,28 @@
-'use client';
+"use client";
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
-import { Download, FileText, ImagePlus, Layers, Save } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
-import { MemberCard } from '@/components/cards/member-card';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { api, uploadFile } from '@/lib/api';
-import { useSession } from '@/lib/auth-client';
-import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
-import type { CardData, CardLayout, CardSettings, CardTemplate, Member, PaginatedResult, QrContent } from '@/lib/types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, FileText, ImagePlus, Layers, Save } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { MemberCard } from "@/components/cards/member-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { api, uploadFile } from "@/lib/api";
+import { useSession } from "@/lib/auth-client";
+import { useMembersPicker } from "@/hooks/use-members-picker";
+import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
+import type {
+  CardData,
+  CardLayout,
+  CardSettings,
+  CardTemplate,
+  QrContent,
+} from "@/lib/types";
 
 async function waitForImages(el: HTMLElement | null): Promise<void> {
   if (!el) return;
-  const imgs = Array.from(el.querySelectorAll('img'));
+  const imgs = Array.from(el.querySelectorAll("img"));
   await Promise.all(
     imgs.map((img) =>
       img.complete
@@ -33,50 +38,47 @@ async function waitForImages(el: HTMLElement | null): Promise<void> {
 }
 
 const FIELD_TOGGLES: { key: keyof CardLayout; label: string }[] = [
-  { key: 'showNome', label: 'Nome' },
-  { key: 'showNumero', label: 'Número' },
-  { key: 'showFoto', label: 'Foto' },
-  { key: 'showCargo', label: 'Cargo' },
-  { key: 'showValidade', label: 'Validade' },
-  { key: 'showPlano', label: 'Plano' },
-  { key: 'showEmail', label: 'Email' },
-  { key: 'showTelefone', label: 'Telefone' },
+  { key: "showNome", label: "Nome" },
+  { key: "showNumero", label: "Número" },
+  { key: "showFoto", label: "Foto" },
+  { key: "showCargo", label: "Cargo" },
+  { key: "showValidade", label: "Validade" },
+  { key: "showPlano", label: "Plano" },
+  { key: "showEmail", label: "Email" },
+  { key: "showTelefone", label: "Telefone" },
 ];
 
 export default function CardsPage() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
-  const isImperador = session?.user?.role === 'imperador';
+  const isImperador = session?.user?.role === "imperador";
   const cardRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
-  const [memberId, setMemberId] = useState('');
+  const [memberId, setMemberId] = useState("");
   const [layout, setLayout] = useState<CardLayout | null>(null);
   const [captureData, setCaptureData] = useState<CardData | null>(null);
-  const [captureSide, setCaptureSide] = useState<'front' | 'back'>('front');
-  const [cardSide, setCardSide] = useState<'front' | 'back'>('front');
+  const [captureSide, setCaptureSide] = useState<"front" | "back">("front");
+  const [cardSide, setCardSide] = useState<"front" | "back">("front");
   const [exporting, setExporting] = useState(false);
 
-  const cardSettingsKey = useTenantQueryKey(['card-settings']);
-  const membersKey = useTenantQueryKey(['members']);
-  const cardKey = useTenantQueryKey(['card', memberId]);
+  const cardSettingsKey = useTenantQueryKey(["card-settings"]);
+  const cardKey = useTenantQueryKey(["card", memberId]);
 
   const { data: settings } = useQuery<CardSettings>({
     queryKey: cardSettingsKey,
-    queryFn: () => api.get<CardSettings>('/cards/settings'),
+    queryFn: () => api.get<CardSettings>("/cards/settings"),
   });
 
-  const { data: membersPage } = useQuery<PaginatedResult<Member>>({
-    queryKey: membersKey,
-    queryFn: () => api.get<PaginatedResult<Member>>('/members?limit=500&page=1'),
+  const { members, hasMore: membersHasMore } = useMembersPicker({
+    immediate: true,
   });
-  const members = membersPage?.items;
 
   useEffect(() => {
     if (settings && !layout) setLayout(settings.layout);
   }, [settings, layout]);
 
   useEffect(() => {
-    if (members && members.length > 0 && !memberId) setMemberId(members[0].id);
+    if (members.length > 0 && !memberId) setMemberId(members[0].id);
   }, [members, memberId]);
 
   const { data: cardData } = useQuery<CardData>({
@@ -86,26 +88,26 @@ export default function CardsPage() {
   });
 
   const save = useMutation({
-    mutationFn: () => api.put<CardSettings>('/cards/settings', layout),
+    mutationFn: () => api.put<CardSettings>("/cards/settings", layout),
     onSuccess: (res) => {
       setLayout(res.layout);
-      queryClient.invalidateQueries({ queryKey: ['card-settings'] });
-      queryClient.invalidateQueries({ queryKey: ['card'] });
+      queryClient.invalidateQueries({ queryKey: ["card-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["card"] });
     },
   });
 
   const uploadPhoto = useMutation({
     mutationFn: (file: File) => uploadFile(`/members/${memberId}/photo`, file),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['card', memberId] });
-      queryClient.invalidateQueries({ queryKey: ['members'] });
+      queryClient.invalidateQueries({ queryKey: ["card", memberId] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
     },
   });
 
   const uploadLogo = useMutation({
-    mutationFn: (file: File) => uploadFile('/organization/logo', file),
+    mutationFn: (file: File) => uploadFile("/organization/logo", file),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['card'] });
+      queryClient.invalidateQueries({ queryKey: ["card"] });
     },
   });
 
@@ -117,25 +119,32 @@ export default function CardsPage() {
     setLayout((prev) => (prev ? { ...prev, [key]: value } : prev));
 
   const availableTemplates = (settings?.catalog ?? []).filter(
-    (t) => t.key !== 'crc_vale' || layout.crcValeEnabled,
+    (t) => t.key !== "crc_vale" || layout.crcValeEnabled,
   );
 
   // Pre-visualizacao com o layout local (edicoes por guardar).
-  const previewData: CardData | null = cardData ? { ...cardData, layout } : null;
-  const isCrcVale = layout.template === 'crc_vale';
+  const previewData: CardData | null = cardData
+    ? { ...cardData, layout }
+    : null;
+  const isCrcVale = layout.template === "crc_vale";
 
   const captureCardImage = async (el: HTMLElement | null) => {
     await waitForImages(el);
-    if (!el) throw new Error('Elemento do cartão indisponível.');
+    if (!el) throw new Error("Elemento do cartão indisponível.");
+    const { toPng } = await import("html-to-image");
     return toPng(el, { pixelRatio: 4, cacheBust: true });
   };
 
   const exportPng = async () => {
     if (!cardRef.current) return;
-    const dataUrl = await toPng(cardRef.current, { pixelRatio: 3, cacheBust: true });
-    const suffix = isCrcVale && cardSide === 'back' ? '-verso' : '';
-    const link = document.createElement('a');
-    link.download = `cartao-${cardData?.numeroFormatado ?? 'socio'}${suffix}.png`;
+    const { toPng } = await import("html-to-image");
+    const dataUrl = await toPng(cardRef.current, {
+      pixelRatio: 3,
+      cacheBust: true,
+    });
+    const suffix = isCrcVale && cardSide === "back" ? "-verso" : "";
+    const link = document.createElement("a");
+    link.download = `cartao-${cardData?.numeroFormatado ?? "socio"}${suffix}.png`;
     link.href = dataUrl;
     link.click();
   };
@@ -144,39 +153,63 @@ export default function CardsPage() {
 
   const exportPdf = async () => {
     if (!previewData) return;
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: CARD_MM });
+    const { jsPDF } = await import("jspdf");
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: CARD_MM,
+    });
 
     flushSync(() => {
       setCaptureData(previewData);
-      setCaptureSide('front');
+      setCaptureSide("front");
     });
     await waitForImages(hiddenRef.current);
     if (!hiddenRef.current) return;
-    pdf.addImage(await captureCardImage(hiddenRef.current), 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+    pdf.addImage(
+      await captureCardImage(hiddenRef.current),
+      "PNG",
+      0,
+      0,
+      CARD_MM[0],
+      CARD_MM[1],
+    );
 
     if (isCrcVale) {
-      flushSync(() => setCaptureSide('back'));
+      flushSync(() => setCaptureSide("back"));
       await waitForImages(hiddenRef.current);
       if (hiddenRef.current) {
-        pdf.addPage(CARD_MM, 'landscape');
-        pdf.addImage(await captureCardImage(hiddenRef.current), 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+        pdf.addPage(CARD_MM, "landscape");
+        pdf.addImage(
+          await captureCardImage(hiddenRef.current),
+          "PNG",
+          0,
+          0,
+          CARD_MM[0],
+          CARD_MM[1],
+        );
       }
     }
 
     flushSync(() => {
       setCaptureData(null);
-      setCaptureSide('front');
+      setCaptureSide("front");
     });
-    pdf.save(`cartao-${cardData?.numeroFormatado ?? 'socio'}.pdf`);
+    pdf.save(`cartao-${cardData?.numeroFormatado ?? "socio"}.pdf`);
   };
 
   // Exportacao em lote: renderiza cada cartao num no oculto e junta num PDF.
   const exportAllPdf = async () => {
-    const list = members ?? [];
+    const list = members;
     if (list.length === 0) return;
     setExporting(true);
     try {
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: CARD_MM });
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: CARD_MM,
+      });
       let pageIndex = 0;
 
       for (let i = 0; i < list.length; i++) {
@@ -185,29 +218,43 @@ export default function CardsPage() {
 
         flushSync(() => {
           setCaptureData(cardPayload);
-          setCaptureSide('front');
+          setCaptureSide("front");
         });
         await waitForImages(hiddenRef.current);
         if (!hiddenRef.current) continue;
 
-        if (pageIndex > 0) pdf.addPage(CARD_MM, 'landscape');
-        pdf.addImage(await captureCardImage(hiddenRef.current), 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+        if (pageIndex > 0) pdf.addPage(CARD_MM, "landscape");
+        pdf.addImage(
+          await captureCardImage(hiddenRef.current),
+          "PNG",
+          0,
+          0,
+          CARD_MM[0],
+          CARD_MM[1],
+        );
         pageIndex++;
 
-        if (layout.template === 'crc_vale') {
-          flushSync(() => setCaptureSide('back'));
+        if (layout.template === "crc_vale") {
+          flushSync(() => setCaptureSide("back"));
           await waitForImages(hiddenRef.current);
           if (hiddenRef.current) {
-            pdf.addPage(CARD_MM, 'landscape');
-            pdf.addImage(await captureCardImage(hiddenRef.current), 'PNG', 0, 0, CARD_MM[0], CARD_MM[1]);
+            pdf.addPage(CARD_MM, "landscape");
+            pdf.addImage(
+              await captureCardImage(hiddenRef.current),
+              "PNG",
+              0,
+              0,
+              CARD_MM[0],
+              CARD_MM[1],
+            );
             pageIndex++;
           }
         }
       }
-      pdf.save('cartoes-socios.pdf');
+      pdf.save("cartoes-socios.pdf");
     } finally {
       setCaptureData(null);
-      setCaptureSide('front');
+      setCaptureSide("front");
       setExporting(false);
     }
   };
@@ -216,7 +263,8 @@ export default function CardsPage() {
     <div>
       <h1 className="mb-2 text-2xl font-bold">Cartões de Sócio</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Escolhe o modelo do cartão, personaliza o visual e pré-visualiza por sócio.
+        Escolhe o modelo do cartão, personaliza o visual e pré-visualiza por
+        sócio.
       </p>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -231,12 +279,18 @@ export default function CardsPage() {
                   onChange={(e) => setMemberId(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  {(members ?? []).map((m) => (
+                  {members.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.number} - {m.name}
                     </option>
                   ))}
                 </select>
+                {membersHasMore ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    A mostrar os primeiros 100 sócios. Use Membros para
+                    pesquisar todos.
+                  </p>
+                ) : null}
               </div>
 
               {previewData ? (
@@ -245,35 +299,42 @@ export default function CardsPage() {
                     <div className="flex w-full gap-2">
                       <Button
                         type="button"
-                        variant={cardSide === 'front' ? 'default' : 'outline'}
+                        variant={cardSide === "front" ? "default" : "outline"}
                         size="sm"
                         className="flex-1"
-                        onClick={() => setCardSide('front')}
+                        onClick={() => setCardSide("front")}
                       >
                         Frente
                       </Button>
                       <Button
                         type="button"
-                        variant={cardSide === 'back' ? 'default' : 'outline'}
+                        variant={cardSide === "back" ? "default" : "outline"}
                         size="sm"
                         className="flex-1"
-                        onClick={() => setCardSide('back')}
+                        onClick={() => setCardSide("back")}
                       >
                         Verso
                       </Button>
                     </div>
                   )}
-                  <MemberCard ref={cardRef} data={previewData} width={420} side={cardSide} />
+                  <MemberCard
+                    ref={cardRef}
+                    data={previewData}
+                    width={420}
+                    side={cardSide}
+                  />
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">Seleciona um sócio.</p>
+                <p className="text-sm text-muted-foreground">
+                  Seleciona um sócio.
+                </p>
               )}
 
               <div className="flex w-full flex-wrap items-center justify-between gap-2">
                 <div className="flex gap-2">
                   <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">
                     <ImagePlus className="h-4 w-4" />
-                    {uploadPhoto.isPending ? 'A enviar...' : 'Foto'}
+                    {uploadPhoto.isPending ? "A enviar..." : "Foto"}
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
@@ -282,13 +343,13 @@ export default function CardsPage() {
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) uploadPhoto.mutate(f);
-                        e.target.value = '';
+                        e.target.value = "";
                       }}
                     />
                   </label>
                   <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">
                     <ImagePlus className="h-4 w-4" />
-                    {uploadLogo.isPending ? 'A enviar...' : 'Logótipo'}
+                    {uploadLogo.isPending ? "A enviar..." : "Logótipo"}
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -297,23 +358,37 @@ export default function CardsPage() {
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) uploadLogo.mutate(f);
-                        e.target.value = '';
+                        e.target.value = "";
                       }}
                     />
                   </label>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={exportPng} disabled={!previewData}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportPng}
+                    disabled={!previewData}
+                  >
                     <Download className="h-4 w-4" />
                     PNG
                   </Button>
-                  <Button variant="outline" size="sm" onClick={exportPdf} disabled={!previewData}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportPdf}
+                    disabled={!previewData}
+                  >
                     <FileText className="h-4 w-4" />
                     PDF
                   </Button>
-                  <Button size="sm" onClick={exportAllPdf} disabled={exporting || !(members?.length)}>
+                  <Button
+                    size="sm"
+                    onClick={exportAllPdf}
+                    disabled={exporting || members.length === 0}
+                  >
                     <Layers className="h-4 w-4" />
-                    {exporting ? 'A gerar...' : 'Todos (PDF)'}
+                    {exporting ? "A gerar..." : "Todos (PDF)"}
                   </Button>
                 </div>
               </div>
@@ -333,51 +408,91 @@ export default function CardsPage() {
                       <input
                         type="checkbox"
                         checked={layout.crcValeEnabled}
-                        onChange={(e) => set('crcValeEnabled', e.target.checked)}
+                        onChange={(e) =>
+                          set("crcValeEnabled", e.target.checked)
+                        }
                       />
                       Ativar layout CRC Vale
                     </label>
                   ) : layout.crcValeEnabled ? (
-                    <span className="text-xs text-muted-foreground">Layout CRC Vale ativado pela plataforma</span>
+                    <span className="text-xs text-muted-foreground">
+                      Layout CRC Vale ativado pela plataforma
+                    </span>
                   ) : null}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {availableTemplates.map((t) => (
                     <button
                       key={t.key}
-                      onClick={() => set('template', t.key as CardTemplate)}
+                      onClick={() => set("template", t.key as CardTemplate)}
                       className={`rounded-md border p-2 text-left text-sm transition-colors ${
                         layout.template === t.key
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                          : 'border-input hover:bg-muted'
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-input hover:bg-muted"
                       }`}
                     >
                       <div className="font-medium">{t.label}</div>
-                      <div className="text-xs text-muted-foreground">{t.description}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {t.description}
+                      </div>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Gradiente (início)" value={layout.gradientFrom} onChange={(v) => set('gradientFrom', v)} />
-                <ColorField label="Gradiente (fim)" value={layout.gradientTo} onChange={(v) => set('gradientTo', v)} />
-                <ColorField label="Cor de destaque" value={layout.accentColor} onChange={(v) => set('accentColor', v)} />
-                <ColorField label="Cor do texto" value={layout.textColor} onChange={(v) => set('textColor', v)} />
+                <ColorField
+                  label="Gradiente (início)"
+                  value={layout.gradientFrom}
+                  onChange={(v) => set("gradientFrom", v)}
+                />
+                <ColorField
+                  label="Gradiente (fim)"
+                  value={layout.gradientTo}
+                  onChange={(v) => set("gradientTo", v)}
+                />
+                <ColorField
+                  label="Cor de destaque"
+                  value={layout.accentColor}
+                  onChange={(v) => set("accentColor", v)}
+                />
+                <ColorField
+                  label="Cor do texto"
+                  value={layout.textColor}
+                  onChange={(v) => set("textColor", v)}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <TextField label="Título (rótulo)" value={layout.cardTitle} onChange={(v) => set('cardTitle', v)} />
-                <TextField label="Prefixo do número" value={layout.numeroPrefix} onChange={(v) => set('numeroPrefix', v)} />
-                <TextField label="Rodapé" value={layout.footerText} onChange={(v) => set('footerText', v)} />
-                <TextField label="Slogan (CRC Vale)" value={layout.slogan} onChange={(v) => set('slogan', v)} />
+                <TextField
+                  label="Título (rótulo)"
+                  value={layout.cardTitle}
+                  onChange={(v) => set("cardTitle", v)}
+                />
+                <TextField
+                  label="Prefixo do número"
+                  value={layout.numeroPrefix}
+                  onChange={(v) => set("numeroPrefix", v)}
+                />
+                <TextField
+                  label="Rodapé"
+                  value={layout.footerText}
+                  onChange={(v) => set("footerText", v)}
+                />
+                <TextField
+                  label="Slogan (CRC Vale)"
+                  value={layout.slogan}
+                  onChange={(v) => set("slogan", v)}
+                />
               </div>
 
               <div>
                 <label className="text-sm font-medium">Conteúdo do QR</label>
                 <select
                   value={layout.qrContent}
-                  onChange={(e) => set('qrContent', e.target.value as QrContent)}
+                  onChange={(e) =>
+                    set("qrContent", e.target.value as QrContent)
+                  }
                   className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="validacao">URL de validação</option>
@@ -387,10 +502,15 @@ export default function CardsPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium">Campos visíveis</label>
+                <label className="mb-2 block text-sm font-medium">
+                  Campos visíveis
+                </label>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {FIELD_TOGGLES.map((f) => (
-                    <label key={f.key} className="flex items-center gap-2 text-sm">
+                    <label
+                      key={f.key}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <input
                         type="checkbox"
                         checked={Boolean(layout[f.key])}
@@ -405,7 +525,7 @@ export default function CardsPage() {
               <div className="flex justify-end">
                 <Button onClick={() => save.mutate()} disabled={save.isPending}>
                   <Save className="h-4 w-4" />
-                  {save.isPending ? 'A guardar...' : 'Guardar definições'}
+                  {save.isPending ? "A guardar..." : "Guardar definições"}
                 </Button>
               </div>
             </CardContent>
@@ -414,19 +534,42 @@ export default function CardsPage() {
       </div>
 
       {/* Render oculto para exportacao em lote (fora do ecra). */}
-      <div style={{ position: 'fixed', left: -10000, top: 0, pointerEvents: 'none' }} aria-hidden>
+      <div
+        style={{
+          position: "fixed",
+          left: -10000,
+          top: 0,
+          pointerEvents: "none",
+        }}
+        aria-hidden
+      >
         {captureData && (
-          <MemberCard ref={hiddenRef} data={captureData} width={620} side={captureSide} />
+          <MemberCard
+            ref={hiddenRef}
+            data={captureData}
+            width={620}
+            side={captureSide}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
       <div className="mt-1 flex items-center gap-2">
         <input
           type="color"
@@ -434,17 +577,35 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
           onChange={(e) => onChange(e.target.value)}
           className="h-9 w-12 cursor-pointer rounded border border-input"
         />
-        <Input value={value} onChange={(e) => onChange(e.target.value)} className="h-9" />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9"
+        />
       </div>
     </div>
   );
 }
 
-function TextField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function TextField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} className="mt-1 h-9" />
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 h-9"
+      />
     </div>
   );
 }

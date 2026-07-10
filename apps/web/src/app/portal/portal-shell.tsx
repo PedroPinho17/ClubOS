@@ -28,7 +28,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     queryKey: [...PORTAL_ME_QUERY_KEY],
     queryFn: () => api.get<PortalMe>("/portal/me"),
     enabled: !!session,
-    staleTime: 0,
+    staleTime: 60_000,
     placeholderData: cachedMe ?? undefined,
   });
 

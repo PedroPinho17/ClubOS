@@ -4,15 +4,16 @@ Guia para desenvolvedores — equivalente ao **Javadoc** neste stack TypeScript/
 
 ## Índice
 
-| Documento | Conteúdo |
-|-----------|----------|
-| [Arquitetura](ARQUITETURA.md) | Visão geral, monorepo, multi-tenancy, fluxo de pedidos |
-| [API Backend](API-BACKEND.md) | Módulos NestJS, endpoints, guards, serviços |
-| [Frontend Web](FRONTEND.md) | Rotas Next.js, layouts, auth client, navegação |
-| [Base de dados](BASE-DE-DADOS.md) | Modelos Prisma, relações, isolamento por tenant |
-| [Autenticação e RBAC](AUTENTICACAO-RBAC.md) | Better Auth, roles, org activa, decorators |
-| [Convenções](CONVENCOES.md) | Como adicionar módulos, testes, TSDoc |
-| [Observabilidade](OBSERVABILIDADE.md) | Alertas Sentry, uptime externo, go-live |
+| Documento                                         | Conteúdo                                               |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| [Arquitetura](ARQUITETURA.md)                     | Visão geral, monorepo, multi-tenancy, fluxo de pedidos |
+| [API Backend](API-BACKEND.md)                     | Módulos NestJS, endpoints, guards, serviços            |
+| [Frontend Web](FRONTEND.md)                       | Rotas Next.js, layouts, auth client, navegação         |
+| [Base de dados](BASE-DE-DADOS.md)                 | Modelos Prisma, relações, isolamento por tenant        |
+| [Autenticação e RBAC](AUTENTICACAO-RBAC.md)       | Better Auth, roles, org activa, decorators             |
+| [Convenções](CONVENCOES.md)                       | Como adicionar módulos, testes, TSDoc                  |
+| [Observabilidade](OBSERVABILIDADE.md)             | Alertas Sentry, uptime externo, go-live                |
+| [Desenvolvimento local](DESENVOLVIMENTO-LOCAL.md) | Arranque, credenciais demo, testes, backups            |
 
 ## Início rápido
 
@@ -53,11 +54,11 @@ Procura comentários em:
 
 ## Glossário rápido
 
-| Termo | Significado |
-|-------|-------------|
-| **Organization** | Tenant (clube, ginásio, associação) |
-| **Org activa** | Organização em que o staff trabalha nesta sessão |
-| **Módulo** | Funcionalidade activável por org (`members`, `payments`, …) |
-| **Staff** | imperador, administrador ou tesoureiro (backoffice) |
-| **Sócio** | Utilizador do portal (`role: socio`) |
-| **Imperador** | Super-admin da plataforma; gere várias orgs |
+| Termo            | Significado                                                 |
+| ---------------- | ----------------------------------------------------------- |
+| **Organization** | Tenant (clube, ginásio, associação)                         |
+| **Org activa**   | Organização em que o staff trabalha nesta sessão            |
+| **Módulo**       | Funcionalidade activável por org (`members`, `payments`, …) |
+| **Staff**        | imperador, administrador ou tesoureiro (backoffice)         |
+| **Sócio**        | Utilizador do portal (`role: socio`)                        |
+| **Imperador**    | Super-admin da plataforma; gere várias orgs                 |

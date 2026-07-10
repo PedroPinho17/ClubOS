@@ -51,7 +51,7 @@ export default function PortalPage() {
     queryKey: [...PORTAL_ME_QUERY_KEY],
     queryFn: () => api.get<PortalMe>("/portal/me"),
     retry: 1,
-    staleTime: 0,
+    staleTime: 60_000,
   });
 
   useEffect(() => {
