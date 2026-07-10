@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
-import { useSession } from '@/lib/auth-client';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+import { Toaster } from "@/components/ui/sonner";
+import { useSession } from "@/lib/auth-client";
 
 /** Arranca o fetch de sessão cedo, antes dos layouts protegidos montarem. */
 function SessionWarmup() {
@@ -27,6 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={client}>
       <SessionWarmup />
       {children}
+      <Toaster />
     </QueryClientProvider>
   );
 }

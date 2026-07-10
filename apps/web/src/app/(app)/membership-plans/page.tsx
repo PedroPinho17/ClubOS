@@ -1,49 +1,53 @@
-'use client';
+"use client";
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
-import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
-import type { MembershipPlan, Periodicity } from '@/lib/types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
+import { toast } from "@/lib/toast";
+import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
+import type { MembershipPlan, Periodicity } from "@/lib/types";
 
 const PERIODICITY_LABEL: Record<Periodicity, string> = {
-  MONTHLY: 'Mensal',
-  QUARTERLY: 'Trimestral',
-  BIANNUAL: 'Semestral',
-  ANNUAL: 'Anual',
-  ONCE: 'Única',
+  MONTHLY: "Mensal",
+  QUARTERLY: "Trimestral",
+  BIANNUAL: "Semestral",
+  ANNUAL: "Anual",
+  ONCE: "Única",
 };
 
 export default function MembershipPlansPage() {
   const queryClient = useQueryClient();
-  const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [periodicity, setPeriodicity] = useState<Periodicity>('MONTHLY');
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [periodicity, setPeriodicity] = useState<Periodicity>("MONTHLY");
+  const [planToRemove, setPlanToRemove] = useState<MembershipPlan | null>(null);
 
-  const plansKey = useTenantQueryKey(['membership-plans']);
+  const plansKey = useTenantQueryKey(["membership-plans"]);
 
   const { data: plans, isLoading } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
-    queryFn: () => api.get<MembershipPlan[]>('/membership-plans'),
+    queryFn: () => api.get<MembershipPlan[]>("/membership-plans"),
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['membership-plans'] });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["membership-plans"] });
 
   const createPlan = useMutation({
     mutationFn: () =>
-      api.post<MembershipPlan>('/membership-plans', {
+      api.post<MembershipPlan>("/membership-plans", {
         name,
         amount: Number(amount),
         periodicity,
       }),
     onSuccess: () => {
-      setName('');
-      setAmount('');
-      setPeriodicity('MONTHLY');
+      setName("");
+      setAmount("");
+      setPeriodicity("MONTHLY");
       invalidate();
     },
   });
@@ -56,7 +60,12 @@ export default function MembershipPlansPage() {
 
   const removePlan = useMutation({
     mutationFn: (id: string) => api.delete(`/membership-plans/${id}`),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setPlanToRemove(null);
+      invalidate();
+      toast.success("Plano removido");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   return (
@@ -77,7 +86,11 @@ export default function MembershipPlansPage() {
           >
             <div className="flex-1 space-y-1">
               <label className="text-sm font-medium">Nome</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Quota Mensal" />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Quota Mensal"
+              />
             </div>
             <div className="w-32 space-y-1">
               <label className="text-sm font-medium">Valor (€)</label>
@@ -104,8 +117,13 @@ export default function MembershipPlansPage() {
                 ))}
               </select>
             </div>
-            <Button type="submit" disabled={createPlan.isPending || !name.trim() || Number(amount) <= 0}>
-              {createPlan.isPending ? 'A criar...' : 'Adicionar plano'}
+            <Button
+              type="submit"
+              disabled={
+                createPlan.isPending || !name.trim() || Number(amount) <= 0
+              }
+            >
+              {createPlan.isPending ? "A criar..." : "Adicionar plano"}
             </Button>
           </form>
         </CardContent>
@@ -127,7 +145,10 @@ export default function MembershipPlansPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="p-6 text-center text-muted-foreground"
+                  >
                     A carregar...
                   </td>
                 </tr>
@@ -139,8 +160,8 @@ export default function MembershipPlansPage() {
                     <td className="p-3">{PERIODICITY_LABEL[p.periodicity]}</td>
                     <td className="p-3">{p._count?.members ?? 0}</td>
                     <td className="p-3">
-                      <Badge variant={p.active ? 'success' : 'muted'}>
-                        {p.active ? 'Ativo' : 'Inativo'}
+                      <Badge variant={p.active ? "success" : "muted"}>
+                        {p.active ? "Ativo" : "Inativo"}
                       </Badge>
                     </td>
                     <td className="p-3">
@@ -151,15 +172,13 @@ export default function MembershipPlansPage() {
                           disabled={toggleActive.isPending}
                           onClick={() => toggleActive.mutate(p)}
                         >
-                          {p.active ? 'Desativar' : 'Ativar'}
+                          {p.active ? "Desativar" : "Ativar"}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           disabled={removePlan.isPending}
-                          onClick={() => {
-                            if (confirm(`Remover o plano "${p.name}"?`)) removePlan.mutate(p.id);
-                          }}
+                          onClick={() => setPlanToRemove(p)}
                         >
                           Remover
                         </Button>
@@ -169,7 +188,10 @@ export default function MembershipPlansPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="p-6 text-center text-muted-foreground"
+                  >
                     Sem planos. Cria o primeiro acima.
                   </td>
                 </tr>
@@ -178,6 +200,23 @@ export default function MembershipPlansPage() {
           </table>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={planToRemove !== null}
+        onOpenChange={(open) => {
+          if (!open) setPlanToRemove(null);
+        }}
+        title="Remover plano?"
+        description={
+          planToRemove ? `Remover o plano "${planToRemove.name}"?` : ""
+        }
+        confirmLabel="Remover"
+        variant="destructive"
+        loading={removePlan.isPending}
+        onConfirm={() => {
+          if (planToRemove) removePlan.mutate(planToRemove.id);
+        }}
+      />
     </div>
   );
 }

@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ImportResultPanel } from "@/components/members/import-result-panel";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { api, downloadBlob, downloadJson, uploadFile } from "@/lib/api";
 import { formatDateInput, todayDateInput } from "@/lib/date-input";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
@@ -135,6 +137,9 @@ export default function MembersPage() {
     null,
   );
   const [portalPassword, setPortalPassword] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
+  const [gdprTarget, setGdprTarget] = useState<Member | null>(null);
+  const [importWarningOpen, setImportWarningOpen] = useState(false);
 
   const membersKey = useTenantQueryKey(["members", search, page]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
@@ -191,7 +196,9 @@ export default function MembersPage() {
       setQuotaPlanId("");
       setJoinedAt(todayDateInput());
       invalidate();
+      toast.success("Sócio criado com sucesso");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const updateMember = useMutation({
@@ -210,17 +217,20 @@ export default function MembersPage() {
     onSuccess: () => {
       setEditingId(null);
       invalidate();
+      toast.success("Alterações guardadas");
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const deleteMember = useMutation({
     mutationFn: (id: string) => api.delete(`/members/${id}`),
     onSuccess: () => {
       setEditingId(null);
+      setDeleteTarget(null);
       invalidate();
+      toast.success("Sócio removido");
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const grantPortal = useMutation({
@@ -240,20 +250,23 @@ export default function MembersPage() {
     onSuccess: (res) => {
       setPortalGrantMember(null);
       setPortalPassword("");
-      alert(
-        `Acesso criado para ${res.email}.\n\n` +
-          "Comunique a password ao sócio. No primeiro login terá de definir uma nova (mín. 12 caracteres).",
+      toast.success(
+        "Acesso ao portal criado — comunique a password ao sócio",
+        `Email: ${res.email}. No primeiro login terá de definir uma nova password (mín. 12 caracteres).`,
       );
       invalidate();
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const uploadPhoto = useMutation({
     mutationFn: ({ memberId, file }: { memberId: string; file: File }) =>
       uploadFile(`/members/${memberId}/photo`, file),
-    onSuccess: invalidate,
-    onError: (err: Error) => alert(err.message),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Fotografia actualizada");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const importMembers = useMutation({
@@ -266,10 +279,12 @@ export default function MembersPage() {
       if (!res.dryRun) {
         invalidate();
         pendingImportFileRef.current = null;
+        setImportWarningOpen(false);
+        toast.success("Importação concluída");
       }
       setImportResult(res);
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   function runImport(file: File, dryRun: boolean) {
@@ -283,28 +298,27 @@ export default function MembersPage() {
     importMembers.mutate({ file, dryRun: false });
   }
 
+  function handleConfirmImport() {
+    if (!importResult || !pendingImportFileRef.current) return;
+    if (importResult.errors.length > 0) {
+      setImportWarningOpen(true);
+      return;
+    }
+    toast.info("A iniciar importação...");
+    confirmRealImport();
+  }
+
   const gdprErase = useMutation({
     mutationFn: (memberId: string) =>
       api.post(`/members/${memberId}/gdpr-erase`, { confirm: true }),
     onSuccess: () => {
       setEditingId(null);
+      setGdprTarget(null);
       invalidate();
+      toast.success("Dados pessoais apagados (RGPD)");
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
-
-  function confirmGdprErase(m: Member) {
-    const msg =
-      `Apagar dados pessoais de "${m.name}" (n.º ${m.number})?\n\n` +
-      "O nome sera anonimizado, contactos removidos e o acesso ao portal desativado. " +
-      "Os registos de pagamento mantem-se para contabilidade. Esta acao e irreversivel.";
-    if (
-      window.confirm(msg) &&
-      window.confirm("Confirmar definitivamente o apagamento RGPD?")
-    ) {
-      gdprErase.mutate(m.id);
-    }
-  }
 
   function memberInitials(name: string): string {
     return name
@@ -321,13 +335,7 @@ export default function MembersPage() {
   }
 
   function confirmDelete(m: Member) {
-    if (
-      window.confirm(
-        `Apagar o sócio "${m.name}" (n.º ${m.number})? Esta ação é irreversível.`,
-      )
-    ) {
-      deleteMember.mutate(m.id);
-    }
+    setDeleteTarget(m);
   }
 
   const selectClass =
@@ -509,7 +517,7 @@ export default function MembersPage() {
             }}
             onConfirmImport={
               importResult.dryRun && pendingImportFileRef.current
-                ? confirmRealImport
+                ? handleConfirmImport
                 : undefined
             }
           />
@@ -690,7 +698,7 @@ export default function MembersPage() {
                       disabled={gdprErase.isPending}
                       onClick={() => {
                         const m = members.find((x) => x.id === editingId);
-                        if (m) confirmGdprErase(m);
+                        if (m) setGdprTarget(m);
                       }}
                     >
                       <ShieldAlert className="h-4 w-4" />
@@ -1113,6 +1121,57 @@ export default function MembersPage() {
           </Card>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Apagar sócio?"
+        description={
+          deleteTarget
+            ? `Apagar "${deleteTarget.name}" (n.º ${deleteTarget.number})? Esta acção é irreversível.`
+            : ""
+        }
+        confirmLabel="Apagar"
+        variant="destructive"
+        loading={deleteMember.isPending}
+        onConfirm={() => {
+          if (deleteTarget) deleteMember.mutate(deleteTarget.id);
+        }}
+      />
+
+      <ConfirmDialog
+        open={gdprTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setGdprTarget(null);
+        }}
+        title="Apagar dados pessoais (RGPD)?"
+        description={
+          gdprTarget
+            ? `Apagar dados pessoais de "${gdprTarget.name}" (n.º ${gdprTarget.number})?\n\nO nome será anonimizado, contactos removidos e o acesso ao portal desativado. Os registos de pagamento mantêm-se para contabilidade. Esta acção é irreversível.`
+            : ""
+        }
+        confirmLabel="Apagar dados (RGPD)"
+        variant="destructive"
+        loading={gdprErase.isPending}
+        requireCheckbox
+        checkboxLabel="Confirmo o apagamento definitivo"
+        onConfirm={() => {
+          if (gdprTarget) gdprErase.mutate(gdprTarget.id);
+        }}
+      />
+
+      <ConfirmDialog
+        open={importWarningOpen}
+        onOpenChange={setImportWarningOpen}
+        title="Importar com erros?"
+        description={`A simulação encontrou ${importResult?.errors.length ?? 0} erro(s). Deseja importar mesmo assim? Linhas com erro serão ignoradas.`}
+        confirmLabel="Importar mesmo assim"
+        variant="destructive"
+        loading={importMembers.isPending}
+        onConfirm={() => confirmRealImport()}
+      />
     </div>
   );
 }

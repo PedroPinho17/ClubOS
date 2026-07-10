@@ -1,14 +1,28 @@
-'use client';
+"use client";
 
-import { getAuthenticatorName } from '@better-auth/passkey';
-import { useMutation } from '@tanstack/react-query';
-import { KeyRound, Plus, Trash2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { changePassword, passkey, updateUser, useListPasskeys, useSession } from '@/lib/auth-client';
+import { getAuthenticatorName } from "@better-auth/passkey";
+import { useMutation } from "@tanstack/react-query";
+import { KeyRound, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import {
+  changePassword,
+  passkey,
+  updateUser,
+  useListPasskeys,
+  useSession,
+} from "@/lib/auth-client";
+import { toast } from "@/lib/toast";
 
 type UserPasskey = {
   id: string;
@@ -24,33 +38,41 @@ function passkeyLabel(item: UserPasskey): string {
   if (trimmed) return trimmed;
   const fromAaguid = item.aaguid ? getAuthenticatorName(item.aaguid) : null;
   if (fromAaguid) return fromAaguid;
-  return 'Passkey';
+  return "Passkey";
 }
 
 function formatPasskeyMeta(item: UserPasskey): string {
   const parts: string[] = [];
-  if (item.deviceType === 'platform') parts.push('Este dispositivo');
-  else if (item.deviceType === 'cross-platform') parts.push('Chave de segurança');
-  if (item.backedUp) parts.push('sincronizada na cloud');
+  if (item.deviceType === "platform") parts.push("Este dispositivo");
+  else if (item.deviceType === "cross-platform")
+    parts.push("Chave de segurança");
+  if (item.backedUp) parts.push("sincronizada na cloud");
   if (item.createdAt) {
     const date = new Date(item.createdAt);
     if (!Number.isNaN(date.getTime())) {
-      parts.push(`desde ${date.toLocaleDateString('pt-PT')}`);
+      parts.push(`desde ${date.toLocaleDateString("pt-PT")}`);
     }
   }
-  return parts.join(' · ') || 'Autenticação sem password';
+  return parts.join(" · ") || "Autenticação sem password";
 }
 
 export default function AccountPage() {
   const router = useRouter();
   const { data: session, isPending, refetch } = useSession();
-  const { data: passkeysData, isPending: passkeysLoading, refetch: refetchPasskeys } = useListPasskeys();
+  const {
+    data: passkeysData,
+    isPending: passkeysLoading,
+    refetch: refetchPasskeys,
+  } = useListPasskeys();
   const passkeys = passkeysData ?? [];
-  const [name, setName] = useState('');
-  const [newPasskeyName, setNewPasskeyName] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [newPasskeyName, setNewPasskeyName] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passkeyToDelete, setPasskeyToDelete] = useState<UserPasskey | null>(
+    null,
+  );
 
   useEffect(() => {
     if (session?.user?.name) setName(session.user.name);
@@ -59,57 +81,76 @@ export default function AccountPage() {
   const saveProfile = useMutation({
     mutationFn: async () => {
       const trimmed = name.trim();
-      if (!trimmed) throw new Error('O nome é obrigatório.');
+      if (!trimmed) throw new Error("O nome é obrigatório.");
       const res = await updateUser({ name: trimmed });
-      if (res.error) throw new Error(res.error.message ?? 'Não foi possível atualizar o perfil.');
+      if (res.error)
+        throw new Error(
+          res.error.message ?? "Não foi possível atualizar o perfil.",
+        );
     },
     onSuccess: async () => {
       await refetch();
-      alert('Dados atualizados com sucesso.');
+      toast.success("Dados atualizados com sucesso");
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const savePassword = useMutation({
     mutationFn: async () => {
-      if (newPassword.length < 8) throw new Error('A nova password deve ter pelo menos 8 caracteres.');
-      if (newPassword !== confirmPassword) throw new Error('As passwords não coincidem.');
-      const res = await changePassword({ currentPassword, newPassword, revokeOtherSessions: false });
-      if (res.error) throw new Error(res.error.message ?? 'Não foi possível alterar a password.');
+      if (newPassword.length < 8)
+        throw new Error("A nova password deve ter pelo menos 8 caracteres.");
+      if (newPassword !== confirmPassword)
+        throw new Error("As passwords não coincidem.");
+      const res = await changePassword({
+        currentPassword,
+        newPassword,
+        revokeOtherSessions: false,
+      });
+      if (res.error)
+        throw new Error(
+          res.error.message ?? "Não foi possível alterar a password.",
+        );
     },
     onSuccess: () => {
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      alert('Password alterada com sucesso.');
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password alterada com sucesso");
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const addPasskey = useMutation({
     mutationFn: async () => {
       const label = newPasskeyName.trim();
       const res = await passkey.addPasskey({ name: label || undefined });
-      if (res.error) throw new Error(res.error.message ?? 'Não foi possível adicionar a passkey.');
+      if (res.error)
+        throw new Error(
+          res.error.message ?? "Não foi possível adicionar a passkey.",
+        );
     },
     onSuccess: async () => {
-      setNewPasskeyName('');
+      setNewPasskeyName("");
       await refetchPasskeys();
-      alert('Passkey adicionada com sucesso.');
+      toast.success("Passkey adicionada com sucesso");
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const removePasskey = useMutation({
     mutationFn: async (id: string) => {
       const res = await passkey.deletePasskey({ id });
-      if (res.error) throw new Error(res.error.message ?? 'Não foi possível eliminar a passkey.');
+      if (res.error)
+        throw new Error(
+          res.error.message ?? "Não foi possível eliminar a passkey.",
+        );
     },
     onSuccess: async () => {
+      setPasskeyToDelete(null);
       await refetchPasskeys();
-      alert('Passkey eliminada.');
+      toast.success("Passkey eliminada");
     },
-    onError: (err: Error) => alert(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   if (isPending || !session) {
@@ -147,8 +188,11 @@ export default function AccountPage() {
                 required
               />
             </div>
-            <Button type="submit" disabled={saveProfile.isPending || !name.trim()}>
-              {saveProfile.isPending ? 'A guardar...' : 'Guardar nome'}
+            <Button
+              type="submit"
+              disabled={saveProfile.isPending || !name.trim()}
+            >
+              {saveProfile.isPending ? "A guardar..." : "Guardar nome"}
             </Button>
           </form>
         </CardContent>
@@ -188,7 +232,9 @@ export default function AccountPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Confirmar nova password</label>
+              <label className="text-sm font-medium">
+                Confirmar nova password
+              </label>
               <Input
                 type="password"
                 value={confirmPassword}
@@ -198,8 +244,15 @@ export default function AccountPage() {
                 required
               />
             </div>
-            <Button type="submit" disabled={savePassword.isPending || !currentPassword || !newPassword}>
-              {savePassword.isPending ? 'A guardar...' : 'Guardar nova password'}
+            <Button
+              type="submit"
+              disabled={
+                savePassword.isPending || !currentPassword || !newPassword
+              }
+            >
+              {savePassword.isPending
+                ? "A guardar..."
+                : "Guardar nova password"}
             </Button>
           </form>
         </CardContent>
@@ -209,34 +262,41 @@ export default function AccountPage() {
         <CardHeader>
           <CardTitle className="text-base">Passkeys</CardTitle>
           <CardDescription>
-            Entra sem password com impressão digital, Face ID ou chave de segurança. Podes ter várias passkeys.
+            Entra sem password com impressão digital, Face ID ou chave de
+            segurança. Podes ter várias passkeys.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {passkeysLoading ? (
-            <p className="text-sm text-muted-foreground">A carregar passkeys...</p>
+            <p className="text-sm text-muted-foreground">
+              A carregar passkeys...
+            </p>
           ) : passkeys.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Ainda não tens passkeys registadas.</p>
+            <p className="text-sm text-muted-foreground">
+              Ainda não tens passkeys registadas.
+            </p>
           ) : (
             <ul className="divide-y rounded-md border">
               {passkeys.map((item) => (
-                <li key={item.id} className="flex items-start justify-between gap-3 p-3">
+                <li
+                  key={item.id}
+                  className="flex items-start justify-between gap-3 p-3"
+                >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 font-medium">
                       <KeyRound className="h-4 w-4 shrink-0 text-muted-foreground" />
                       <span className="truncate">{passkeyLabel(item)}</span>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{formatPasskeyMeta(item)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatPasskeyMeta(item)}
+                    </p>
                   </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     disabled={removePasskey.isPending}
-                    onClick={() => {
-                      if (!window.confirm(`Eliminar a passkey "${passkeyLabel(item)}"?`)) return;
-                      removePasskey.mutate(item.id);
-                    }}
+                    onClick={() => setPasskeyToDelete(item)}
                   >
                     <Trash2 className="h-4 w-4" />
                     Eliminar
@@ -267,7 +327,7 @@ export default function AccountPage() {
             </div>
             <Button type="submit" disabled={addPasskey.isPending}>
               <Plus className="h-4 w-4" />
-              {addPasskey.isPending ? 'A registar...' : 'Adicionar passkey'}
+              {addPasskey.isPending ? "A registar..." : "Adicionar passkey"}
             </Button>
           </form>
         </CardContent>
@@ -276,6 +336,25 @@ export default function AccountPage() {
       <Button type="button" variant="outline" onClick={() => router.back()}>
         Fechar
       </Button>
+
+      <ConfirmDialog
+        open={passkeyToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPasskeyToDelete(null);
+        }}
+        title="Eliminar passkey?"
+        description={
+          passkeyToDelete
+            ? `Eliminar a passkey "${passkeyLabel(passkeyToDelete)}"?`
+            : ""
+        }
+        confirmLabel="Eliminar"
+        variant="destructive"
+        loading={removePasskey.isPending}
+        onConfirm={() => {
+          if (passkeyToDelete) removePasskey.mutate(passkeyToDelete.id);
+        }}
+      />
     </div>
   );
 }

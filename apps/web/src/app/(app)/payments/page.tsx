@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { api, openBlob } from "@/lib/api";
 import { todayDateInput } from "@/lib/date-input";
+import { toast } from "@/lib/toast";
 import { useMembersPicker } from "@/hooks/use-members-picker";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type {
@@ -91,7 +92,9 @@ export default function PaymentsPage() {
       setPaidAt(todayDateInput());
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["members"] });
+      toast.success("Pagamento registado");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   return (
