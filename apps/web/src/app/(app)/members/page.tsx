@@ -11,6 +11,7 @@ import {
   FileDown,
   FileSpreadsheet,
   FileText,
+  IdCard,
   ImagePlus,
   Pencil,
   ShieldAlert,
@@ -19,10 +20,11 @@ import {
   Users,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ImportResultPanel } from "@/components/members/import-result-panel";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -110,6 +112,9 @@ export default function MembersPage() {
     "administrador",
     "tesoureiro",
   ].includes(session?.user?.role ?? "");
+  const canAccessCards = ["imperador", "administrador"].includes(
+    session?.user?.role ?? "",
+  );
   const importInputRef = useRef<HTMLInputElement>(null);
   const pendingImportFileRef = useRef<File | null>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
@@ -936,6 +941,38 @@ export default function MembersPage() {
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                            )}
+                            {canAccessCards && !isGdprErased(m) && (
+                              <>
+                                <Link
+                                  href={`/cartao/${m.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Ver cartão"
+                                  className={cn(
+                                    buttonVariants({
+                                      variant: "ghost",
+                                      size: "sm",
+                                    }),
+                                  )}
+                                >
+                                  <IdCard className="h-4 w-4" />
+                                </Link>
+                                <Link
+                                  href={`/cartao/${m.id}?pdf=1`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Descarregar PDF do cartão"
+                                  className={cn(
+                                    buttonVariants({
+                                      variant: "ghost",
+                                      size: "sm",
+                                    }),
+                                  )}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Link>
+                              </>
                             )}
                             {canManage && !isGdprErased(m) && (
                               <Button

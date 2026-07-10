@@ -1,14 +1,29 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileText, ImagePlus, Layers, Save } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  Download,
+  FileText,
+  ImagePlus,
+  Layers,
+  Printer,
+  Save,
+} from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { MemberCard } from "@/components/cards/member-card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api, uploadFile } from "@/lib/api";
+import {
+  CARD_MM,
+  captureCardElement,
+  waitForCardImages,
+} from "@/lib/card-export";
+import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { useMembersPicker } from "@/hooks/use-members-picker";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
@@ -20,21 +35,9 @@ import type {
   QrContent,
 } from "@/lib/types";
 
-async function waitForImages(el: HTMLElement | null): Promise<void> {
-  if (!el) return;
-  const imgs = Array.from(el.querySelectorAll("img"));
-  await Promise.all(
-    imgs.map((img) =>
-      img.complete
-        ? Promise.resolve()
-        : new Promise<void>((resolve) => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-          }),
-    ),
-  );
-  // pequena folga para o layout/QR estabilizar
-  await new Promise((r) => setTimeout(r, 60));
+async function captureCardImage(el: HTMLElement | null) {
+  if (!el) throw new Error("Elemento do cartão indisponível.");
+  return captureCardElement(el);
 }
 
 const FIELD_TOGGLES: { key: keyof CardLayout; label: string }[] = [
@@ -49,6 +52,19 @@ const FIELD_TOGGLES: { key: keyof CardLayout; label: string }[] = [
 ];
 
 export default function CardsPage() {
+  return (
+    <Suspense
+      fallback={
+        <p className="text-sm text-muted-foreground">A carregar cartões...</p>
+      }
+    >
+      <CardsPageContent />
+    </Suspense>
+  );
+}
+
+function CardsPageContent() {
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const isImperador = session?.user?.role === "imperador";
@@ -72,6 +88,12 @@ export default function CardsPage() {
   const { members, hasMore: membersHasMore } = useMembersPicker({
     immediate: true,
   });
+
+  useEffect(() => {
+    const fromUrl =
+      searchParams.get("memberId") ?? searchParams.get("member") ?? "";
+    if (fromUrl) setMemberId(fromUrl);
+  }, [searchParams]);
 
   useEffect(() => {
     if (settings && !layout) setLayout(settings.layout);
@@ -128,13 +150,6 @@ export default function CardsPage() {
     : null;
   const isCrcVale = layout.template === "crc_vale";
 
-  const captureCardImage = async (el: HTMLElement | null) => {
-    await waitForImages(el);
-    if (!el) throw new Error("Elemento do cartão indisponível.");
-    const { toPng } = await import("html-to-image");
-    return toPng(el, { pixelRatio: 4, cacheBust: true });
-  };
-
   const exportPng = async () => {
     if (!cardRef.current) return;
     const { toPng } = await import("html-to-image");
@@ -149,8 +164,6 @@ export default function CardsPage() {
     link.click();
   };
 
-  const CARD_MM: [number, number] = [85.6, 53.98];
-
   const exportPdf = async () => {
     if (!previewData) return;
     const { jsPDF } = await import("jspdf");
@@ -164,7 +177,7 @@ export default function CardsPage() {
       setCaptureData(previewData);
       setCaptureSide("front");
     });
-    await waitForImages(hiddenRef.current);
+    await waitForCardImages(hiddenRef.current);
     if (!hiddenRef.current) return;
     pdf.addImage(
       await captureCardImage(hiddenRef.current),
@@ -177,7 +190,7 @@ export default function CardsPage() {
 
     if (isCrcVale) {
       flushSync(() => setCaptureSide("back"));
-      await waitForImages(hiddenRef.current);
+      await waitForCardImages(hiddenRef.current);
       if (hiddenRef.current) {
         pdf.addPage(CARD_MM, "landscape");
         pdf.addImage(
@@ -220,7 +233,7 @@ export default function CardsPage() {
           setCaptureData(cardPayload);
           setCaptureSide("front");
         });
-        await waitForImages(hiddenRef.current);
+        await waitForCardImages(hiddenRef.current);
         if (!hiddenRef.current) continue;
 
         if (pageIndex > 0) pdf.addPage(CARD_MM, "landscape");
@@ -236,7 +249,7 @@ export default function CardsPage() {
 
         if (layout.template === "crc_vale") {
           flushSync(() => setCaptureSide("back"));
-          await waitForImages(hiddenRef.current);
+          await waitForCardImages(hiddenRef.current);
           if (hiddenRef.current) {
             pdf.addPage(CARD_MM, "landscape");
             pdf.addImage(
@@ -264,7 +277,8 @@ export default function CardsPage() {
       <h1 className="mb-2 text-2xl font-bold">Cartões de Sócio</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Escolhe o modelo do cartão, personaliza o visual e pré-visualiza por
-        sócio.
+        sócio. Para imprimir, usa <strong>Imprimir</strong> (abre página de
+        impressão) ou exporta PNG/PDF.
       </p>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -364,6 +378,24 @@ export default function CardsPage() {
                   </label>
                 </div>
                 <div className="flex gap-2">
+                  {memberId ? (
+                    <Link
+                      href={`/cartao/${memberId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "sm" }),
+                      )}
+                    >
+                      <Printer className="h-4 w-4" />
+                      Imprimir
+                    </Link>
+                  ) : (
+                    <Button variant="outline" size="sm" disabled>
+                      <Printer className="h-4 w-4" />
+                      Imprimir
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"

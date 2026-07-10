@@ -32,3 +32,26 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  .cartao-print-toolbar {
+    display: none !important;
+  }
+
+  .cartao-print-page {
+    background: white !important;
+    padding: 0 !important;
+    min-height: auto !important;
+  }
+
+  .cartao-print-wrap {
+    display: flex !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .cartao-print-card {
+    box-shadow: none !important;
+  }
+}
