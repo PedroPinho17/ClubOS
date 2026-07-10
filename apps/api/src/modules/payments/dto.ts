@@ -1,5 +1,12 @@
-import { IsEnum, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
-import { PaymentMethod, PaymentStatus } from '@clubos/database';
+import {
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+} from "class-validator";
+import { PaymentMethod, PaymentStatus } from "@clubos/database";
 
 export class CreatePaymentDto {
   @IsString()
@@ -25,4 +32,8 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsString()
   reference?: string;
+
+  @IsOptional()
+  @IsDateString()
+  paidAt?: string;
 }

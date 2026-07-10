@@ -3,19 +3,27 @@
  * CRUD de socios, fotos e calculo de situacao de quota por organizacao.
  * Import/export Excel delegado a `MemberImportService` / `MemberExportService`.
  */
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, PaymentStatus } from '@clubos/database';
-import { PrismaService } from '../../prisma/prisma.service';
-import { StorageService } from '../../storage/storage.service';
-import { paginated, parsePagination } from '../../common/pagination';
-import { CreateMemberDto, UpdateMemberDto } from './dto';
-import { computeQuotaSituation } from './quota.util';
-import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { Prisma, PaymentStatus } from "@clubos/database";
+import { PrismaService } from "../../prisma/prisma.service";
+import { StorageService } from "../../storage/storage.service";
+import { paginated, parsePagination } from "../../common/pagination";
+import {
+  parseApiDate,
+  parseOptionalApiDate,
+} from "../../common/parse-api-date";
+import { CreateMemberDto, UpdateMemberDto } from "./dto";
+import { computeQuotaSituation } from "./quota.util";
+import { loadOrgReminderSettings } from "../reminders/org-reminder-settings";
 
 const IMAGE_EXT: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
 };
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -41,9 +49,9 @@ export class MembersService {
       ...(search
         ? {
             OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } },
-              { number: { contains: search, mode: 'insensitive' } },
+              { name: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+              { number: { contains: search, mode: "insensitive" } },
             ],
           }
         : {}),
@@ -57,17 +65,20 @@ export class MembersService {
           quotaPlan: true,
           payments: {
             where: { status: PaymentStatus.PAID },
-            orderBy: { paidAt: 'desc' },
+            orderBy: { paidAt: "desc" },
             take: 1,
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
     ]);
 
-    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
+    const { diasAvisoQuota } = await loadOrgReminderSettings(
+      this.prisma,
+      organizationId,
+    );
 
     const items = await Promise.all(
       members.map(async ({ payments, ...member }) => ({
@@ -89,14 +100,22 @@ export class MembersService {
   async findOne(organizationId: string, id: string) {
     const member = await this.prisma.member.findFirst({
       where: { id, organizationId },
-      include: { quotaPlan: true, payments: { orderBy: { createdAt: 'desc' } } },
+      include: {
+        quotaPlan: true,
+        payments: { orderBy: { createdAt: "desc" } },
+      },
     });
     if (!member) {
-      throw new NotFoundException('Membro nao encontrado.');
+      throw new NotFoundException("Membro nao encontrado.");
     }
 
-    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
-    const lastPaid = member.payments.find((p) => p.status === PaymentStatus.PAID && p.paidAt);
+    const { diasAvisoQuota } = await loadOrgReminderSettings(
+      this.prisma,
+      organizationId,
+    );
+    const lastPaid = member.payments.find(
+      (p) => p.status === PaymentStatus.PAID && p.paidAt,
+    );
     return {
       ...member,
       photoUrl: await this.storage.getUrl(member.photoKey),
@@ -117,14 +136,14 @@ export class MembersService {
     file: { buffer: Buffer; mimetype: string; size: number } | undefined,
   ) {
     if (!file) {
-      throw new BadRequestException('Ficheiro em falta.');
+      throw new BadRequestException("Ficheiro em falta.");
     }
     const ext = IMAGE_EXT[file.mimetype];
     if (!ext) {
-      throw new BadRequestException('Formato invalido (usa PNG, JPG ou WEBP).');
+      throw new BadRequestException("Formato invalido (usa PNG, JPG ou WEBP).");
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      throw new BadRequestException('Imagem demasiado grande (max 5MB).');
+      throw new BadRequestException("Imagem demasiado grande (max 5MB).");
     }
     await this.findOne(organizationId, id);
     const key = `${organizationId}/members/${id}/photo-${Date.now()}.${ext}`;
@@ -144,18 +163,34 @@ export class MembersService {
         phone: dto.phone,
         notes: dto.notes,
         quotaPlanId: dto.quotaPlanId,
+        ...(dto.joinedAt
+          ? { joinedAt: parseApiDate(dto.joinedAt, "Data de adesão") }
+          : {}),
       },
     });
   }
 
   async update(organizationId: string, id: string, dto: UpdateMemberDto) {
     await this.findOne(organizationId, id);
-    const { quotaPlanId, ...rest } = dto;
+    const { quotaPlanId, joinedAt, cardValidUntil, ...rest } = dto;
     return this.prisma.member.update({
       where: { id },
       data: {
         ...rest,
-        ...(quotaPlanId !== undefined ? { quotaPlanId: quotaPlanId || null } : {}),
+        ...(quotaPlanId !== undefined
+          ? { quotaPlanId: quotaPlanId || null }
+          : {}),
+        ...(joinedAt !== undefined
+          ? { joinedAt: parseApiDate(joinedAt, "Data de adesão") }
+          : {}),
+        ...(cardValidUntil !== undefined
+          ? {
+              cardValidUntil: parseOptionalApiDate(
+                cardValidUntil,
+                "Validade do cartão",
+              ),
+            }
+          : {}),
       },
     });
   }

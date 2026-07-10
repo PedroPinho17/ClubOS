@@ -139,6 +139,8 @@ export interface Member {
   photoUrl?: string | null;
   cardRole?: string | null;
   notes?: string | null;
+  joinedAt: string;
+  cardValidUntil?: string | null;
   quotaPlan: { id: string; name: string; amount: string } | null;
   quotaSituation?: QuotaSituation;
   createdAt: string;

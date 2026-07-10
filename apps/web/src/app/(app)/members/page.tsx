@@ -22,6 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { api, downloadBlob, downloadJson, uploadFile } from "@/lib/api";
+import { formatDateInput, todayDateInput } from "@/lib/date-input";
 import { useSession } from "@/lib/auth-client";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type {
@@ -56,6 +57,8 @@ interface EditForm {
   quotaPlanId: string;
   cardRole: string;
   notes: string;
+  joinedAt: string;
+  cardValidUntil: string;
 }
 
 function emptyEditForm(): EditForm {
@@ -67,6 +70,8 @@ function emptyEditForm(): EditForm {
     quotaPlanId: "",
     cardRole: "",
     notes: "",
+    joinedAt: todayDateInput(),
+    cardValidUntil: "",
   };
 }
 
@@ -79,6 +84,8 @@ function memberToForm(m: Member): EditForm {
     quotaPlanId: m.quotaPlan?.id ?? "",
     cardRole: m.cardRole ?? "",
     notes: m.notes ?? "",
+    joinedAt: m.joinedAt ? formatDateInput(m.joinedAt) : todayDateInput(),
+    cardValidUntil: m.cardValidUntil ? formatDateInput(m.cardValidUntil) : "",
   };
 }
 
@@ -109,6 +116,7 @@ export default function MembersPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [quotaPlanId, setQuotaPlanId] = useState("");
+  const [joinedAt, setJoinedAt] = useState(todayDateInput);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>(emptyEditForm());
   const [portalGrantMember, setPortalGrantMember] = useState<Member | null>(
@@ -147,11 +155,13 @@ export default function MembersPage() {
         name,
         email: email || undefined,
         quotaPlanId: quotaPlanId || undefined,
+        joinedAt,
       }),
     onSuccess: () => {
       setName("");
       setEmail("");
       setQuotaPlanId("");
+      setJoinedAt(todayDateInput());
       invalidate();
     },
   });
@@ -166,6 +176,8 @@ export default function MembersPage() {
         quotaPlanId: editForm.quotaPlanId || null,
         cardRole: editForm.cardRole || undefined,
         notes: editForm.notes || undefined,
+        joinedAt: editForm.joinedAt,
+        cardValidUntil: editForm.cardValidUntil || null,
       }),
     onSuccess: () => {
       setEditingId(null);
@@ -559,6 +571,36 @@ export default function MembersPage() {
                 </select>
               </div>
               <div className="space-y-1">
+                <label className="text-sm font-medium">Data de adesão</label>
+                <Input
+                  type="date"
+                  value={editForm.joinedAt}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, joinedAt: e.target.value }))
+                  }
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Adesão usada na quota se não houver pagamentos.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Validade cartão</label>
+                <Input
+                  type="date"
+                  value={editForm.cardValidUntil}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      cardValidUntil: e.target.value,
+                    }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Opcional. Sobrepõe o cálculo automático da validade.
+                </p>
+              </div>
+              <div className="space-y-1">
                 <label className="text-sm font-medium">Cargo no cartão</label>
                 <Input
                   value={editForm.cardRole}
@@ -660,6 +702,18 @@ export default function MembersPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="email@exemplo.pt"
               />
+            </div>
+            <div className="w-44 space-y-1">
+              <label className="text-sm font-medium">Data de adesão</label>
+              <Input
+                type="date"
+                value={joinedAt}
+                onChange={(e) => setJoinedAt(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Adesão usada na quota se não houver pagamentos.
+              </p>
             </div>
             <div className="w-44 space-y-1">
               <label className="text-sm font-medium">Plano</label>

@@ -1,11 +1,21 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PaymentStatus } from '@clubos/database';
-import type { Redis } from 'ioredis';
-import { PrismaService } from '../../prisma/prisma.service';
-import { REDIS_CLIENT, RECEIPT_CACHE_TTL_SECONDS, receiptCacheKey } from '../../redis/redis.constants';
-import { CreatePaymentDto } from './dto';
-import { ReceiptQueue } from './receipt.queue';
-import { ReceiptService, type ReceiptData } from './receipt.service';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { PaymentStatus } from "@clubos/database";
+import type { Redis } from "ioredis";
+import { parseApiDate } from "../../common/parse-api-date";
+import { PrismaService } from "../../prisma/prisma.service";
+import {
+  REDIS_CLIENT,
+  RECEIPT_CACHE_TTL_SECONDS,
+  receiptCacheKey,
+} from "../../redis/redis.constants";
+import { CreatePaymentDto } from "./dto";
+import { ReceiptQueue } from "./receipt.queue";
+import { ReceiptService, type ReceiptData } from "./receipt.service";
 
 @Injectable()
 export class PaymentsService {
@@ -20,7 +30,7 @@ export class PaymentsService {
     return this.prisma.payment.findMany({
       where: { organizationId },
       include: { member: true, quotaPlan: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -34,7 +44,7 @@ export class PaymentsService {
       },
     });
     if (!payment) {
-      throw new NotFoundException('Pagamento nao encontrado.');
+      throw new NotFoundException("Pagamento nao encontrado.");
     }
     return payment;
   }
@@ -45,7 +55,7 @@ export class PaymentsService {
       where: { id: dto.memberId, organizationId },
     });
     if (!member) {
-      throw new BadRequestException('Socio invalido para esta organizacao.');
+      throw new BadRequestException("Socio invalido para esta organizacao.");
     }
 
     // Resolve plano e valor: se nao vier valor, usa o do plano.
@@ -58,7 +68,9 @@ export class PaymentsService {
       amount = plan ? Number(plan.amount) : undefined;
     }
     if (amount === undefined) {
-      throw new BadRequestException('Valor em falta (indica um valor ou um plano com valor).');
+      throw new BadRequestException(
+        "Valor em falta (indica um valor ou um plano com valor).",
+      );
     }
 
     const status = dto.status ?? PaymentStatus.PAID;
@@ -71,7 +83,12 @@ export class PaymentsService {
         method: dto.method,
         status,
         reference: dto.reference,
-        paidAt: status === PaymentStatus.PAID ? new Date() : null,
+        paidAt:
+          status === PaymentStatus.PAID
+            ? dto.paidAt
+              ? parseApiDate(dto.paidAt, "Data do pagamento")
+              : new Date()
+            : null,
       },
       include: { member: true, quotaPlan: true },
     });
@@ -81,7 +98,10 @@ export class PaymentsService {
       void Promise.race([
         this.receiptQueue.enqueue({ organizationId, paymentId: payment.id }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Redis timeout ao enfileirar recibo')), 3_000),
+          setTimeout(
+            () => reject(new Error("Redis timeout ao enfileirar recibo")),
+            3_000,
+          ),
         ),
       ]).catch(() => {
         // Redis indisponivel nao deve bloquear o registo do pagamento.
@@ -101,7 +121,7 @@ export class PaymentsService {
     await this.redis.set(
       receiptCacheKey(paymentId),
       buffer,
-      'EX',
+      "EX",
       RECEIPT_CACHE_TTL_SECONDS,
     );
   }
@@ -112,7 +132,10 @@ export class PaymentsService {
   }
 
   /** Devolve o recibo servindo do cache Redis quando disponivel. */
-  async getReceipt(organizationId: string, id: string): Promise<{ filename: string; buffer: Buffer }> {
+  async getReceipt(
+    organizationId: string,
+    id: string,
+  ): Promise<{ filename: string; buffer: Buffer }> {
     const payment = await this.findOne(organizationId, id); // valida ownership
     const number = payment.reference ?? payment.id.slice(-8).toUpperCase();
     const filename = `recibo-${number}.pdf`;
@@ -128,12 +151,17 @@ export class PaymentsService {
   }
 
   /** Gera o comprovativo PDF de um pagamento. */
-  async generateReceipt(organizationId: string, id: string): Promise<{ filename: string; buffer: Buffer }> {
+  async generateReceipt(
+    organizationId: string,
+    id: string,
+  ): Promise<{ filename: string; buffer: Buffer }> {
     const payment = await this.findOne(organizationId, id);
-    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
 
     const data: ReceiptData = {
-      organizationName: org?.name ?? 'Organizacao',
+      organizationName: org?.name ?? "Organizacao",
       organizationColor: org?.primaryColor,
       receiptNumber: payment.reference ?? payment.id.slice(-8).toUpperCase(),
       date: payment.paidAt ?? payment.createdAt,
