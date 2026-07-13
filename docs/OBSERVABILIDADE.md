@@ -1,79 +1,153 @@
 # Observabilidade e alertas
 
-Guia operacional para monitorizar o ClubOS em produção — Sentry (erros de aplicação) e uptime externo (disponibilidade).
+Guia operacional para monitorizar o ClubOS em produção — **Sentry** (erros de aplicação) e **uptime externo** (disponibilidade).
+
+Relacionado: [Go-live CRC Vale](GO-LIVE-CRC-VALE.md) · [Runbook ops](RUNBOOK-OPS.md)
+
+---
+
+## Ordem recomendada
+
+| #   | Tarefa           | Quando                                          |
+| --- | ---------------- | ----------------------------------------------- |
+| 1   | Sentry alertas   | Assim que `SENTRY_DSN` estiver em prod/staging  |
+| 2   | Uptime externo   | No mesmo dia do deploy (precisa de URL pública) |
+| 3   | Go-live CRC Vale | Após VPS + domínio + reunião fechada            |
+
+---
 
 ## Sentry — alertas automáticos
 
 ### Situação no código
 
-- API e Web já enviam erros quando `SENTRY_DSN` está definido.
+- API e Web enviam erros quando `SENTRY_DSN` está definido.
 - A API adiciona tags `environment`, `organizationId` e `endpoint` em cada excepção capturada.
+- **Sem DSN** = zero impacto em dev local e CI (`NODE_ENV=test`).
 - Variáveis em `.env` (ver `.env.example`):
 
 ```env
 SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
 SENTRY_ENVIRONMENT=production
 SENTRY_TRACES_SAMPLE_RATE=0.1
-NEXT_PUBLIC_SENTRY_DSN=""   # opcional; Web client
+NEXT_PUBLIC_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx   # opcional; Web client
 ```
 
-### Configurar no painel Sentry
+### A) Painel Sentry (manual — não é código)
 
-1. Criar projeto(s) ClubOS — API e Web separados se preferir.
-2. **Alerts** → **Create Alert**
-3. **Alerta A — erro novo**
-   - Tipo: **Issues** → *A new issue is created*
-   - Filtro: `environment:production`
-   - Acção: email ou Slack
-4. **Alerta B — spike de erros**
-   - Tipo: **Number of events** > 10 em 5 minutos
-   - Filtro: `environment:production`
-   - Acção: email urgente
+1. Criar ou usar projeto(s): **clubos-api** e **clubos-web** (ou um só).
+2. **Alerts → Create Alert**
 
-### Validar
+**Alerta A — Novo issue**
 
-- [ ] Forçar erro 500 em staging/production e confirmar email
-- [ ] Alertas filtrados por `production` (sem spam em dev local)
-- [ ] Tags `organizationId` visíveis no evento Sentry (multi-tenant)
+| Campo  | Valor                             |
+| ------ | --------------------------------- |
+| Tipo   | Issues → _A new issue is created_ |
+| Filtro | `environment:production`          |
+| Acção  | Email (Pedro) + Slack opcional    |
+| Nome   | `ClubOS [production] — novo erro` |
+
+**Alerta B — Spike**
+
+| Campo  | Valor                                      |
+| ------ | ------------------------------------------ |
+| Tipo   | Number of events **> 10** em **5 minutes** |
+| Filtro | `environment:production`                   |
+| Acção  | Email urgente                              |
+| Nome   | `ClubOS [production] — spike de erros`     |
+
+3. **Project Settings → Environments** — confirmar que eventos de prod chegam com `environment:production`.
+
+### B) Variáveis em produção (VPS / Coolify)
+
+Garantir no `.env` do servidor:
+
+```env
+SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.1
+NEXT_PUBLIC_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+```
+
+### C) Validar (obrigatório)
+
+1. Em staging ou prod: provocar erro 500 controlado:
+   - Opção segura: no painel Sentry → **Send test event**
+   - Opção API: pedido que rebenta internamente (remover após teste)
+2. Confirmar evento no Sentry com tag `environment:production`
+3. Confirmar tag `organizationId` num erro multi-tenant (se aplicável)
+4. Confirmar email do **Alerta A**
+5. **Não** repetir em `development` — alertas devem estar filtrados por `production`
+
+### D) Critérios de sucesso — Sentry
+
+- [ ] Alerta "novo issue" testado em production — data: ___________
+- [ ] Alerta spike configurado
+- [ ] Zero spam de alertas em dev local
+- [ ] `SENTRY_ENVIRONMENT=production` no servidor
 
 ---
 
 ## Uptime externo
 
-O Sentry deteta **erros de aplicação**. Um monitor externo deteta **site/API caído** (VPS, rede, Docker).
+O Sentry deteta **erros de aplicação**. Um monitor externo deteta **site/API caído** (VPS, rede, Docker parado).
 
-### Endpoints a monitorizar
+### Endpoints públicos (sem auth)
 
-| URL | Tipo | Intervalo |
-|-----|------|-----------|
-| `https://teu-dominio.pt/api/health` | HTTP 200 | 5 min |
-| `https://teu-dominio.pt/api/ready` | HTTP 200 + body `ready` | 5 min |
-| `https://teu-dominio.pt/login` | HTTP 200 | 15 min |
+| Endpoint          | Função                          |
+| ----------------- | ------------------------------- |
+| `GET /api/health` | Liveness — processo a responder |
+| `GET /api/ready`  | Readiness — PostgreSQL + Redis  |
+| `GET /login`      | Frontend activo                 |
 
-### UptimeRobot (exemplo)
+### A) UptimeRobot — 3 monitores
 
-1. Conta gratuita em [uptimerobot.com](https://uptimerobot.com)
-2. **Add Monitor** → HTTP(s)
-3. URL: `https://socios.clube.pt/api/ready`
-4. Interval: 5 minutes
-5. Alert contacts: email (+ Telegram opcional)
-6. Repetir para `/api/health` e `/login`
+Substituir `https://TEU-DOMINIO` pelo domínio real (ex. `https://socios.crcvale.pt`):
 
-### Healthchecks.io — job de lembretes
+| Nome              | URL                              | Intervalo | Alerta se                      |
+| ----------------- | -------------------------------- | --------- | ------------------------------ |
+| ClubOS API health | `https://TEU-DOMINIO/api/health` | 5 min     | ≠ HTTP 200                     |
+| ClubOS API ready  | `https://TEU-DOMINIO/api/ready`  | 5 min     | ≠ HTTP 200 ou body sem `ready` |
+| ClubOS Web login  | `https://TEU-DOMINIO/login`      | 15 min    | ≠ HTTP 200                     |
 
-O cron de lembretes de quotas pode fazer ping após cada execução:
+Passos:
+
+1. Conta [UptimeRobot](https://uptimerobot.com) (grátis) ou Better Stack
+2. **Add New Monitor** → HTTP(s)
+3. Alert Contacts: email (+ Telegram opcional)
+4. Guardar os 3 monitores
+
+**URLs finais em produção:**
+
+| Monitor    | URL                                  |
+| ---------- | ------------------------------------ |
+| API health | `https://_______________/api/health` |
+| API ready  | `https://_______________/api/ready`  |
+| Web login  | `https://_______________/login`      |
+
+### B) Healthchecks.io — cron lembretes (opcional, recomendado)
+
+1. Criar check em [healthchecks.io](https://healthchecks.io) — "ClubOS quota reminders"
+2. No `.env` de produção:
 
 ```env
-HEALTHCHECK_QUOTA_REMINDERS_URL=https://hc-ping.com/xxx
+REMINDERS_ENABLED=true
+HEALTHCHECK_QUOTA_REMINDERS_URL=https://hc-ping.com/SEU-UUID
 ```
 
-Configurar no [healthchecks.io](https://healthchecks.io) para saber se o job correu.
+3. O job `pnpm --filter @clubos/api reminders:run` faz ping ao URL após cada execução (já suportado no código).
 
-### Validar
+### C) Validar uptime
 
-- [ ] Monitor activo em produção
-- [ ] Parar API → alerta em menos de 10 minutos
-- [ ] Checklist de go-live actualizado
+1. Monitores em estado **Up** com domínio real
+2. Teste: parar container `clubos-api` → alerta em **< 10 min**
+3. Repor serviço → monitor volta a Up
+4. Preencher URLs finais na tabela acima
+
+### D) Critérios de sucesso — Uptime
+
+- [ ] 3 monitores UptimeRobot activos — data: ___________
+- [ ] Teste de downtime feito e alerta recebido
+- [ ] Healthchecks.io para lembretes (opcional) — data: ___________
 
 ---
 
@@ -81,17 +155,21 @@ Configurar no [healthchecks.io](https://healthchecks.io) para saber se o job cor
 
 - [ ] Sentry: alerta "new issue" em `production`
 - [ ] Sentry: alerta spike de erros (>10 / 5 min)
-- [ ] UptimeRobot: `/api/ready`
 - [ ] UptimeRobot: `/api/health`
-- [ ] UptimeRobot ou similar: `/login`
+- [ ] UptimeRobot: `/api/ready`
+- [ ] UptimeRobot: `/login`
 - [ ] Healthchecks.io: ping lembretes (opcional)
+- [ ] Backup PostgreSQL diário (`pnpm db:backup`)
+- [ ] Runbook partilhado: [RUNBOOK-OPS.md](RUNBOOK-OPS.md)
 
 ---
 
 ## Relação com outras docs
 
-| Documento | Conteúdo |
-|-----------|----------|
-| [Arquitetura](ARQUITETURA.md) | Health `/api/health` e `/api/ready` |
-| [API Backend](API-BACKEND.md) | Endpoints e workers |
-| [README](README.md) | Índice geral |
+| Documento                               | Conteúdo                            |
+| --------------------------------------- | ----------------------------------- |
+| [Arquitetura](ARQUITETURA.md)           | Health `/api/health` e `/api/ready` |
+| [API Backend](API-BACKEND.md)           | Endpoints e workers                 |
+| [Go-live CRC Vale](GO-LIVE-CRC-VALE.md) | Deploy piloto, import, paralelo     |
+| [Runbook ops](RUNBOOK-OPS.md)           | API down → restart                  |
+| [README](../README.md)                  | Índice geral                        |

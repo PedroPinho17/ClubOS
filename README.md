@@ -54,19 +54,19 @@ Endpoints:
 
 ## Stack
 
-| Camada          | Tecnologia                                                      |
-| --------------- | --------------------------------------------------------------- |
-| Frontend        | Next.js 15 + React 19 + shadcn/ui + Tailwind                    |
-| Data fetching   | TanStack Query                                                  |
-| Backend         | NestJS 11 (modular)                                             |
-| ORM / BD        | **Prisma + PostgreSQL**                                         |
-| Cache/filas     | Redis + BullMQ _(preparado)_                                    |
-| Ficheiros       | S3 / MinIO _(em uso: logotipos, fotos)_                         |
-| Auth            | **Better Auth** (email+password, passkey/WebAuthn, roles/admin) |
-| PWA             | Manifest Next.js + service worker (`/sw.js`)                    |
-| Testes          | Vitest (API, unitarios)                                         |
-| Observabilidade | Sentry (activo com `SENTRY_DSN`)                                |
-| Deploy          | Docker / Coolify                                                |
+| Camada          | Tecnologia                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| Frontend        | Next.js 15 + React 19 + shadcn/ui + Tailwind                                               |
+| Data fetching   | TanStack Query                                                                             |
+| Backend         | NestJS 11 (modular)                                                                        |
+| ORM / BD        | **Prisma + PostgreSQL**                                                                    |
+| Cache/filas     | Redis + BullMQ _(preparado)_                                                               |
+| Ficheiros       | S3 / MinIO _(em uso: logotipos, fotos)_                                                    |
+| Auth            | **Better Auth** (email+password, passkey/WebAuthn, roles/admin)                            |
+| PWA             | Manifest Next.js + service worker (`/sw.js`)                                               |
+| Testes          | Vitest (API, unitarios)                                                                    |
+| Observabilidade | Sentry (activo com `SENTRY_DSN`) + uptime externo ([UptimeRobot](docs/OBSERVABILIDADE.md)) |
+| Deploy          | Docker / Coolify                                                                           |
 
 ## Estado do projeto
 
@@ -96,7 +96,7 @@ Endpoints:
 | Relatorios      | Overview, CSV generico, **pagantes / em atraso** (PDF + Excel)                                     |
 | Portal socio    | Quotas, cartao, recibos PDF, concessao de acesso pelo admin                                        |
 | Lembretes       | Cron diario 09:00, `QuotaReminderSent`, **emails HTML** a vencer + atraso                          |
-| Observabilidade | **Sentry** API + Web (so activa com `SENTRY_DSN`)                                                  |
+| Observabilidade | **Sentry** API + Web + guia uptime ([docs/OBSERVABILIDADE.md](docs/OBSERVABILIDADE.md))            |
 | Seguranca       | **Rate limit** login (`/api/auth`) e validacao QR publica                                          |
 | Branding        | Logotipo na sidebar + titulo/favicon dinamicos por organizacao                                     |
 | PWA             | Instalavel no telemovel (manifest + cache de assets estaticos)                                     |
@@ -405,6 +405,7 @@ Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
 - **Isolamento multi-tenant:** org activa validada por membership (`OrganizationMember`) ou `Member` (socio).
 - **Health:** `GET /api/health` (liveness) e `GET /api/ready` (PostgreSQL + Redis) — publicos, sem auth.
 - **Sentry:** activo apenas com `SENTRY_DSN` (API: filtro global; Web: `@sentry/nextjs`). Sem DSN = zero impacto em dev/CI.
+- **Uptime externo:** monitores HTTP em `/api/health`, `/api/ready` e `/login` — ver [docs/OBSERVABILIDADE.md](docs/OBSERVABILIDADE.md).
 
 ---
 

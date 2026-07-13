@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { ImportResultPanel } from "@/components/members/import-result-panel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -44,14 +44,6 @@ import type {
 } from "@/lib/types";
 
 const PAGE_SIZE = 25;
-
-const ImportResultPanel = dynamic(
-  () =>
-    import("@/components/members/import-result-panel").then(
-      (m) => m.ImportResultPanel,
-    ),
-  { ssr: false },
-);
 
 const QUOTA_BADGE: Record<
   QuotaStatus,

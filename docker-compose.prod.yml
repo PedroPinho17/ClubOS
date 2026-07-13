@@ -4,7 +4,7 @@
 # Antes do primeiro arranque:
 #   1. Copiar .env.example para .env e preencher segredos de producao
 #   2. docker compose up -d postgres redis minio
-#   3. pnpm db:deploy && pnpm db:seed (primeiro arranque; API corre migrate no entrypoint)
+#   3. pnpm db:deploy (primeiro arranque; NÃO correr db:seed em produção)
 
 services:
   api:

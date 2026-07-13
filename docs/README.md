@@ -13,6 +13,8 @@ Guia para desenvolvedores — equivalente ao **Javadoc** neste stack TypeScript/
 | [Autenticação e RBAC](AUTENTICACAO-RBAC.md)       | Better Auth, roles, org activa, decorators             |
 | [Convenções](CONVENCOES.md)                       | Como adicionar módulos, testes, TSDoc                  |
 | [Observabilidade](OBSERVABILIDADE.md)             | Alertas Sentry, uptime externo, go-live                |
+| [Go-live CRC Vale](GO-LIVE-CRC-VALE.md)           | Deploy piloto, import, paralelo com gestao_socios      |
+| [Runbook ops](RUNBOOK-OPS.md)                     | API down, SMTP, backup — 1 página                      |
 | [Desenvolvimento local](DESENVOLVIMENTO-LOCAL.md) | Arranque, credenciais demo, testes, backups            |
 
 ## Início rápido
