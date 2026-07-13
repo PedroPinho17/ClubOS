@@ -1,0 +1,184 @@
+"use client";
+
+import Link from "next/link";
+import { KeyRound } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { postLoginPath } from "@/lib/auth-redirect";
+import { authClient, signIn, useSession } from "@/lib/auth-client";
+import { useApiHealth } from "@/hooks/use-api-health";
+
+const API_OFFLINE_MSG =
+  "A API nao esta acessivel (porta 4000). Corre `pnpm dev` na raiz do projeto e aguarda a mensagem «ClubOS API a correr».";
+
+async function redirectAfterLogin(
+  router: ReturnType<typeof useRouter>,
+  refetch: () => Promise<void>,
+) {
+  await refetch();
+  const { data } = await authClient.getSession();
+  if (!data) return false;
+  const user = data.user as {
+    role?: string | null;
+    mustChangePassword?: boolean | null;
+  };
+  router.replace(postLoginPath(user.role, user.mustChangePassword));
+  return true;
+}
+
+export function LoginForm() {
+  const router = useRouter();
+  const { refetch } = useSession();
+  const apiReachable = useApiHealth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (apiReachable === false) {
+      setError(API_OFFLINE_MSG);
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await signIn.email({ email, password });
+      if (error) {
+        setError(error.message ?? "Credenciais invalidas.");
+        return;
+      }
+      const ok = await redirectAfterLogin(router, refetch);
+      if (!ok) setError("Sessao nao iniciada. Tenta novamente.");
+    } catch {
+      setError(API_OFFLINE_MSG);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onPasskey() {
+    setError(null);
+    if (apiReachable === false) {
+      setError(API_OFFLINE_MSG);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await signIn.passkey();
+      if (res?.error) {
+        setError(res.error.message ?? "Falha na autenticacao com passkey.");
+        return;
+      }
+      const ok = await redirectAfterLogin(router, refetch);
+      if (!ok) setError("Sessao nao iniciada. Tenta novamente.");
+    } catch {
+      setError(API_OFFLINE_MSG);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <div className="mb-2 text-center text-2xl font-bold text-primary">
+            ClubOS
+          </div>
+          <CardTitle>Entrar</CardTitle>
+          <CardDescription>
+            Acede ao backoffice ou portal do sócio.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {apiReachable === false ? (
+            <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {API_OFFLINE_MSG}
+            </p>
+          ) : null}
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label htmlFor="login-email" className="text-sm font-medium">
+                Email
+              </label>
+              <Input
+                id="login-email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                autoComplete="email"
+                required
+                className="h-11 text-base"
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="login-password" className="text-sm font-medium">
+                Password
+              </label>
+              <Input
+                id="login-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                autoComplete="current-password"
+                required
+                className="h-11 text-base"
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button
+              type="submit"
+              className="min-h-11 w-full text-base"
+              disabled={loading}
+            >
+              {loading ? "A entrar..." : "Entrar"}
+            </Button>
+          </form>
+
+          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            ou
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 w-full text-base"
+            onClick={onPasskey}
+            disabled={loading}
+          >
+            <KeyRound className="h-4 w-4" />
+            Entrar com passkey
+          </Button>
+        </CardContent>
+      </Card>
+      <p className="mt-6 max-w-sm text-center text-xs text-muted-foreground">
+        <Link
+          href="/privacidade"
+          className="inline-block py-2 underline hover:text-foreground"
+        >
+          Política de privacidade
+        </Link>
+        {" · "}
+        <Link
+          href="/dpa"
+          className="inline-block py-2 underline hover:text-foreground"
+        >
+          DPA
+        </Link>
+      </p>
+    </>
+  );
+}

@@ -13,7 +13,9 @@ const useStandalone =
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
-    optimizePackageImports: ["lucide-react"],
+    optimizePackageImports: ["lucide-react", "@radix-ui/react-alert-dialog"],
+    // Cache em disco entre restarts do `next dev` — 2.ª visita muito mais rápida.
+    turbopackFileSystemCacheForDev: true,
   },
   ...(useStandalone ? { output: "standalone" as const } : {}),
 };

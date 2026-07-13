@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { passkey, signOut } from "@/lib/auth-client";
+import { ThemeMenuItems } from "@/components/theme-menu-items";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -132,6 +133,10 @@ export function UserMenu({ name, email }: UserMenuProps) {
             <UserRound className="h-4 w-4 text-muted-foreground" />
             Editar dados
           </Link>
+
+          <div className="my-1.5 h-px bg-border" />
+
+          <ThemeMenuItems />
 
           <div className="my-1.5 h-px bg-border" />
 
