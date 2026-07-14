@@ -97,10 +97,10 @@ function isGdprErased(m: Member): boolean {
 
 export default function MembersPage() {
   const queryClient = useQueryClient();
-  const { effectiveRole } = useEffectiveRole();
-  const canManage = canManageMembers(effectiveRole);
-  const canExportReports = hasReportExport(effectiveRole);
-  const canAccessCards = hasCardAccess(effectiveRole);
+  const { effectiveRole, isLoading: roleLoading } = useEffectiveRole();
+  const canManage = !roleLoading && canManageMembers(effectiveRole);
+  const canExportReports = !roleLoading && hasReportExport(effectiveRole);
+  const canAccessCards = !roleLoading && hasCardAccess(effectiveRole);
   const importInputRef = useRef<HTMLInputElement>(null);
   const pendingImportFileRef = useRef<File | null>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
