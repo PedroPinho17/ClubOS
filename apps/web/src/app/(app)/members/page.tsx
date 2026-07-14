@@ -56,7 +56,7 @@ const QUOTA_BADGE: Record<
   no_plan: { label: "Sem plano", variant: "muted" },
 };
 
-interface EditForm extends MemberEditForm {}
+type EditForm = MemberEditForm;
 
 function emptyEditForm(): EditForm {
   return {
