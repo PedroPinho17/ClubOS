@@ -36,6 +36,17 @@ async function submitLogin(page: Page, email: string, password: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
+
+  const loginFailed = page.getByText(/invalid email or password/i);
+  const failed = await loginFailed
+    .waitFor({ state: "visible", timeout: 3_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (failed) {
+    throw new Error(
+      `Login falhou para ${email}. Verifique SEED_DEMO_PASSWORD / utilizadores seed.`,
+    );
+  }
 }
 
 export async function loginAsAdmin(page: Page) {
@@ -51,6 +62,17 @@ export async function loginAsSocio(page: Page) {
   await expect(page).toHaveURL(/\/portal/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: /Joao Silva/i })).toBeVisible({
     timeout: 15_000,
+  });
+}
+
+export const E2E_TREASURER_EMAIL =
+  readEnv("E2E_TREASURER_EMAIL") ?? "tesoureiro@crcvale.pt";
+
+export async function loginAsTreasurer(page: Page) {
+  await submitLogin(page, E2E_TREASURER_EMAIL, requireE2EPassword());
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+    timeout: 20_000,
   });
 }
 

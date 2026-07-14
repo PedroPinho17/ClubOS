@@ -2,6 +2,7 @@
  * @module Nav
  * Itens de navegacao do backoffice, filtrados por modulos activos e role.
  */
+import { STAFF_ROLES } from "./staff-roles";
 import {
   BarChart3,
   ClipboardList,
@@ -14,7 +15,7 @@ import {
   Tags,
   Users,
   type LucideIcon,
-} from 'lucide-react';
+} from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -28,16 +29,68 @@ export interface NavItem {
 
 /** Navegacao mapeada a modulos. So aparece se o modulo estiver ativo na org. */
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', module: 'dashboard', icon: LayoutDashboard },
-  { label: 'Membros', href: '/members', module: 'members', icon: Users },
-  { label: 'Planos', href: '/membership-plans', module: 'membership-plans', icon: Tags, roles: ['imperador', 'administrador'] },
-  { label: 'Pagamentos', href: '/payments', module: 'payments', icon: CreditCard },
-  { label: 'Cartões', href: '/cards', module: 'cards', icon: IdCard, roles: ['imperador', 'administrador'] },
-  { label: 'Comunicações', href: '/communications', module: 'communications', icon: Mail, roles: ['imperador', 'administrador'] },
-  { label: 'Relatórios', href: '/reports', module: 'reports', icon: BarChart3 },
-  { label: 'Auditoria', href: '/audit', icon: ClipboardList, roles: ['imperador', 'administrador'] },
-  { label: 'Definições', href: '/settings', icon: SlidersHorizontal, roles: ['imperador', 'administrador'] },
-  { label: 'Módulos', href: '/modules', icon: Settings, roles: ['imperador'] },
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    module: "dashboard",
+    icon: LayoutDashboard,
+    roles: [...STAFF_ROLES],
+  },
+  {
+    label: "Membros",
+    href: "/members",
+    module: "members",
+    icon: Users,
+    roles: [...STAFF_ROLES],
+  },
+  {
+    label: "Planos",
+    href: "/membership-plans",
+    module: "membership-plans",
+    icon: Tags,
+    roles: ["imperador", "administrador"],
+  },
+  {
+    label: "Pagamentos",
+    href: "/payments",
+    module: "payments",
+    icon: CreditCard,
+    roles: [...STAFF_ROLES],
+  },
+  {
+    label: "Cartões",
+    href: "/cards",
+    module: "cards",
+    icon: IdCard,
+    roles: ["imperador", "administrador"],
+  },
+  {
+    label: "Comunicações",
+    href: "/communications",
+    module: "communications",
+    icon: Mail,
+    roles: ["imperador", "administrador"],
+  },
+  {
+    label: "Relatórios",
+    href: "/reports",
+    module: "reports",
+    icon: BarChart3,
+    roles: [...STAFF_ROLES],
+  },
+  {
+    label: "Auditoria",
+    href: "/audit",
+    icon: ClipboardList,
+    roles: ["imperador", "administrador"],
+  },
+  {
+    label: "Definições",
+    href: "/settings",
+    icon: SlidersHorizontal,
+    roles: ["imperador", "administrador"],
+  },
+  { label: "Módulos", href: "/modules", icon: Settings, roles: ["imperador"] },
 ];
 
 /** Filtra itens de navegacao por modulos ativos e role do utilizador. */

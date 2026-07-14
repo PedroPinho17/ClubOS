@@ -11,6 +11,7 @@ import type { Organization } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { OrgBrandHeader } from "@/components/org-brand-header";
 import { OrgDocumentBranding } from "@/components/org-document-branding";
+import { RoleContextError } from "@/components/role-context-error";
 import { UserMenu } from "@/components/user-menu";
 import { AppShellSkeleton } from "@/components/app-shell-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,8 +40,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   });
 
   const activeOrgId = useActiveOrgId();
-  const { isBootstrapping } = useBootstrapActiveOrganization(!!session);
-  const { effectiveRole, isLoading: roleLoading } = useEffectiveRole();
+  const { isBootstrapping, orgsError, refetchOrgs } =
+    useBootstrapActiveOrganization(!!session);
+  const {
+    effectiveRole,
+    isLoading: roleLoading,
+    isError: roleError,
+    refetch: refetchRole,
+  } = useEffectiveRole();
   const orgKey = useTenantQueryKey(["organization"]);
   const modulesKey = useTenantQueryKey(["modules", "enabled"]);
 
@@ -60,7 +67,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <AppShellSkeleton />;
   }
 
-  const role = effectiveRole ?? session.user?.role;
+  if (orgsError) {
+    return <RoleContextError onRetry={() => void refetchOrgs()} />;
+  }
+
+  if (roleError || !effectiveRole) {
+    return <RoleContextError onRetry={() => void refetchRole()} />;
+  }
+
+  const role = effectiveRole;
   const enabledSet = new Set(enabled ?? []);
   const visibleNav = filterNavItems(NAV_ITEMS, enabledSet, role);
 
@@ -100,8 +115,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-card px-4 md:justify-end md:px-6">
-          <div className="min-w-0 md:hidden">
-            <OrgBrandHeader name={org?.name} logoUrl={org?.logoUrl} />
+          <div className="flex min-w-0 flex-1 items-center gap-3 md:hidden">
+            <OrgSwitcher compact />
+            <div className="min-w-0 shrink">
+              <OrgBrandHeader name={org?.name} logoUrl={org?.logoUrl} />
+            </div>
           </div>
           <UserMenu name={session.user?.name} email={session.user?.email} />
         </header>

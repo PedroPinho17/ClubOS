@@ -1,20 +1,24 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Building2 } from "lucide-react";
 import { useActiveOrgId } from "@/hooks/use-active-org";
+import { useMyOrganizations } from "@/hooks/use-my-organizations";
 import { api } from "@/lib/api";
+import { invalidateTenantQueries } from "@/lib/invalidate-tenant-queries";
 import { setActiveOrganizationId } from "@/lib/org-context";
-import type { MyOrganization } from "@/lib/types";
+import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 
-export function OrgSwitcher() {
+type OrgSwitcherProps = {
+  /** Versao compacta para o header mobile. */
+  compact?: boolean;
+};
+
+export function OrgSwitcher({ compact = false }: OrgSwitcherProps) {
   const queryClient = useQueryClient();
   const activeOrgId = useActiveOrgId();
-
-  const { data: orgs } = useQuery<MyOrganization[]>({
-    queryKey: ["me", "organizations"],
-    queryFn: () => api.get<MyOrganization[]>("/me/organizations"),
-  });
+  const { data: orgs } = useMyOrganizations();
 
   if (!orgs || orgs.length <= 1) return null;
 
@@ -25,10 +29,32 @@ export function OrgSwitcher() {
 
     await api.post("/me/active-organization", { organizationId: id });
     setActiveOrganizationId(id);
+    invalidateTenantQueries(queryClient);
 
-    void queryClient.invalidateQueries({ queryKey: ["organization"] });
-    void queryClient.invalidateQueries({ queryKey: ["modules"] });
-    void queryClient.invalidateQueries({ queryKey: ["me", "context"] });
+    const name = orgs?.find((o) => o.id === id)?.name;
+    toast.info(name ? `Organização: ${name}` : "Organização alterada");
+  }
+
+  if (compact) {
+    return (
+      <div className="min-w-0 flex-1">
+        <label className="sr-only" htmlFor="org-switcher-mobile">
+          Organização
+        </label>
+        <select
+          id="org-switcher-mobile"
+          value={selectValue}
+          onChange={(e) => void switchOrg(e.target.value)}
+          className="flex h-9 w-full min-w-0 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {orgs.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
   }
 
   return (
@@ -41,7 +67,9 @@ export function OrgSwitcher() {
       <select
         value={selectValue}
         onChange={(e) => void switchOrg(e.target.value)}
-        className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={cn(
+          "flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
       >
         {orgs.map((o) => (
           <option key={o.id} value={o.id}>

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { RoleGate } from "@/components/role-gate";
+import { STAFF_ROLES } from "@/lib/staff-roles";
 import { api, openBlob } from "@/lib/api";
 import { todayDateInput } from "@/lib/date-input";
 import { toast } from "@/lib/toast";
@@ -40,6 +42,14 @@ const STATUS_BADGE: Record<
 };
 
 export default function PaymentsPage() {
+  return (
+    <RoleGate roles={[...STAFF_ROLES]}>
+      <PaymentsPageContent />
+    </RoleGate>
+  );
+}
+
+function PaymentsPageContent() {
   const queryClient = useQueryClient();
   const [memberId, setMemberId] = useState("");
   const [amount, setAmount] = useState("");

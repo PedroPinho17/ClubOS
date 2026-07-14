@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { RoleContextError } from "@/components/role-context-error";
 import { useRequireRole } from "@/hooks/use-require-role";
 
 type RoleGateProps = {
@@ -19,7 +20,14 @@ export function RoleGate({
     <p className="text-sm text-muted-foreground">A verificar permissões...</p>
   ),
 }: RoleGateProps) {
-  const { isLoading, allowed } = useRequireRole({ roles, redirectTo });
+  const { isLoading, allowed, isError, refetch } = useRequireRole({
+    roles,
+    redirectTo,
+  });
+
+  if (isError) {
+    return <RoleContextError onRetry={() => void refetch()} />;
+  }
 
   if (isLoading || !allowed) return fallback;
   return children;

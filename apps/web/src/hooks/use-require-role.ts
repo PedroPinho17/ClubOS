@@ -23,17 +23,31 @@ export function useRequireRole({
   const { session, isLoading: authLoading } = useRequireAuth({
     redirectIf: redirectSocioFromAdmin,
   });
-  const { effectiveRole, isLoading: roleLoading } = useEffectiveRole();
+  const {
+    effectiveRole,
+    isLoading: roleLoading,
+    isError: roleError,
+    refetch,
+  } = useEffectiveRole();
 
   const isLoading = authLoading || (!!session && roleLoading);
-  const allowed = effectiveRole != null && roles.includes(effectiveRole);
+  const allowed =
+    !roleError && effectiveRole != null && roles.includes(effectiveRole);
 
   useEffect(() => {
-    if (isLoading || !session) return;
-    if (effectiveRole && !allowed) {
+    if (isLoading || !session || roleError) return;
+    if (effectiveRole != null && !allowed) {
       router.replace(redirectTo);
     }
-  }, [isLoading, session, effectiveRole, allowed, router, redirectTo]);
+  }, [
+    isLoading,
+    session,
+    roleError,
+    effectiveRole,
+    allowed,
+    router,
+    redirectTo,
+  ]);
 
-  return { effectiveRole, isLoading, allowed };
+  return { effectiveRole, isLoading, allowed, isError: roleError, refetch };
 }

@@ -6,6 +6,14 @@ describe("filterNavItems", () => {
     NAV_ITEMS.map((i) => i.module).filter(Boolean) as string[],
   );
 
+  it("tesoureiro ve pagamentos e relatorios", () => {
+    const visible = filterNavItems(NAV_ITEMS, allModules, "tesoureiro");
+    const hrefs = visible.map((i) => i.href);
+    expect(hrefs).toContain("/payments");
+    expect(hrefs).toContain("/reports");
+    expect(hrefs).not.toContain("/settings");
+  });
+
   it("tesoureiro nao ve rotas admin-only", () => {
     const visible = filterNavItems(NAV_ITEMS, allModules, "tesoureiro");
     const hrefs = visible.map((i) => i.href);

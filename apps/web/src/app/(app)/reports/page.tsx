@@ -1,44 +1,69 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Card, CardContent } from '@/components/ui/card';
-import { api, downloadCsv } from '@/lib/api';
-import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
-import type { QuotaStatus, ReportsOverview } from '@/lib/types';
+import { useQuery } from "@tanstack/react-query";
+import { BarChart3, Download } from "lucide-react";
+import { RoleGate } from "@/components/role-gate";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Card, CardContent } from "@/components/ui/card";
+import { api, downloadCsv } from "@/lib/api";
+import { STAFF_ROLES } from "@/lib/staff-roles";
+import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
+import type { QuotaStatus, ReportsOverview } from "@/lib/types";
 
 const QUOTA_LABEL: Record<QuotaStatus, string> = {
-  up_to_date: 'Em dia',
-  due_soon: 'A vencer',
-  overdue: 'Em atraso',
-  pending: 'Pendente',
-  no_plan: 'Sem plano',
+  up_to_date: "Em dia",
+  due_soon: "A vencer",
+  overdue: "Em atraso",
+  pending: "Pendente",
+  no_plan: "Sem plano",
 };
 
 export default function ReportsPage() {
-  const overviewKey = useTenantQueryKey(['reports', 'overview']);
+  return (
+    <RoleGate roles={[...STAFF_ROLES]}>
+      <ReportsPageContent />
+    </RoleGate>
+  );
+}
+
+function ReportsPageContent() {
+  const overviewKey = useTenantQueryKey(["reports", "overview"]);
   const { data, isLoading } = useQuery<ReportsOverview>({
     queryKey: overviewKey,
-    queryFn: () => api.get<ReportsOverview>('/reports/overview'),
+    queryFn: () => api.get<ReportsOverview>("/reports/overview"),
   });
 
-  const maxMonthly = Math.max(...(data?.revenue.monthly.map((m) => m.total) ?? [1]), 1);
+  const maxMonthly = Math.max(
+    ...(data?.revenue.monthly.map((m) => m.total) ?? [1]),
+    1,
+  );
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Relatórios</h1>
-          <p className="text-sm text-muted-foreground">Visão analítica e exportação CSV.</p>
+          <p className="text-sm text-muted-foreground">
+            Visão analítica e exportação CSV.
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => downloadCsv('/reports/members.csv', 'socios.csv')}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => downloadCsv("/reports/members.csv", "socios.csv")}
+          >
             <Download className="h-4 w-4" />
             CSV Sócios
           </Button>
-          <Button variant="outline" size="sm" onClick={() => downloadCsv('/reports/payments.csv', 'pagamentos.csv')}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              downloadCsv("/reports/payments.csv", "pagamentos.csv")
+            }
+          >
             <Download className="h-4 w-4" />
             CSV Pagamentos
           </Button>
@@ -54,7 +79,7 @@ export default function ReportsPage() {
               icon={BarChart3}
               title="Sem dados para este relatório"
               description="Adicione sócios e registe pagamentos para ver estatísticas aqui."
-              actions={[{ label: 'Ir a Membros', href: '/members' }]}
+              actions={[{ label: "Ir a Membros", href: "/members" }]}
             />
           </CardContent>
         </Card>
@@ -74,8 +99,12 @@ export default function ReportsPage() {
           <Card>
             <CardContent className="pt-6">
               <h2 className="mb-4 font-semibold">Receita</h2>
-              <p className="text-3xl font-bold">{data.revenue.total.toFixed(2)} €</p>
-              <p className="text-sm text-muted-foreground">{data.revenue.paymentsCount} pagamentos</p>
+              <p className="text-3xl font-bold">
+                {data.revenue.total.toFixed(2)} €
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {data.revenue.paymentsCount} pagamentos
+              </p>
             </CardContent>
           </Card>
 
@@ -83,12 +112,19 @@ export default function ReportsPage() {
             <CardContent className="pt-6">
               <h2 className="mb-4 font-semibold">Situação de quotas</h2>
               <div className="space-y-2">
-                {(Object.keys(data.quotaBreakdown) as QuotaStatus[]).map((k) => (
-                  <div key={k} className="flex items-center justify-between text-sm">
-                    <span>{QUOTA_LABEL[k]}</span>
-                    <span className="font-semibold">{data.quotaBreakdown[k]}</span>
-                  </div>
-                ))}
+                {(Object.keys(data.quotaBreakdown) as QuotaStatus[]).map(
+                  (k) => (
+                    <div
+                      key={k}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span>{QUOTA_LABEL[k]}</span>
+                      <span className="font-semibold">
+                        {data.quotaBreakdown[k]}
+                      </span>
+                    </div>
+                  ),
+                )}
               </div>
             </CardContent>
           </Card>
@@ -98,7 +134,10 @@ export default function ReportsPage() {
               <h2 className="mb-4 font-semibold">Sócios por plano</h2>
               <div className="space-y-2">
                 {data.membersByPlan.map((row) => (
-                  <div key={row.plan} className="flex items-center justify-between text-sm">
+                  <div
+                    key={row.plan}
+                    className="flex items-center justify-between text-sm"
+                  >
                     <span>{row.plan}</span>
                     <span className="font-semibold">{row.count}</span>
                   </div>
@@ -112,13 +151,20 @@ export default function ReportsPage() {
               <h2 className="mb-4 font-semibold">Receita mensal (6 meses)</h2>
               <div className="flex h-40 items-end gap-2">
                 {data.revenue.monthly.map((m) => (
-                  <div key={m.month} className="flex flex-1 flex-col items-center gap-1">
+                  <div
+                    key={m.month}
+                    className="flex flex-1 flex-col items-center gap-1"
+                  >
                     <div
                       className="w-full rounded-t bg-primary/80"
-                      style={{ height: `${Math.max(4, (m.total / maxMonthly) * 100)}%` }}
+                      style={{
+                        height: `${Math.max(4, (m.total / maxMonthly) * 100)}%`,
+                      }}
                       title={`${m.total.toFixed(2)} €`}
                     />
-                    <span className="text-[10px] text-muted-foreground">{m.month.slice(5)}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {m.month.slice(5)}
+                    </span>
                   </div>
                 ))}
               </div>

@@ -47,6 +47,12 @@ export function MemberRowActions({
   onExportGdpr,
   onGdprErase,
 }: MemberRowActionsProps) {
+  const hasActions = canManage || canAccessCards;
+
+  if (!hasActions) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
   if (member.userId) {
     return (
       <div className="flex items-center justify-end gap-2">
@@ -131,11 +137,13 @@ function RowActionsMenu({
     >
       <DropdownMenuLabel>{member.name}</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <DropdownMenuItem onClick={onEdit}>
-        <Pencil className="h-4 w-4" />
-        Editar sócio
-      </DropdownMenuItem>
-      {!isGdprErased && (
+      {canManage && (
+        <DropdownMenuItem onClick={onEdit}>
+          <Pencil className="h-4 w-4" />
+          Editar sócio
+        </DropdownMenuItem>
+      )}
+      {canManage && !isGdprErased && (
         <DropdownMenuItem
           destructive
           disabled={deletePending}

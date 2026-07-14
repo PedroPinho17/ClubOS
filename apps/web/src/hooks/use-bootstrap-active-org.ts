@@ -1,14 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useActiveOrgId } from "@/hooks/use-active-org";
+import { useMyOrganizations } from "@/hooks/use-my-organizations";
 import { api } from "@/lib/api";
 import {
   getActiveOrganizationId,
   setActiveOrganizationId,
 } from "@/lib/org-context";
-import type { MyOrganization } from "@/lib/types";
 
 /**
  * Garante org activa no localStorage/sessao antes do shell renderizar.
@@ -18,12 +17,12 @@ export function useBootstrapActiveOrganization(enabled: boolean) {
   const activeOrgId = useActiveOrgId();
   const bootstrapped = useRef(false);
 
-  const { data: orgs, isLoading: orgsLoading } = useQuery<MyOrganization[]>({
-    queryKey: ["me", "organizations"],
-    queryFn: () => api.get<MyOrganization[]>("/me/organizations"),
-    enabled,
-    staleTime: 60_000,
-  });
+  const {
+    data: orgs,
+    isLoading: orgsLoading,
+    isError: orgsError,
+    refetch: refetchOrgs,
+  } = useMyOrganizations(enabled);
 
   useEffect(() => {
     if (!enabled) {
@@ -53,5 +52,5 @@ export function useBootstrapActiveOrganization(enabled: boolean) {
   const isBootstrapping =
     enabled && (orgsLoading || (!!orgs?.length && !activeOrgId));
 
-  return { orgs, isBootstrapping };
+  return { orgs, isBootstrapping, orgsError, refetchOrgs };
 }

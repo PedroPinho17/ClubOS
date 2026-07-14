@@ -9,10 +9,7 @@ import {
 import { ImagePlus, UserPlus, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ImportResultPanel } from "@/components/members/import-result-panel";
-import {
-  MemberEditDialog,
-  type MemberEditForm,
-} from "@/components/members/member-edit-dialog";
+import { MemberEditDialog } from "@/components/members/member-edit-dialog";
 import {
   MemberFilters,
   type MemberPlanFilter,
@@ -20,6 +17,16 @@ import {
 } from "@/components/members/member-filters";
 import { MemberRowActions } from "@/components/members/member-row-actions";
 import { MembersToolsPanel } from "@/components/members/members-tools-panel";
+import {
+  emptyEditForm,
+  isGdprErased,
+  memberInitials,
+  memberToForm,
+  PAGE_SIZE,
+  QUOTA_BADGE,
+  SELECT_CLASS,
+} from "@/components/members/members-shared";
+import { PortalGrantDialog } from "@/components/members/portal-grant-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +34,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { api, downloadJson, uploadFile } from "@/lib/api";
-import { formatDateInput, todayDateInput } from "@/lib/date-input";
+import { todayDateInput } from "@/lib/date-input";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
@@ -44,56 +51,6 @@ import type {
   PaginatedResult,
   QuotaStatus,
 } from "@/lib/types";
-
-const PAGE_SIZE = 25;
-
-const QUOTA_BADGE: Record<
-  QuotaStatus,
-  {
-    label: string;
-    variant: "success" | "muted" | "secondary" | "default" | "warning";
-  }
-> = {
-  up_to_date: { label: "Em dia", variant: "success" },
-  due_soon: { label: "A vencer", variant: "warning" },
-  overdue: { label: "Em atraso", variant: "default" },
-  pending: { label: "Pendente", variant: "secondary" },
-  no_plan: { label: "Sem plano", variant: "muted" },
-};
-
-type EditForm = MemberEditForm;
-
-function emptyEditForm(): EditForm {
-  return {
-    name: "",
-    email: "",
-    phone: "",
-    status: "ACTIVE",
-    quotaPlanId: "",
-    cardRole: "",
-    notes: "",
-    joinedAt: todayDateInput(),
-    cardValidUntil: "",
-  };
-}
-
-function memberToForm(m: Member): EditForm {
-  return {
-    name: m.name,
-    email: m.email ?? "",
-    phone: m.phone ?? "",
-    status: m.status,
-    quotaPlanId: m.quotaPlan?.id ?? "",
-    cardRole: m.cardRole ?? "",
-    notes: m.notes ?? "",
-    joinedAt: m.joinedAt ? formatDateInput(m.joinedAt) : todayDateInput(),
-    cardValidUntil: m.cardValidUntil ? formatDateInput(m.cardValidUntil) : "",
-  };
-}
-
-function isGdprErased(m: Member): boolean {
-  return m.name === "Apagado RGPD";
-}
 
 export default function MembersPage() {
   const queryClient = useQueryClient();
@@ -119,7 +76,7 @@ export default function MembersPage() {
   const [quotaPlanId, setQuotaPlanId] = useState("");
   const [joinedAt, setJoinedAt] = useState(todayDateInput);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>(emptyEditForm());
+  const [editForm, setEditForm] = useState(emptyEditForm());
   const [portalGrantMember, setPortalGrantMember] = useState<Member | null>(
     null,
   );
@@ -317,15 +274,6 @@ export default function MembersPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  function memberInitials(name: string): string {
-    return name
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase())
-      .join("");
-  }
-
   function startEdit(m: Member) {
     setEditingId(m.id);
     setEditForm(memberToForm(m));
@@ -334,9 +282,6 @@ export default function MembersPage() {
   function confirmDelete(m: Member) {
     setDeleteTarget(m);
   }
-
-  const selectClass =
-    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
   function clearFilters() {
     setQuotaFilter("");
@@ -390,70 +335,72 @@ export default function MembersPage() {
         </div>
       )}
 
-      <Card id="create-member-form" className="mb-6">
-        <CardContent className="pt-6">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (name.trim()) createMember.mutate();
-            }}
-            className="flex flex-wrap items-end gap-3"
-          >
-            <div className="flex-1 space-y-1">
-              <label className="text-sm font-medium">Nome</label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nome do sócio"
-              />
-            </div>
-            <div className="flex-1 space-y-1">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@exemplo.pt"
-              />
-            </div>
-            <div className="w-44 space-y-1">
-              <label className="text-sm font-medium">Data de adesão</label>
-              <Input
-                type="date"
-                value={joinedAt}
-                onChange={(e) => setJoinedAt(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Adesão usada na quota se não houver pagamentos.
-              </p>
-            </div>
-            <div className="w-44 space-y-1">
-              <label className="text-sm font-medium">Plano</label>
-              <select
-                value={quotaPlanId}
-                onChange={(e) => setQuotaPlanId(e.target.value)}
-                className={selectClass}
-              >
-                <option value="">Sem plano</option>
-                {(plans ?? [])
-                  .filter((p) => p.active)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <Button
-              type="submit"
-              disabled={createMember.isPending || !name.trim()}
+      {canManage && (
+        <Card id="create-member-form" className="mb-6">
+          <CardContent className="pt-6">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (name.trim()) createMember.mutate();
+              }}
+              className="flex flex-wrap items-end gap-3"
             >
-              <UserPlus className="h-4 w-4" />
-              {createMember.isPending ? "A criar..." : "Adicionar sócio"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="flex-1 space-y-1">
+                <label className="text-sm font-medium">Nome</label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Nome do sócio"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <label className="text-sm font-medium">Email</label>
+                <Input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@exemplo.pt"
+                />
+              </div>
+              <div className="w-44 space-y-1">
+                <label className="text-sm font-medium">Data de adesão</label>
+                <Input
+                  type="date"
+                  value={joinedAt}
+                  onChange={(e) => setJoinedAt(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Adesão usada na quota se não houver pagamentos.
+                </p>
+              </div>
+              <div className="w-44 space-y-1">
+                <label className="text-sm font-medium">Plano</label>
+                <select
+                  value={quotaPlanId}
+                  onChange={(e) => setQuotaPlanId(e.target.value)}
+                  className={SELECT_CLASS}
+                >
+                  <option value="">Sem plano</option>
+                  {(plans ?? [])
+                    .filter((p) => p.active)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <Button
+                type="submit"
+                disabled={createMember.isPending || !name.trim()}
+              >
+                <UserPlus className="h-4 w-4" />
+                {createMember.isPending ? "A criar..." : "Adicionar sócio"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="max-w-sm flex-1">
@@ -712,62 +659,22 @@ export default function MembersPage() {
       />
 
       {portalGrantMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="space-y-4 pt-6">
-              <div>
-                <h2 className="text-lg font-semibold">Acesso ao portal</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {portalGrantMember.name} — {portalGrantMember.email}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <label
-                  htmlFor="portal-password"
-                  className="text-sm font-medium"
-                >
-                  Password inicial
-                </label>
-                <Input
-                  id="portal-password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={8}
-                  value={portalPassword}
-                  onChange={(e) => setPortalPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
-                  className="h-11"
-                />
-                <p className="text-xs text-muted-foreground">
-                  O sócio terá de alterar esta password no primeiro login (mín.
-                  12 caracteres).
-                </p>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setPortalGrantMember(null);
-                    setPortalPassword("");
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  disabled={portalPassword.length < 8 || grantPortal.isPending}
-                  onClick={() =>
-                    grantPortal.mutate({
-                      memberId: portalGrantMember.id,
-                      password: portalPassword,
-                    })
-                  }
-                >
-                  {grantPortal.isPending ? "A criar..." : "Criar acesso"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <PortalGrantDialog
+          member={portalGrantMember}
+          password={portalPassword}
+          pending={grantPortal.isPending}
+          onPasswordChange={setPortalPassword}
+          onClose={() => {
+            setPortalGrantMember(null);
+            setPortalPassword("");
+          }}
+          onSubmit={() =>
+            grantPortal.mutate({
+              memberId: portalGrantMember.id,
+              password: portalPassword,
+            })
+          }
+        />
       )}
 
       <ConfirmDialog
