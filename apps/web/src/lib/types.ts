@@ -57,6 +57,12 @@ export interface MyOrganization extends OrganizationSummary {
   orgRole: string;
 }
 
+/** Contexto activo resolvido pela API (org + papel efectivo). */
+export interface ActiveContext {
+  organizationId: string;
+  effectiveRole: string;
+}
+
 export interface MemberImportResult {
   created: number;
   updated: number;

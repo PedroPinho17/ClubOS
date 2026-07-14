@@ -30,7 +30,7 @@ export class EffectiveRoleGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const user = request.user;
     if (!user?.id) {
-      return true;
+      throw new ForbiddenException("Autenticacao em falta.");
     }
 
     const skipOrgContext = this.reflector.getAllAndOverride<boolean>(

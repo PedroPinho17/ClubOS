@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api, uploadFile } from "@/lib/api";
-import { useSession } from "@/lib/auth-client";
+import { RoleGate } from "@/components/role-gate";
+import { useEffectiveRole } from "@/hooks/use-effective-role";
+import { canInviteAdmin } from "@/lib/permissions";
 import { toast } from "@/lib/toast";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type { Organization, StaffRole, StaffUser } from "@/lib/types";
@@ -26,10 +28,17 @@ const ROLE_BADGE: Record<string, "default" | "secondary" | "success"> = {
 };
 
 export default function SettingsPage() {
+  return (
+    <RoleGate roles={["imperador", "administrador"]}>
+      <SettingsPageContent />
+    </RoleGate>
+  );
+}
+
+function SettingsPageContent() {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
-  const actorRole = session?.user?.role;
-  const canInviteAdmin = actorRole === "imperador";
+  const { effectiveRole } = useEffectiveRole();
+  const canInviteAdminRole = canInviteAdmin(effectiveRole);
 
   const [name, setName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#16a34a");
@@ -353,7 +362,7 @@ export default function SettingsPage() {
                 className={selectClass}
               >
                 <option value="tesoureiro">Tesoureiro</option>
-                {canInviteAdmin && (
+                {canInviteAdminRole && (
                   <option value="administrador">Administrador</option>
                 )}
               </select>

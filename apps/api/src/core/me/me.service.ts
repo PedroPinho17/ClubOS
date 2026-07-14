@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import type { Request } from "express";
 import { PrismaService } from "../../prisma/prisma.service";
 import { StorageService } from "../../storage/storage.service";
 import { OrganizationContextService } from "../../common/organization-context.service";
@@ -15,6 +16,17 @@ export class MeService {
     private readonly storage: StorageService,
     private readonly orgContext: OrganizationContextService,
   ) {}
+
+  /** Contexto activo: org resolvida + papel efectivo (para o frontend). */
+  async getActiveContext(user: AuthUser, request: Request) {
+    const organizationId =
+      await this.orgContext.resolveActiveOrganizationId(request);
+    const effectiveRole = await this.orgContext.resolveEffectiveRole(
+      user,
+      organizationId,
+    );
+    return { organizationId, effectiveRole };
+  }
 
   async listOrganizations(user: AuthUser) {
     if (user.role === "socio") {
@@ -71,6 +83,13 @@ export class MeService {
         throw new ForbiddenException(
           "Sem permissao para aceder a esta organizacao.",
         );
+      }
+    } else if (user.role === "imperador") {
+      const org = await this.prisma.organization.findUnique({
+        where: { id: organizationId },
+      });
+      if (!org) {
+        throw new NotFoundException("Organizacao nao encontrada.");
       }
     } else {
       const ok = await this.orgContext.hasMembership(user.id, organizationId);

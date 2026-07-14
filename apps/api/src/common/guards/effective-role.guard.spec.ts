@@ -77,6 +77,19 @@ describe("EffectiveRoleGuard", () => {
     );
   });
 
+  it("rejeita pedidos sem utilizador autenticado", () => {
+    reflector.getAllAndOverride.mockImplementation((key: string) => {
+      if (key === CLUBOS_EFFECTIVE_ROLES_KEY) {
+        return ["administrador"];
+      }
+      return undefined;
+    });
+    const request = {} as MockRequest;
+    expect(() => guard.canActivate(createContext(request))).toThrow(
+      ForbiddenException,
+    );
+  });
+
   it("usa user.role global em rotas @NoOrgContext", () => {
     reflector.getAllAndOverride.mockImplementation((key: string) => {
       if (key === CLUBOS_EFFECTIVE_ROLES_KEY) {

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
+import { RoleGate } from "@/components/role-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +40,14 @@ const STATUS_BADGE: Record<
 type Channel = "email" | "whatsapp";
 
 export default function CommunicationsPage() {
+  return (
+    <RoleGate roles={["imperador", "administrador"]}>
+      <CommunicationsPageContent />
+    </RoleGate>
+  );
+}
+
+function CommunicationsPageContent() {
   const queryClient = useQueryClient();
   const [channel, setChannel] = useState<Channel>("email");
   const [subject, setSubject] = useState("");

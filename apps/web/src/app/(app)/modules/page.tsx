@@ -1,23 +1,24 @@
-'use client';
+"use client";
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { api } from '@/lib/api';
-import { useTenantQueryKey } from '@/hooks/use-tenant-query-key';
-import type { PlatformModule } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { RoleGate } from "@/components/role-gate";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/lib/api";
+import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
+import type { PlatformModule } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-const CATEGORY_LABEL: Record<PlatformModule['category'], string> = {
-  CORE: 'Core',
-  BASE: 'Modulos base',
-  PLUGIN: 'Plugins (modalidades)',
+const CATEGORY_LABEL: Record<PlatformModule["category"], string> = {
+  CORE: "Core",
+  BASE: "Modulos base",
+  PLUGIN: "Plugins (modalidades)",
 };
 
-const DEFAULT_OPEN: Record<PlatformModule['category'], boolean> = {
+const DEFAULT_OPEN: Record<PlatformModule["category"], boolean> = {
   CORE: false,
   BASE: true,
   PLUGIN: false,
@@ -46,45 +47,59 @@ function ModuleCategorySection({
           className="flex w-full items-center gap-3 rounded-t-lg px-6 py-4 text-left hover:bg-muted/40"
         >
           <ChevronDown
-            className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
           />
           <div className="min-w-0 flex-1">
             <CardTitle className="text-base">{title}</CardTitle>
             <p className="text-xs text-muted-foreground">
-              {count} {count === 1 ? 'modulo' : 'modulos'}
+              {count} {count === 1 ? "modulo" : "modulos"}
             </p>
           </div>
         </button>
       </CardHeader>
-      {open ? <CardContent className="space-y-2 pt-0">{children}</CardContent> : null}
+      {open ? (
+        <CardContent className="space-y-2 pt-0">{children}</CardContent>
+      ) : null}
     </Card>
   );
 }
 
 export default function ModulesPage() {
+  return (
+    <RoleGate roles={["imperador"]}>
+      <ModulesPageContent />
+    </RoleGate>
+  );
+}
+
+function ModulesPageContent() {
   const queryClient = useQueryClient();
-  const modulesKey = useTenantQueryKey(['modules']);
+  const modulesKey = useTenantQueryKey(["modules"]);
 
   const { data: modules } = useQuery<PlatformModule[]>({
     queryKey: modulesKey,
-    queryFn: () => api.get<PlatformModule[]>('/modules'),
+    queryFn: () => api.get<PlatformModule[]>("/modules"),
   });
 
   const toggle = useMutation({
     mutationFn: ({ slug, enabled }: { slug: string; enabled: boolean }) =>
       api.put(`/modules/${slug}`, { enabled }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['modules'] });
+      queryClient.invalidateQueries({ queryKey: ["modules"] });
     },
   });
 
-  const groups: PlatformModule['category'][] = ['CORE', 'BASE', 'PLUGIN'];
+  const groups: PlatformModule["category"][] = ["CORE", "BASE", "PLUGIN"];
 
   return (
     <div>
       <h1 className="mb-2 text-2xl font-bold">Modulos</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Ativa ou desativa modulos para esta organizacao. Os modulos core estao sempre ativos.
+        Ativa ou desativa modulos para esta organizacao. Os modulos core estao
+        sempre ativos.
       </p>
 
       <div className="space-y-6">
@@ -108,18 +123,22 @@ export default function ModulesPage() {
                       {m.name}
                       {m.enabled && <Badge variant="success">Ativo</Badge>}
                     </div>
-                    <div className="text-xs text-muted-foreground">{m.slug}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {m.slug}
+                    </div>
                   </div>
                   {m.isCore ? (
                     <Badge variant="muted">Sempre ativo</Badge>
                   ) : (
                     <Button
-                      variant={m.enabled ? 'outline' : 'default'}
+                      variant={m.enabled ? "outline" : "default"}
                       size="sm"
                       disabled={toggle.isPending}
-                      onClick={() => toggle.mutate({ slug: m.slug, enabled: !m.enabled })}
+                      onClick={() =>
+                        toggle.mutate({ slug: m.slug, enabled: !m.enabled })
+                      }
                     >
-                      {m.enabled ? 'Desativar' : 'Ativar'}
+                      {m.enabled ? "Desativar" : "Ativar"}
                     </Button>
                   )}
                 </div>

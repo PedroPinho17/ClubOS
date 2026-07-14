@@ -17,6 +17,12 @@ export class MeController {
     return this.me.listOrganizations(user);
   }
 
+  /** Org activa + papel efectivo (alinhado com OrganizationContextGuard). */
+  @Get("context")
+  context(@CurrentUser() user: AuthUser, @Req() req: Request) {
+    return this.me.getActiveContext(user, req);
+  }
+
   /** Troca a organizacao activa (sessao + cookie). */
   @Post("active-organization")
   async setActiveOrganization(

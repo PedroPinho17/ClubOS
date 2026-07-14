@@ -24,7 +24,9 @@ import {
   waitForCardImages,
 } from "@/lib/card-export";
 import { cn } from "@/lib/utils";
-import { useSession } from "@/lib/auth-client";
+import { RoleGate } from "@/components/role-gate";
+import { useEffectiveRole } from "@/hooks/use-effective-role";
+import { isImperador } from "@/lib/permissions";
 import { useMembersPicker } from "@/hooks/use-members-picker";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type {
@@ -53,21 +55,23 @@ const FIELD_TOGGLES: { key: keyof CardLayout; label: string }[] = [
 
 export default function CardsPage() {
   return (
-    <Suspense
-      fallback={
-        <p className="text-sm text-muted-foreground">A carregar cartões...</p>
-      }
-    >
-      <CardsPageContent />
-    </Suspense>
+    <RoleGate roles={["imperador", "administrador"]}>
+      <Suspense
+        fallback={
+          <p className="text-sm text-muted-foreground">A carregar cartões...</p>
+        }
+      >
+        <CardsPageContent />
+      </Suspense>
+    </RoleGate>
   );
 }
 
 function CardsPageContent() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
-  const isImperador = session?.user?.role === "imperador";
+  const { effectiveRole } = useEffectiveRole();
+  const isImperadorRole = isImperador(effectiveRole);
   const cardRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
   const [memberId, setMemberId] = useState("");
@@ -435,7 +439,7 @@ function CardsPageContent() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label className="text-sm font-semibold">Modelo ativo</label>
-                  {isImperador ? (
+                  {isImperadorRole ? (
                     <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       <input
                         type="checkbox"

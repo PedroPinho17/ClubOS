@@ -3,32 +3,38 @@
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Printer } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { MemberCard } from "@/components/cards/member-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useEffectiveRole } from "@/hooks/use-effective-role";
+import { canAccessCards } from "@/lib/permissions";
+import { redirectSocioFromAdmin } from "@/lib/auth-redirect";
+import { useSession } from "@/lib/auth-client";
 import { api } from "@/lib/api";
 import { downloadMemberCardPdf } from "@/lib/card-export";
 import { cn } from "@/lib/utils";
 import type { CardData } from "@/lib/types";
 
-function canAccessCards(role: string): boolean {
-  return role === "imperador" || role === "administrador";
-}
-
 function MemberCardPrintContent() {
   const params = useParams<{ memberId: string }>();
   const searchParams = useSearchParams();
   const memberId = params.memberId;
-  const { session, isLoading: authLoading } = useRequireAuth({
-    redirectIf: (role) => {
-      if (role === "socio") return "/portal";
-      if (!canAccessCards(role)) return "/dashboard";
-      return null;
-    },
+  const { data: session } = useSession();
+  const { isLoading: authLoading } = useRequireAuth({
+    redirectIf: redirectSocioFromAdmin,
   });
+  const { effectiveRole, isLoading: roleLoading } = useEffectiveRole();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authLoading || roleLoading) return;
+    if (effectiveRole && !canAccessCards(effectiveRole)) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, roleLoading, effectiveRole, router]);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
@@ -45,7 +51,11 @@ function MemberCardPrintContent() {
   } = useQuery<CardData>({
     queryKey: ["card", "print", memberId],
     queryFn: () => api.get<CardData>(`/cards/${memberId}`),
-    enabled: !!session && !!memberId,
+    enabled:
+      !!session &&
+      !!memberId &&
+      !!effectiveRole &&
+      canAccessCards(effectiveRole),
   });
 
   const isCrcVale = cardData?.layout.template === "crc_vale";

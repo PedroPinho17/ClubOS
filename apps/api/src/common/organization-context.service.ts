@@ -72,17 +72,34 @@ export class OrganizationContextService {
     }
 
     const membershipIds = await this.listMembershipOrganizationIds(user.id);
+    const headerOrgId = readOrgHeader(request.headers);
+    const cookies = parseCookies(request.headers.cookie);
+    const cookieOrgId = cookies[ACTIVE_ORG_COOKIE];
+    const sessionOrgId = await this.readSessionActiveOrg(request);
+
+    if (user.role === "imperador") {
+      const candidate =
+        headerOrgId ?? cookieOrgId ?? sessionOrgId ?? membershipIds[0];
+      if (!candidate) {
+        throw new ForbiddenException("Sem organizacoes disponiveis.");
+      }
+      const org = await this.prisma.organization.findUnique({
+        where: { id: candidate },
+        select: { id: true },
+      });
+      if (!org) {
+        throw new ForbiddenException(
+          "Sem permissao para aceder a esta organizacao.",
+        );
+      }
+      return candidate;
+    }
 
     if (membershipIds.length === 0) {
       throw new ForbiddenException("Sem organizacoes associadas a esta conta.");
     }
 
     const allowed = new Set(membershipIds);
-    const headerOrgId = readOrgHeader(request.headers);
-    const cookies = parseCookies(request.headers.cookie);
-    const cookieOrgId = cookies[ACTIVE_ORG_COOKIE];
-    const sessionOrgId = await this.readSessionActiveOrg(request);
-
     const candidate =
       headerOrgId ?? cookieOrgId ?? sessionOrgId ?? membershipIds[0];
 

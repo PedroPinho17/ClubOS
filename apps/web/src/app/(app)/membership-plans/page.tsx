@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { RoleGate } from "@/components/role-gate";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
@@ -21,6 +22,14 @@ const PERIODICITY_LABEL: Record<Periodicity, string> = {
 };
 
 export default function MembershipPlansPage() {
+  return (
+    <RoleGate roles={["imperador", "administrador"]}>
+      <MembershipPlansPageContent />
+    </RoleGate>
+  );
+}
+
+function MembershipPlansPageContent() {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");

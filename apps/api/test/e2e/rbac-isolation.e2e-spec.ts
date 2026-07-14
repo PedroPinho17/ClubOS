@@ -179,7 +179,102 @@ describe.skipIf(!dbReady)("RBAC and tenant isolation (E2E)", () => {
     const paymentsAsTreasurer = await agent.get("/api/payments");
     expect(paymentsAsTreasurer.status).toBe(200);
 
+    const cardsAsTreasurer = await agent.get("/api/cards/settings");
+    expect(cardsAsTreasurer.status).toBe(403);
+
+    const auditAsTreasurer = await agent.get("/api/audit?limit=10");
+    expect(auditAsTreasurer.status).toBe(403);
+
     await prisma.organizationMember.deleteMany({ where: { userId: user.id } });
     await prisma.user.delete({ where: { id: user.id } });
+  });
+
+  it("tesoureiro bloqueado em rotas @AdminOnly na org activa", async () => {
+    const treasurer = await createStaffUser({
+      role: "tesoureiro",
+      organizationId: crcValeOrgId,
+    });
+    const agent = await loginWithOrg(
+      app,
+      treasurer.email,
+      E2E_PASSWORD,
+      crcValeOrgId,
+    );
+
+    const users = await agent.get("/api/users");
+    expect(users.status).toBe(403);
+
+    const cards = await agent.get("/api/cards/settings");
+    expect(cards.status).toBe(403);
+
+    const payments = await agent.get("/api/payments");
+    expect(payments.status).toBe(200);
+
+    await prisma.organizationMember.deleteMany({
+      where: { userId: treasurer.userId },
+    });
+    await prisma.user.delete({ where: { id: treasurer.userId } });
+  });
+
+  it("imperador acede a org sem membership explicita", async () => {
+    const email = `rbac-imperador-${suffix}@test.clubos.local`;
+    await auth.api.signUpEmail({
+      body: { email, password: E2E_PASSWORD, name: "Imperador RBAC" },
+    });
+    const user = await prisma.user.update({
+      where: { email },
+      data: { role: "imperador", emailVerified: true },
+    });
+
+    const agent = request.agent(app.getHttpServer());
+    const signIn = await agent
+      .post("/api/auth/sign-in/email")
+      .send({ email, password: E2E_PASSWORD });
+    expect(signIn.status).toBe(200);
+
+    const members = await agent
+      .get("/api/members")
+      .set("x-organization-id", crcValeOrgId);
+    expect(members.status).toBe(200);
+
+    const context = await agent
+      .get("/api/me/context")
+      .set("x-organization-id", crcValeOrgId);
+    expect(context.status).toBe(200);
+    expect(context.body.effectiveRole).toBe("imperador");
+    expect(context.body.organizationId).toBe(crcValeOrgId);
+
+    await prisma.user.delete({ where: { id: user.id } });
+  });
+
+  it("socio nao acede staff com header de org forjado", async () => {
+    const agent = await loginWithOrg(
+      app,
+      staffEmail,
+      E2E_PASSWORD,
+      crcValeOrgId,
+    );
+    const email = `rbac-socio-spoof-${suffix}@test.clubos.local`;
+    const created = await agent
+      .post("/api/members")
+      .send({ name: `Socio Spoof ${suffix}`, email });
+    expect(created.status).toBe(201);
+
+    await createSocioPortalUser(
+      created.body.id,
+      email,
+      `Socio Spoof ${suffix}`,
+    );
+
+    const socioAgent = request.agent(app.getHttpServer());
+    const signIn = await socioAgent
+      .post("/api/auth/sign-in/email")
+      .send({ email, password: E2E_PASSWORD });
+    expect(signIn.status).toBe(200);
+
+    const members = await socioAgent
+      .get("/api/members")
+      .set("x-organization-id", otherOrgId);
+    expect(members.status).toBe(403);
   });
 });

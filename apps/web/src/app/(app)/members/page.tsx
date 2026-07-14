@@ -30,8 +30,13 @@ import { api, downloadJson, uploadFile } from "@/lib/api";
 import { formatDateInput, todayDateInput } from "@/lib/date-input";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { useSession } from "@/lib/auth-client";
+import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
+import {
+  canAccessCards as hasCardAccess,
+  canExportReports as hasReportExport,
+  canManageMembers,
+} from "@/lib/permissions";
 import type {
   Member,
   MemberImportResult,
@@ -92,18 +97,10 @@ function isGdprErased(m: Member): boolean {
 
 export default function MembersPage() {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
-  const canManage = ["imperador", "administrador"].includes(
-    session?.user?.role ?? "",
-  );
-  const canExportReports = [
-    "imperador",
-    "administrador",
-    "tesoureiro",
-  ].includes(session?.user?.role ?? "");
-  const canAccessCards = ["imperador", "administrador"].includes(
-    session?.user?.role ?? "",
-  );
+  const { effectiveRole } = useEffectiveRole();
+  const canManage = canManageMembers(effectiveRole);
+  const canExportReports = hasReportExport(effectiveRole);
+  const canAccessCards = hasCardAccess(effectiveRole);
   const importInputRef = useRef<HTMLInputElement>(null);
   const pendingImportFileRef = useRef<File | null>(null);
   const [updateExisting, setUpdateExisting] = useState(true);

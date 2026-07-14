@@ -15,6 +15,7 @@ import { UserMenu } from "@/components/user-menu";
 import { AppShellSkeleton } from "@/components/app-shell-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveOrgId } from "@/hooks/use-active-org";
+import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 
@@ -37,6 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   });
 
   const activeOrgId = useActiveOrgId();
+  const { effectiveRole, isLoading: roleLoading } = useEffectiveRole();
   const orgKey = useTenantQueryKey(["organization"]);
   const modulesKey = useTenantQueryKey(["modules", "enabled"]);
 
@@ -52,11 +54,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     enabled: !!session && !!activeOrgId,
   });
 
-  if (isLoading || !session) {
+  if (isLoading || !session || roleLoading) {
     return <AppShellSkeleton />;
   }
 
-  const role = session.user?.role;
+  const role = effectiveRole ?? session.user?.role;
   const enabledSet = new Set(enabled ?? []);
   const visibleNav = filterNavItems(NAV_ITEMS, enabledSet, role);
 
