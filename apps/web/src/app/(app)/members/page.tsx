@@ -6,30 +6,27 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
-import {
-  Download,
-  FileDown,
-  FileSpreadsheet,
-  FileText,
-  IdCard,
-  ImagePlus,
-  Pencil,
-  ShieldAlert,
-  Trash2,
-  UserPlus,
-  Users,
-  X,
-} from "lucide-react";
-import Link from "next/link";
+import { ImagePlus, UserPlus, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ImportResultPanel } from "@/components/members/import-result-panel";
+import {
+  MemberEditDialog,
+  type MemberEditForm,
+} from "@/components/members/member-edit-dialog";
+import {
+  MemberFilters,
+  type MemberPlanFilter,
+  type MemberStatusFilter,
+} from "@/components/members/member-filters";
+import { MemberRowActions } from "@/components/members/member-row-actions";
+import { MembersToolsPanel } from "@/components/members/members-tools-panel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { api, downloadBlob, downloadJson, uploadFile } from "@/lib/api";
+import { api, downloadJson, uploadFile } from "@/lib/api";
 import { formatDateInput, todayDateInput } from "@/lib/date-input";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -59,17 +56,7 @@ const QUOTA_BADGE: Record<
   no_plan: { label: "Sem plano", variant: "muted" },
 };
 
-interface EditForm {
-  name: string;
-  email: string;
-  phone: string;
-  status: "ACTIVE" | "INACTIVE";
-  quotaPlanId: string;
-  cardRole: string;
-  notes: string;
-  joinedAt: string;
-  cardValidUntil: string;
-}
+interface EditForm extends MemberEditForm {}
 
 function emptyEditForm(): EditForm {
   return {
@@ -127,6 +114,9 @@ export default function MembersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [quotaFilter, setQuotaFilter] = useState<QuotaStatus | "">("");
+  const [statusFilter, setStatusFilter] = useState<MemberStatusFilter>("");
+  const [planFilter, setPlanFilter] = useState<MemberPlanFilter>("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [quotaPlanId, setQuotaPlanId] = useState("");
@@ -141,7 +131,14 @@ export default function MembersPage() {
   const [gdprTarget, setGdprTarget] = useState<Member | null>(null);
   const [importWarningOpen, setImportWarningOpen] = useState(false);
 
-  const membersKey = useTenantQueryKey(["members", search, page]);
+  const membersKey = useTenantQueryKey([
+    "members",
+    search,
+    page,
+    quotaFilter,
+    statusFilter,
+    planFilter,
+  ]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
 
   useEffect(() => {
@@ -165,6 +162,9 @@ export default function MembersPage() {
         limit: String(PAGE_SIZE),
       });
       if (search) params.set("search", search);
+      if (quotaFilter) params.set("quotaStatus", quotaFilter);
+      if (statusFilter) params.set("status", statusFilter);
+      if (planFilter) params.set("quotaPlanId", planFilter);
       return api.get<PaginatedResult<Member>>(`/members?${params}`);
     },
     placeholderData: keepPreviousData,
@@ -341,170 +341,39 @@ export default function MembersPage() {
   const selectClass =
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+  function clearFilters() {
+    setQuotaFilter("");
+    setStatusFilter("");
+    setPlanFilter("");
+    setPage(1);
+  }
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">Membros</h1>
 
-      {canExportReports && (
-        <Card className="mb-6">
-          <CardContent className="space-y-3 pt-6">
-            <div>
-              <h2 className="font-semibold">Relatórios de quota</h2>
-              <p className="text-sm text-muted-foreground">
-                Exportar sócios pagantes (em dia) ou em atraso — PDF ou Excel
-                (CSV).
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  void downloadBlob(
-                    "/reports/members/paying.pdf",
-                    "socios_pagantes.pdf",
-                  )
-                }
-              >
-                <FileText className="h-4 w-4" />
-                Pagantes PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  void downloadBlob(
-                    "/reports/members/paying.csv",
-                    "socios_pagantes.csv",
-                  )
-                }
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                Pagantes Excel
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  void downloadBlob(
-                    "/reports/members/overdue.pdf",
-                    "socios_em_atraso.pdf",
-                  )
-                }
-              >
-                <FileText className="h-4 w-4" />
-                Em atraso PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  void downloadBlob(
-                    "/reports/members/overdue.csv",
-                    "socios_em_atraso.csv",
-                  )
-                }
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                Em atraso Excel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <MembersToolsPanel
+        canManage={canManage}
+        canExportReports={canExportReports}
+        updateExisting={updateExisting}
+        importDryRun={importDryRun}
+        importPending={importMembers.isPending}
+        onUpdateExistingChange={setUpdateExisting}
+        onImportDryRunChange={setImportDryRun}
+        onImportClick={() => importInputRef.current?.click()}
+      />
 
-      {(canManage || canExportReports) && (
-        <Card className="mb-6">
-          <CardContent className="space-y-3 pt-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold">Importar / Exportar</h2>
-                <p className="text-sm text-muted-foreground">
-                  Excel (.xlsx) com o mesmo modelo do gestao_socios — sócios e
-                  pagamentos.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {canExportReports && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      void downloadBlob(
-                        "/members/export",
-                        "socios_exportacao.xlsx",
-                      )
-                    }
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Exportar todos
-                  </Button>
-                )}
-                {canManage && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      void downloadBlob(
-                        "/members/import/template",
-                        "modelo_importacao_socios.xlsx",
-                      )
-                    }
-                  >
-                    <Download className="h-4 w-4" />
-                    Modelo Excel
-                  </Button>
-                )}
-              </div>
-            </div>
-            {canManage && (
-              <>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={importDryRun}
-                    onChange={(e) => setImportDryRun(e.target.checked)}
-                  />
-                  Simular importação (dry-run) — não grava na base de dados
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={updateExisting}
-                    onChange={(e) => setUpdateExisting(e.target.checked)}
-                  />
-                  Actualizar sócios existentes (por número)
-                </label>
-                <input
-                  ref={importInputRef}
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) runImport(file, importDryRun);
-                    e.target.value = "";
-                  }}
-                />
-                <Button
-                  variant="secondary"
-                  disabled={importMembers.isPending}
-                  onClick={() => importInputRef.current?.click()}
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  {importMembers.isPending
-                    ? importDryRun
-                      ? "A simular..."
-                      : "A importar..."
-                    : importDryRun
-                      ? "Simular importação"
-                      : "Importar Excel"}
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) runImport(file, importDryRun);
+          e.target.value = "";
+        }}
+      />
 
       {importResult && (
         <div className="mb-6">
@@ -524,196 +393,6 @@ export default function MembersPage() {
         </div>
       )}
 
-      {editingId && (
-        <Card className="mb-6 border-primary/40">
-          <CardContent className="space-y-4 pt-6">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Editar sócio</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditingId(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <form
-              className="grid gap-3 sm:grid-cols-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (editForm.name.trim()) updateMember.mutate();
-              }}
-            >
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-sm font-medium">Nome</label>
-                <Input
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Email</label>
-                <Input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, email: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Telefone</label>
-                <Input
-                  value={editForm.phone}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, phone: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Plano</label>
-                <select
-                  value={editForm.quotaPlanId}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, quotaPlanId: e.target.value }))
-                  }
-                  className={selectClass}
-                >
-                  <option value="">Sem plano</option>
-                  {(plans ?? []).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Estado</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      status: e.target.value as "ACTIVE" | "INACTIVE",
-                    }))
-                  }
-                  className={selectClass}
-                >
-                  <option value="ACTIVE">Ativo</option>
-                  <option value="INACTIVE">Inativo</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Data de adesão</label>
-                <Input
-                  type="date"
-                  value={editForm.joinedAt}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, joinedAt: e.target.value }))
-                  }
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Adesão usada na quota se não houver pagamentos.
-                </p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Validade cartão</label>
-                <Input
-                  type="date"
-                  value={editForm.cardValidUntil}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      cardValidUntil: e.target.value,
-                    }))
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Opcional. Sobrepõe o cálculo automático da validade.
-                </p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Cargo no cartão</label>
-                <Input
-                  value={editForm.cardRole}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, cardRole: e.target.value }))
-                  }
-                  placeholder="Sócio"
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-sm font-medium">Notas</label>
-                <Input
-                  value={editForm.notes}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, notes: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="flex gap-2 sm:col-span-2">
-                <Button type="submit" disabled={updateMember.isPending}>
-                  {updateMember.isPending
-                    ? "A guardar..."
-                    : "Guardar alterações"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setEditingId(null)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-              {canManage && editingId && editForm.name !== "Apagado RGPD" && (
-                <div className="mt-4 rounded-lg border border-dashed p-4 sm:col-span-2">
-                  <h3 className="mb-1 text-sm font-semibold">RGPD</h3>
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    Exportar ou apagar dados pessoais deste socio
-                    (administradores).
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        void downloadJson(
-                          `/members/${editingId}/gdpr-export`,
-                          `gdpr-export-${editingId}.json`,
-                        )
-                      }
-                    >
-                      <FileDown className="h-4 w-4" />
-                      Exportar RGPD
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      disabled={gdprErase.isPending}
-                      onClick={() => {
-                        const m = members.find((x) => x.id === editingId);
-                        if (m) setGdprTarget(m);
-                      }}
-                    >
-                      <ShieldAlert className="h-4 w-4" />
-                      {gdprErase.isPending
-                        ? "A apagar..."
-                        : "Apagar dados RGPD"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
       <Card id="create-member-form" className="mb-6">
         <CardContent className="pt-6">
           <form
@@ -728,7 +407,7 @@ export default function MembersPage() {
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nome do membro"
+                placeholder="Nome do sócio"
               />
             </div>
             <div className="flex-1 space-y-1">
@@ -773,7 +452,7 @@ export default function MembersPage() {
               disabled={createMember.isPending || !name.trim()}
             >
               <UserPlus className="h-4 w-4" />
-              {createMember.isPending ? "A criar..." : "Adicionar membro"}
+              {createMember.isPending ? "A criar..." : "Adicionar sócio"}
             </Button>
           </form>
         </CardContent>
@@ -784,16 +463,36 @@ export default function MembersPage() {
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Pesquisar membros..."
+            placeholder="Pesquisar sócios..."
           />
         </div>
         {membersPage && membersPage.total > 0 && (
           <p className="text-sm text-muted-foreground">
-            {membersPage.total} membro{membersPage.total !== 1 ? "s" : ""}
+            {membersPage.total} sócio{membersPage.total !== 1 ? "s" : ""}
             {isPageTransition ? " · A actualizar..." : ""}
           </p>
         )}
       </div>
+
+      <MemberFilters
+        quotaStatus={quotaFilter}
+        memberStatus={statusFilter}
+        planId={planFilter}
+        plans={plans}
+        onQuotaStatusChange={(value) => {
+          setQuotaFilter(value);
+          setPage(1);
+        }}
+        onMemberStatusChange={(value) => {
+          setStatusFilter(value);
+          setPage(1);
+        }}
+        onPlanIdChange={(value) => {
+          setPlanFilter(value);
+          setPage(1);
+        }}
+        onClear={clearFilters}
+      />
 
       <Card>
         <CardContent className="p-0">
@@ -929,92 +628,27 @@ export default function MembersPage() {
                           </Badge>
                         </td>
                         <td className="p-3">
-                          <div className="flex flex-wrap items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => startEdit(m)}
-                              title="Editar"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {!isGdprErased(m) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => confirmDelete(m)}
-                                disabled={deleteMember.isPending}
-                                title="Apagar"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {canAccessCards && !isGdprErased(m) && (
-                              <>
-                                <Link
-                                  href={`/cartao/${m.id}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="Ver cartão"
-                                  className={cn(
-                                    buttonVariants({
-                                      variant: "ghost",
-                                      size: "sm",
-                                    }),
-                                  )}
-                                >
-                                  <IdCard className="h-4 w-4" />
-                                </Link>
-                                <Link
-                                  href={`/cartao/${m.id}?pdf=1`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="Descarregar PDF do cartão"
-                                  className={cn(
-                                    buttonVariants({
-                                      variant: "ghost",
-                                      size: "sm",
-                                    }),
-                                  )}
-                                >
-                                  <FileText className="h-4 w-4" />
-                                </Link>
-                              </>
-                            )}
-                            {canManage && !isGdprErased(m) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Exportar RGPD"
-                                onClick={() =>
-                                  void downloadJson(
-                                    `/members/${m.id}/gdpr-export`,
-                                    `gdpr-export-${m.id}.json`,
-                                  )
-                                }
-                              >
-                                <FileDown className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {m.userId ? (
-                              <Badge variant="success" className="ml-1">
-                                Portal
-                              </Badge>
-                            ) : m.email && !isGdprErased(m) ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={grantPortal.isPending}
-                                onClick={() => {
-                                  setPortalGrantMember(m);
-                                  setPortalPassword("");
-                                }}
-                              >
-                                Dar acesso
-                              </Button>
-                            ) : null}
-                          </div>
+                          <MemberRowActions
+                            member={m}
+                            canManage={canManage}
+                            canAccessCards={canAccessCards}
+                            deletePending={deleteMember.isPending}
+                            grantPortalPending={grantPortal.isPending}
+                            isGdprErased={isGdprErased(m)}
+                            onEdit={() => startEdit(m)}
+                            onDelete={() => confirmDelete(m)}
+                            onGrantPortal={() => {
+                              setPortalGrantMember(m);
+                              setPortalPassword("");
+                            }}
+                            onExportGdpr={() =>
+                              void downloadJson(
+                                `/members/${m.id}/gdpr-export`,
+                                `gdpr-export-${m.id}.json`,
+                              )
+                            }
+                            onGdprErase={() => setGdprTarget(m)}
+                          />
                         </td>
                       </tr>
                     ))
@@ -1062,6 +696,23 @@ export default function MembersPage() {
           </div>
         </div>
       )}
+
+      <MemberEditDialog
+        open={editingId !== null}
+        memberId={editingId}
+        form={editForm}
+        plans={plans}
+        canManage={canManage}
+        saving={updateMember.isPending}
+        gdprErasing={gdprErase.isPending}
+        onClose={() => setEditingId(null)}
+        onChange={setEditForm}
+        onSubmit={() => updateMember.mutate()}
+        onGdprErase={() => {
+          const m = members.find((x) => x.id === editingId);
+          if (m) setGdprTarget(m);
+        }}
+      />
 
       {portalGrantMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

@@ -17,7 +17,7 @@ import {
   parseOptionalApiDate,
 } from "../../common/parse-api-date";
 import { CreateMemberDto, UpdateMemberDto } from "./dto";
-import { computeQuotaSituation } from "./quota.util";
+import { computeQuotaSituation, type QuotaStatus } from "./quota.util";
 import { loadOrgReminderSettings } from "../reminders/org-reminder-settings";
 
 const IMAGE_EXT: Record<string, string> = {
@@ -36,16 +36,42 @@ export class MembersService {
 
   async list(
     organizationId: string,
-    opts: { search?: string; page?: string; limit?: string } = {},
+    opts: {
+      search?: string;
+      page?: string;
+      limit?: string;
+      status?: string;
+      quotaPlanId?: string;
+      quotaStatus?: string;
+    } = {},
   ) {
-    const { search, page: pageRaw, limit: limitRaw } = opts;
+    const {
+      search,
+      page: pageRaw,
+      limit: limitRaw,
+      status,
+      quotaPlanId,
+      quotaStatus,
+    } = opts;
     const { page, limit, skip } = parsePagination(
       { page: pageRaw, limit: limitRaw },
       { limit: 25, maxLimit: 500 },
     );
 
+    const memberStatus =
+      status === "ACTIVE" || status === "INACTIVE" ? status : undefined;
+    const planFilter =
+      quotaPlanId === "none"
+        ? { quotaPlanId: null }
+        : quotaPlanId
+          ? { quotaPlanId }
+          : {};
+    const quotaFilter = this.parseQuotaStatusFilter(quotaStatus);
+
     const where: Prisma.MemberWhereInput = {
       organizationId,
+      ...(memberStatus ? { status: memberStatus } : {}),
+      ...planFilter,
       ...(search
         ? {
             OR: [
@@ -57,44 +83,80 @@ export class MembersService {
         : {}),
     };
 
-    const [total, members] = await Promise.all([
-      this.prisma.member.count({ where }),
-      this.prisma.member.findMany({
-        where,
-        include: {
-          quotaPlan: true,
-          payments: {
-            where: { status: PaymentStatus.PAID },
-            orderBy: { paidAt: "desc" },
-            take: 1,
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-    ]);
+    const include = {
+      quotaPlan: true,
+      payments: {
+        where: { status: PaymentStatus.PAID },
+        orderBy: { paidAt: "desc" as const },
+        take: 1,
+      },
+    };
 
     const { diasAvisoQuota } = await loadOrgReminderSettings(
       this.prisma,
       organizationId,
     );
 
-    const items = await Promise.all(
-      members.map(async ({ payments, ...member }) => ({
-        ...member,
-        photoUrl: await this.storage.getUrl(member.photoKey),
-        quotaSituation: computeQuotaSituation({
-          periodicity: member.quotaPlan?.periodicity,
-          joinedAt: member.joinedAt,
-          lastPaidAt: payments[0]?.paidAt ?? null,
-          cardValidUntil: member.cardValidUntil,
-          dueSoonDays: diasAvisoQuota,
-        }),
-      })),
-    );
+    type MemberRow = Prisma.MemberGetPayload<{
+      include: typeof include;
+    }>;
+
+    const mapMembers = async (rows: MemberRow[]) =>
+      Promise.all(
+        rows.map(async ({ payments, ...member }) => ({
+          ...member,
+          photoUrl: await this.storage.getUrl(member.photoKey),
+          quotaSituation: computeQuotaSituation({
+            periodicity: member.quotaPlan?.periodicity,
+            joinedAt: member.joinedAt,
+            lastPaidAt: payments[0]?.paidAt ?? null,
+            cardValidUntil: member.cardValidUntil,
+            dueSoonDays: diasAvisoQuota,
+          }),
+        })),
+      );
+
+    if (quotaFilter) {
+      const members = await this.prisma.member.findMany({
+        where,
+        include,
+        orderBy: { createdAt: "desc" },
+      });
+      const items = await mapMembers(members);
+      const filtered = items.filter(
+        (m) => m.quotaSituation.status === quotaFilter,
+      );
+      const pageItems = filtered.slice(skip, skip + limit);
+      return paginated(pageItems, filtered.length, page, limit);
+    }
+
+    const [total, members] = await Promise.all([
+      this.prisma.member.count({ where }),
+      this.prisma.member.findMany({
+        where,
+        include,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const items = await mapMembers(members);
 
     return paginated(items, total, page, limit);
+  }
+
+  private parseQuotaStatusFilter(value?: string): QuotaStatus | undefined {
+    const allowed: QuotaStatus[] = [
+      "up_to_date",
+      "due_soon",
+      "overdue",
+      "pending",
+      "no_plan",
+    ];
+    return allowed.includes(value as QuotaStatus)
+      ? (value as QuotaStatus)
+      : undefined;
   }
 
   async findOne(organizationId: string, id: string) {
