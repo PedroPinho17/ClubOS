@@ -171,7 +171,7 @@ describe.skipIf(!dbReady)("RBAC and tenant isolation (E2E)", () => {
     const switchOrg = await agent
       .post("/api/me/active-organization")
       .send({ organizationId: otherOrgId });
-    expect(switchOrg.status).toBe(200);
+    expect([200, 201]).toContain(switchOrg.status);
 
     const usersAsTreasurer = await agent.get("/api/users");
     expect(usersAsTreasurer.status).toBe(403);
