@@ -1,7 +1,8 @@
-import { Global, Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { OrganizationContextService } from './organization-context.service';
-import { OrganizationContextGuard } from './guards/organization-context.guard';
+import { Global, Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { OrganizationContextService } from "./organization-context.service";
+import { EffectiveRoleGuard } from "./guards/effective-role.guard";
+import { OrganizationContextGuard } from "./guards/organization-context.guard";
 
 @Global()
 @Module({
@@ -10,6 +11,10 @@ import { OrganizationContextGuard } from './guards/organization-context.guard';
     {
       provide: APP_GUARD,
       useClass: OrganizationContextGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: EffectiveRoleGuard,
     },
   ],
   exports: [OrganizationContextService],

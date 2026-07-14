@@ -1,10 +1,15 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import type { Request } from 'express';
-import { NO_ORG_CONTEXT_KEY } from '../decorators/no-org-context';
-import { OrganizationContextService } from '../organization-context.service';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import type { Request } from "express";
+import { NO_ORG_CONTEXT_KEY } from "../decorators/no-org-context";
+import { OrganizationContextService } from "../organization-context.service";
 
-const PUBLIC_ROUTE_KEY = 'PUBLIC';
+const PUBLIC_ROUTE_KEY = "PUBLIC";
 
 /**
  * Resolve e valida a organizacao activa antes dos handlers/guards de modulo.
@@ -23,27 +28,35 @@ export class OrganizationContextGuard implements CanActivate {
       return true;
     }
 
-    const skipOrgContext = this.reflector.getAllAndOverride<boolean>(NO_ORG_CONTEXT_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_ROUTE_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const skipOrgContext = this.reflector.getAllAndOverride<boolean>(
+      NO_ORG_CONTEXT_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    const isPublic = this.reflector.getAllAndOverride<boolean>(
+      PUBLIC_ROUTE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (skipOrgContext || isPublic) {
       return true;
     }
 
     try {
-      request.activeOrganizationId = await this.orgContext.resolveActiveOrganizationId(request);
+      const organizationId =
+        await this.orgContext.resolveActiveOrganizationId(request);
+      request.activeOrganizationId = organizationId;
+      request.effectiveRole = await this.orgContext.resolveEffectiveRole(
+        request.user,
+        organizationId,
+      );
       return true;
     } catch (error) {
       if (error instanceof ForbiddenException) {
         throw error;
       }
-      throw new ForbiddenException('Nao foi possivel resolver o contexto de organizacao.');
+      throw new ForbiddenException(
+        "Nao foi possivel resolver o contexto de organizacao.",
+      );
     }
   }
 }

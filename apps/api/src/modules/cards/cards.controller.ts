@@ -1,33 +1,48 @@
-import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
-import { AdminOnly, CurrentUser, OrgId, RequireModule } from '../../common/decorators';
-import type { AuthUser } from '../../common/types';
-import { ModuleGuard } from '../../common/guards/module.guard';
-import { CardsService } from './cards.service';
-import { UpdateCardSettingsDto } from './dto';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
+import {
+  AdminOnly,
+  EffectiveRole,
+  OrgId,
+  RequireModule,
+} from "../../common/decorators";
+import { ModuleGuard } from "../../common/guards/module.guard";
+import { CardsService } from "./cards.service";
+import { UpdateCardSettingsDto } from "./dto";
 
-@Controller('api/cards')
-@RequireModule('cards')
+@Controller("api/cards")
+@RequireModule("cards")
 @UseGuards(ModuleGuard)
 @AdminOnly()
 export class CardsController {
   constructor(private readonly cards: CardsService) {}
 
-  @Get('settings')
+  @Get("settings")
   getSettings(@OrgId() organizationId: string) {
     return this.cards.getSettings(organizationId);
   }
 
-  @Put('settings')
+  @Put("settings")
   updateSettings(
     @OrgId() organizationId: string,
-    @CurrentUser() user: AuthUser,
+    @EffectiveRole() actorRole: string,
     @Body() dto: UpdateCardSettingsDto,
   ) {
-    return this.cards.updateSettings(organizationId, dto, user.role);
+    return this.cards.updateSettings(organizationId, dto, actorRole);
   }
 
-  @Get(':memberId')
-  getCard(@OrgId() organizationId: string, @Param('memberId') memberId: string) {
+  @Get(":memberId")
+  getCard(
+    @OrgId() organizationId: string,
+    @Param("memberId") memberId: string,
+  ) {
     return this.cards.getCardData(organizationId, memberId);
   }
 }

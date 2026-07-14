@@ -4,20 +4,21 @@
  *
  * @see {@link OrganizationContextGuard} Aplica esta logica globalmente
  */
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import type { Request } from 'express';
-import { PrismaService } from '../prisma/prisma.service';
-import { readOrgHeader } from './org-context';
-import type { AuthUser } from './types';
+import { ForbiddenException, Injectable } from "@nestjs/common";
+import type { Request } from "express";
+import { PrismaService } from "../prisma/prisma.service";
+import { resolveEffectiveRole } from "./effective-role";
+import { readOrgHeader } from "./org-context";
+import type { AuthUser } from "./types";
 
-export const ACTIVE_ORG_COOKIE = 'clubos_active_org';
+export const ACTIVE_ORG_COOKIE = "clubos_active_org";
 
 function parseCookies(header: string | undefined): Record<string, string> {
   if (!header) return {};
   return Object.fromEntries(
-    header.split(';').map((part) => {
-      const [key, ...rest] = part.trim().split('=');
-      return [key, decodeURIComponent(rest.join('='))];
+    header.split(";").map((part) => {
+      const [key, ...rest] = part.trim().split("=");
+      return [key, decodeURIComponent(rest.join("="))];
     }),
   );
 }
@@ -36,7 +37,7 @@ export class OrganizationContextService {
     const rows = await this.prisma.organizationMember.findMany({
       where: { userId },
       select: { organizationId: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
     return rows.map((r) => r.organizationId);
   }
@@ -54,16 +55,18 @@ export class OrganizationContextService {
   async resolveActiveOrganizationId(request: Request): Promise<string> {
     const user = request.user as AuthUser | undefined;
     if (!user?.id) {
-      throw new ForbiddenException('Autenticacao em falta.');
+      throw new ForbiddenException("Autenticacao em falta.");
     }
 
-    if (user.role === 'socio') {
+    if (user.role === "socio") {
       const member = await this.prisma.member.findFirst({
         where: { userId: user.id },
         select: { organizationId: true },
       });
       if (!member?.organizationId) {
-        throw new ForbiddenException('Conta de socio sem organizacao associada.');
+        throw new ForbiddenException(
+          "Conta de socio sem organizacao associada.",
+        );
       }
       return member.organizationId;
     }
@@ -71,7 +74,7 @@ export class OrganizationContextService {
     const membershipIds = await this.listMembershipOrganizationIds(user.id);
 
     if (membershipIds.length === 0) {
-      throw new ForbiddenException('Sem organizacoes associadas a esta conta.');
+      throw new ForbiddenException("Sem organizacoes associadas a esta conta.");
     }
 
     const allowed = new Set(membershipIds);
@@ -80,17 +83,36 @@ export class OrganizationContextService {
     const cookieOrgId = cookies[ACTIVE_ORG_COOKIE];
     const sessionOrgId = await this.readSessionActiveOrg(request);
 
-    const candidate = headerOrgId ?? cookieOrgId ?? sessionOrgId ?? membershipIds[0];
+    const candidate =
+      headerOrgId ?? cookieOrgId ?? sessionOrgId ?? membershipIds[0];
 
     if (!allowed.has(candidate)) {
-      throw new ForbiddenException('Sem permissao para aceder a esta organizacao.');
+      throw new ForbiddenException(
+        "Sem permissao para aceder a esta organizacao.",
+      );
     }
 
     return candidate;
   }
 
+  /** Papel efectivo na org activa (orgRole ou imperador/socio global). */
+  async resolveEffectiveRole(
+    user: AuthUser,
+    organizationId: string,
+  ): Promise<string> {
+    return resolveEffectiveRole(
+      this.prisma,
+      user.id,
+      user.role,
+      organizationId,
+    );
+  }
+
   /** Verifica se o user tem membership na org (ignora socios). */
-  async hasMembership(userId: string, organizationId: string): Promise<boolean> {
+  async hasMembership(
+    userId: string,
+    organizationId: string,
+  ): Promise<boolean> {
     const row = await this.prisma.organizationMember.findUnique({
       where: { userId_organizationId: { userId, organizationId } },
     });
@@ -98,7 +120,10 @@ export class OrganizationContextService {
   }
 
   /** Persiste org activa na sessao Better Auth. */
-  async setSessionActiveOrganization(sessionToken: string | undefined, organizationId: string): Promise<void> {
+  async setSessionActiveOrganization(
+    sessionToken: string | undefined,
+    organizationId: string,
+  ): Promise<void> {
     if (!sessionToken) return;
     await this.prisma.session.updateMany({
       where: { token: sessionToken },
@@ -106,7 +131,9 @@ export class OrganizationContextService {
     });
   }
 
-  private async readSessionActiveOrg(request: Request): Promise<string | undefined> {
+  private async readSessionActiveOrg(
+    request: Request,
+  ): Promise<string | undefined> {
     const session = request.session as { token?: string } | undefined;
     const token = session?.token;
     if (!token) return undefined;

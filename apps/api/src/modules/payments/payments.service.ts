@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { PaymentStatus } from "@clubos/database";
 import type { Redis } from "ioredis";
+import { paginated, parsePagination } from "../../common/pagination";
 import { parseApiDate } from "../../common/parse-api-date";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
@@ -26,12 +27,22 @@ export class PaymentsService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  list(organizationId: string) {
-    return this.prisma.payment.findMany({
-      where: { organizationId },
-      include: { member: true, quotaPlan: true },
-      orderBy: { createdAt: "desc" },
+  list(organizationId: string, opts: { page?: string; limit?: string } = {}) {
+    const { page, limit, skip } = parsePagination(opts, {
+      limit: 50,
+      maxLimit: 500,
     });
+
+    return Promise.all([
+      this.prisma.payment.count({ where: { organizationId } }),
+      this.prisma.payment.findMany({
+        where: { organizationId },
+        include: { member: true, quotaPlan: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+    ]).then(([total, items]) => paginated(items, total, page, limit));
   }
 
   async findOne(organizationId: string, id: string) {

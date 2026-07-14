@@ -15,6 +15,7 @@ import { useMembersPicker } from "@/hooks/use-members-picker";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type {
   MembershipPlan,
+  PaginatedResult,
   Payment,
   PaymentMethod,
   PaymentStatus,
@@ -48,10 +49,11 @@ export default function PaymentsPage() {
   const paymentsKey = useTenantQueryKey(["payments"]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
 
-  const { data: payments, isLoading } = useQuery<Payment[]>({
+  const { data: paymentsPage, isLoading } = useQuery<PaginatedResult<Payment>>({
     queryKey: paymentsKey,
-    queryFn: () => api.get<Payment[]>("/payments"),
+    queryFn: () => api.get<PaginatedResult<Payment>>("/payments?limit=500"),
   });
+  const payments = paymentsPage?.items;
 
   const {
     members,

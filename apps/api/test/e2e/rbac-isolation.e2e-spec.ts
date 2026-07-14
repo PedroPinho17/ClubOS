@@ -3,6 +3,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { prisma } from "@clubos/database";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { auth } from "../../src/auth/auth";
 import { createTestApp } from "./create-app";
 import { isDatabaseAvailable } from "./db-available";
 import {
@@ -132,5 +133,53 @@ describe.skipIf(!dbReady)("RBAC and tenant isolation (E2E)", () => {
       .get("/api/members")
       .set("x-organization-id", otherOrgId);
     expect(members.status).toBe(403);
+  });
+
+  it("staff com roles diferentes por org usa orgRole da org activa", async () => {
+    const email = `rbac-multi-${suffix}@test.clubos.local`;
+    const password = E2E_PASSWORD;
+
+    await auth.api.signUpEmail({
+      body: { email, password, name: "Multi Org Staff" },
+    });
+
+    const user = await prisma.user.update({
+      where: { email },
+      data: { role: "administrador", emailVerified: true },
+    });
+
+    await prisma.organizationMember.createMany({
+      data: [
+        {
+          userId: user.id,
+          organizationId: crcValeOrgId,
+          orgRole: "administrador",
+        },
+        {
+          userId: user.id,
+          organizationId: otherOrgId,
+          orgRole: "tesoureiro",
+        },
+      ],
+    });
+
+    const agent = await loginWithOrg(app, email, password, crcValeOrgId);
+
+    const usersAsAdmin = await agent.get("/api/users");
+    expect(usersAsAdmin.status).toBe(200);
+
+    const switchOrg = await agent
+      .post("/api/me/active-organization")
+      .send({ organizationId: otherOrgId });
+    expect(switchOrg.status).toBe(200);
+
+    const usersAsTreasurer = await agent.get("/api/users");
+    expect(usersAsTreasurer.status).toBe(403);
+
+    const paymentsAsTreasurer = await agent.get("/api/payments");
+    expect(paymentsAsTreasurer.status).toBe(200);
+
+    await prisma.organizationMember.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
   });
 });

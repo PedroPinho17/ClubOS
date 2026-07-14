@@ -1,6 +1,6 @@
 /**
  * @module RolesShortcuts
- * Atalhos para `@Roles([...])` usando constantes centralizadas em `roles.ts`.
+ * Atalhos RBAC por org activa (validados por {@link EffectiveRoleGuard}).
  *
  * @example
  * ```typescript
@@ -9,17 +9,27 @@
  * list() { ... }
  * ```
  */
-import { Roles } from '@thallesp/nestjs-better-auth';
-import { ADMIN_ROLES, IMPERADOR_ROLES, PORTAL_ROLES, STAFF_ROLES } from '../roles';
+import { SetMetadata } from "@nestjs/common";
+import {
+  ADMIN_ROLES,
+  IMPERADOR_ROLES,
+  PORTAL_ROLES,
+  STAFF_ROLES,
+} from "../roles";
+
+export const CLUBOS_EFFECTIVE_ROLES_KEY = "clubosEffectiveRoles";
+
+const effectiveRoles = (roles: readonly string[]) =>
+  SetMetadata(CLUBOS_EFFECTIVE_ROLES_KEY, [...roles]);
 
 /** Backoffice: imperador, administrador, tesoureiro. */
-export const StaffOnly = () => Roles([...STAFF_ROLES]);
+export const StaffOnly = () => effectiveRoles(STAFF_ROLES);
 
 /** Administracao do clube: imperador, administrador. */
-export const AdminOnly = () => Roles([...ADMIN_ROLES]);
+export const AdminOnly = () => effectiveRoles(ADMIN_ROLES);
 
 /** Super-admin da plataforma. */
-export const ImperadorOnly = () => Roles([...IMPERADOR_ROLES]);
+export const ImperadorOnly = () => effectiveRoles(IMPERADOR_ROLES);
 
 /** Portal do socio. */
-export const PortalOnly = () => Roles([...PORTAL_ROLES]);
+export const PortalOnly = () => effectiveRoles(PORTAL_ROLES);

@@ -117,12 +117,15 @@ export class UsersService {
       throw new BadRequestException("Nao foi possivel criar a conta.");
     }
 
+    const hasOtherMemberships =
+      (existing?.organizationMemberships.length ?? 0) > 0;
+
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
         name: dto.name,
-        role: dto.role,
         emailVerified: true,
+        ...(hasOtherMemberships ? {} : { role: dto.role }),
       },
     });
 

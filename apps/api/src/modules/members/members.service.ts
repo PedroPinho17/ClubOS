@@ -18,6 +18,7 @@ import {
 } from "../../common/parse-api-date";
 import { CreateMemberDto, UpdateMemberDto } from "./dto";
 import { computeQuotaSituation, type QuotaStatus } from "./quota.util";
+import { findMemberIdsByQuotaStatus } from "./members-quota-filter";
 import { loadOrgReminderSettings } from "../reminders/org-reminder-settings";
 
 const IMAGE_EXT: Record<string, string> = {
@@ -117,17 +118,28 @@ export class MembersService {
       );
 
     if (quotaFilter) {
-      const members = await this.prisma.member.findMany({
+      const { ids, total } = await findMemberIdsByQuotaStatus(
+        this.prisma,
+        organizationId,
         where,
-        include,
-        orderBy: { createdAt: "desc" },
-      });
-      const items = await mapMembers(members);
-      const filtered = items.filter(
-        (m) => m.quotaSituation.status === quotaFilter,
+        quotaFilter,
+        diasAvisoQuota,
       );
-      const pageItems = filtered.slice(skip, skip + limit);
-      return paginated(pageItems, filtered.length, page, limit);
+      const pageIds = ids.slice(skip, skip + limit);
+      if (pageIds.length === 0) {
+        return paginated([], total, page, limit);
+      }
+
+      const members = await this.prisma.member.findMany({
+        where: { id: { in: pageIds }, organizationId },
+        include,
+      });
+      const byId = new Map(members.map((m) => [m.id, m]));
+      const ordered = pageIds
+        .map((id) => byId.get(id))
+        .filter((m): m is MemberRow => m !== undefined);
+      const items = await mapMembers(ordered);
+      return paginated(items, total, page, limit);
     }
 
     const [total, members] = await Promise.all([
@@ -210,7 +222,13 @@ export class MembersService {
     await this.findOne(organizationId, id);
     const key = `${organizationId}/members/${id}/photo-${Date.now()}.${ext}`;
     await this.storage.upload(key, file.buffer, file.mimetype);
-    await this.prisma.member.update({ where: { id }, data: { photoKey: key } });
+    const updated = await this.prisma.member.updateMany({
+      where: { id, organizationId },
+      data: { photoKey: key },
+    });
+    if (updated.count === 0) {
+      throw new NotFoundException("Membro nao encontrado.");
+    }
     return this.findOne(organizationId, id);
   }
 
@@ -235,8 +253,8 @@ export class MembersService {
   async update(organizationId: string, id: string, dto: UpdateMemberDto) {
     await this.findOne(organizationId, id);
     const { quotaPlanId, joinedAt, cardValidUntil, ...rest } = dto;
-    return this.prisma.member.update({
-      where: { id },
+    const updated = await this.prisma.member.updateMany({
+      where: { id, organizationId },
       data: {
         ...rest,
         ...(quotaPlanId !== undefined
@@ -255,23 +273,31 @@ export class MembersService {
           : {}),
       },
     });
+    if (updated.count === 0) {
+      throw new NotFoundException("Membro nao encontrado.");
+    }
+    return this.findOne(organizationId, id);
   }
 
   async remove(organizationId: string, id: string) {
     await this.findOne(organizationId, id);
-    await this.prisma.member.delete({ where: { id } });
+    const deleted = await this.prisma.member.deleteMany({
+      where: { id, organizationId },
+    });
+    if (deleted.count === 0) {
+      throw new NotFoundException("Membro nao encontrado.");
+    }
     return { success: true };
   }
 
   private async nextNumber(organizationId: string): Promise<string> {
-    const members = await this.prisma.member.findMany({
-      where: { organizationId },
-      select: { number: true },
-    });
-    const max = members.reduce((acc, m) => {
-      const n = Number.parseInt(m.number, 10);
-      return Number.isFinite(n) && n > acc ? n : acc;
-    }, 0);
+    const rows = await this.prisma.$queryRaw<{ max: number | null }[]>`
+      SELECT MAX(CAST(number AS INTEGER)) AS max
+      FROM "Member"
+      WHERE "organizationId" = ${organizationId}
+        AND number ~ '^[0-9]+$'
+    `;
+    const max = rows[0]?.max ?? 0;
     return String(max + 1);
   }
 }
