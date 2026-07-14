@@ -22,7 +22,7 @@ export function useEffectiveRole() {
   return {
     effectiveRole: data?.effectiveRole ?? null,
     organizationId: data?.organizationId ?? activeOrgId,
-    isLoading: !!session && !!activeOrgId && isLoading,
+    isLoading: !!session && (!activeOrgId || isLoading),
     isError,
     refetch,
   };

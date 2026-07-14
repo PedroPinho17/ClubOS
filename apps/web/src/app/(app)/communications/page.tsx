@@ -370,7 +370,7 @@ function CommunicationsPageContent() {
           ) : (
             <EmptyState
               icon={Mail}
-              title="Ainda não enviou comunicações"
+              title="Sem histórico de envios"
               description="Envie o primeiro email aos sócios usando o formulário acima."
             />
           )}
