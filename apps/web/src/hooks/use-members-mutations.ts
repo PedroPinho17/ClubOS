@@ -81,12 +81,9 @@ export function useMembersMutations() {
         `/portal/access/${memberId}`,
         { password },
       ),
-    onSuccess: (res) => {
+    onSuccess: () => {
       invalidate();
-      toast.success(
-        "Acesso ao portal criado — comunique a password ao sócio",
-        `Email: ${res.email}. No primeiro login terá de definir uma nova password (mín. 12 caracteres).`,
-      );
+      toast.success("Acesso ao portal criado");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -96,7 +93,7 @@ export function useMembersMutations() {
       uploadFile(`/members/${memberId}/photo`, file),
     onSuccess: () => {
       invalidate();
-      toast.success("Fotografia actualizada");
+      toast.success("Fotografia atualizada");
     },
     onError: (err: Error) => toast.error(err.message),
   });

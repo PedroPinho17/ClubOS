@@ -278,7 +278,7 @@ export default function PortalPage() {
 
       {isFetched && !data && !isError && (
         <p className="text-center text-xs text-muted-foreground">
-          Dados actualizados
+          Dados atualizados
         </p>
       )}
     </div>

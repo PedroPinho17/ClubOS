@@ -160,7 +160,7 @@ function CardsPageContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["card", memberId] });
       queryClient.invalidateQueries({ queryKey: ["members"] });
-      toast.success("Foto actualizada");
+      toast.success("Foto atualizada");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -169,7 +169,7 @@ function CardsPageContent() {
     mutationFn: (file: File) => uploadFile("/organization/logo", file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["card"] });
-      toast.success("Logótipo actualizado");
+      toast.success("Logótipo atualizado");
     },
     onError: (err: Error) => toast.error(err.message),
   });

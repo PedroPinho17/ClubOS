@@ -68,7 +68,7 @@ function MembershipPlansPageContent() {
       api.patch(`/membership-plans/${plan.id}`, { active: !plan.active }),
     onSuccess: (_, plan) => {
       invalidate();
-      toast.success(plan.active ? "Plano desactivado" : "Plano activado");
+      toast.success(plan.active ? "Plano desativado" : "Plano ativado");
     },
     onError: (err: Error) => toast.error(err.message),
   });

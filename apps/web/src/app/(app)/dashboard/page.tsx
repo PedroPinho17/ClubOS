@@ -9,6 +9,7 @@ import {
   CreditCard,
   Users,
 } from "lucide-react";
+import { GettingStartedCard } from "@/components/getting-started-card";
 import { RoleGate } from "@/components/role-gate";
 import { QueryErrorCard } from "@/components/query-error-card";
 import { Badge } from "@/components/ui/badge";
@@ -86,9 +87,13 @@ function DashboardPageContent() {
     );
   }
 
+  const isEmptyOrg = !isLoading && data != null && data.members === 0;
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
+
+      {isEmptyOrg && <GettingStartedCard />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((c) => (

@@ -20,6 +20,7 @@ import {
   PAGE_SIZE,
   SELECT_CLASS,
 } from "@/components/members/members-shared";
+import { PortalAccessCreatedDialog } from "@/components/members/portal-access-created-dialog";
 import { PortalGrantDialog } from "@/components/members/portal-grant-dialog";
 import { RoleGate } from "@/components/role-gate";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -93,6 +94,11 @@ function MembersPageContent() {
     null,
   );
   const [portalPassword, setPortalPassword] = useState("");
+  const [portalAccessCreated, setPortalAccessCreated] = useState<{
+    memberName: string;
+    email: string;
+    password: string;
+  } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
   const [gdprTarget, setGdprTarget] = useState<Member | null>(null);
   const [importWarningOpen, setImportWarningOpen] = useState(false);
@@ -334,7 +340,7 @@ function MembersPageContent() {
         {membersPage && membersPage.total > 0 && (
           <p className="text-sm text-muted-foreground">
             {membersPage.total} sócio{membersPage.total !== 1 ? "s" : ""}
-            {isPageTransition ? " · A actualizar..." : ""}
+            {isPageTransition ? " · A atualizar..." : ""}
           </p>
         )}
       </div>
@@ -442,20 +448,36 @@ function MembersPageContent() {
             setPortalGrantMember(null);
             setPortalPassword("");
           }}
-          onSubmit={() =>
+          onSubmit={() => {
+            const member = portalGrantMember;
+            const password = portalPassword;
             grantPortal.mutate(
               {
-                memberId: portalGrantMember.id,
-                password: portalPassword,
+                memberId: member.id,
+                password,
               },
               {
-                onSuccess: () => {
+                onSuccess: (res) => {
                   setPortalGrantMember(null);
                   setPortalPassword("");
+                  setPortalAccessCreated({
+                    memberName: member.name,
+                    email: res.email,
+                    password,
+                  });
                 },
               },
-            )
-          }
+            );
+          }}
+        />
+      )}
+
+      {portalAccessCreated && (
+        <PortalAccessCreatedDialog
+          memberName={portalAccessCreated.memberName}
+          email={portalAccessCreated.email}
+          password={portalAccessCreated.password}
+          onClose={() => setPortalAccessCreated(null)}
         />
       )}
 

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const CATEGORY_LABEL: Record<PlatformModule["category"], string> = {
   CORE: "Core",
-  BASE: "Modulos base",
+  BASE: "Módulos base",
   PLUGIN: "Plugins (modalidades)",
 };
 
@@ -57,7 +57,7 @@ function ModuleCategorySection({
           <div className="min-w-0 flex-1">
             <CardTitle className="text-base">{title}</CardTitle>
             <p className="text-xs text-muted-foreground">
-              {count} {count === 1 ? "modulo" : "modulos"}
+              {count} {count === 1 ? "módulo" : "módulos"}
             </p>
           </div>
         </button>
@@ -92,7 +92,7 @@ function ModulesPageContent() {
       api.put(`/modules/${slug}`, { enabled }),
     onSuccess: (_, { enabled }) => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
-      toast.success(enabled ? "Módulo activado" : "Módulo desactivado");
+      toast.success(enabled ? "Módulo ativado" : "Módulo desativado");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -101,9 +101,9 @@ function ModulesPageContent() {
 
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Modulos</h1>
+      <h1 className="mb-2 text-2xl font-bold">Módulos</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Ativa ou desativa modulos para esta organizacao. Os modulos core estao
+        Ativa ou desativa módulos para esta organização. Os módulos core estão
         sempre ativos.
       </p>
 

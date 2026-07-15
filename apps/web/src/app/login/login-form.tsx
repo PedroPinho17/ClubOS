@@ -18,7 +18,7 @@ import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { useApiHealth } from "@/hooks/use-api-health";
 
 const API_OFFLINE_MSG_DEV =
-  "A API nao esta acessivel (porta 4000). Corre `pnpm dev` na raiz do projeto e aguarda a mensagem «ClubOS API a correr».";
+  "A API não está acessível (porta 4000). Corre `pnpm dev` na raiz do projeto e aguarda a mensagem «ClubOS API a correr».";
 
 const API_OFFLINE_MSG =
   process.env.NODE_ENV === "development"
@@ -48,6 +48,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,11 +61,11 @@ export function LoginForm() {
     try {
       const { error } = await signIn.email({ email, password });
       if (error) {
-        setError(error.message ?? "Credenciais invalidas.");
+        setError(error.message ?? "Credenciais inválidas.");
         return;
       }
       const ok = await redirectAfterLogin(router, refetch);
-      if (!ok) setError("Sessao nao iniciada. Tenta novamente.");
+      if (!ok) setError("Sessão não iniciada. Tente novamente.");
     } catch {
       setError(API_OFFLINE_MSG);
     } finally {
@@ -82,11 +83,11 @@ export function LoginForm() {
     try {
       const res = await signIn.passkey();
       if (res?.error) {
-        setError(res.error.message ?? "Falha na autenticacao com passkey.");
+        setError(res.error.message ?? "Falha na autenticação com passkey.");
         return;
       }
       const ok = await redirectAfterLogin(router, refetch);
-      if (!ok) setError("Sessao nao iniciada. Tenta novamente.");
+      if (!ok) setError("Sessão não iniciada. Tente novamente.");
     } catch {
       setError(API_OFFLINE_MSG);
     } finally {
@@ -128,9 +129,17 @@ export function LoginForm() {
               />
             </div>
             <div className="space-y-1">
-              <label htmlFor="login-password" className="text-sm font-medium">
-                Password
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="login-password" className="text-sm font-medium">
+                  Password
+                </label>
+                <Link
+                  href="/recuperar-password"
+                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                >
+                  Esqueci a password
+                </Link>
+              </div>
               <Input
                 id="login-password"
                 value={password}
@@ -167,6 +176,48 @@ export function LoginForm() {
             <KeyRound className="h-4 w-4" />
             Entrar com passkey
           </Button>
+
+          <div className="mt-5 border-t pt-4">
+            <button
+              type="button"
+              className="w-full text-left text-sm font-medium text-foreground"
+              aria-expanded={helpOpen}
+              onClick={() => setHelpOpen((v) => !v)}
+            >
+              Problemas a entrar?
+            </button>
+            {helpOpen && (
+              <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
+                <p>
+                  <strong className="text-foreground">Staff</strong> (admin /
+                  tesoureiro) — abre o backoffice do clube após o login.
+                </p>
+                <p>
+                  <strong className="text-foreground">Sócio</strong> — abre o
+                  portal pessoal. O acesso é criado pela secretaria do clube; no
+                  1.º login terá de definir uma nova password.
+                </p>
+                <p>
+                  Sem password ou bloqueado?{" "}
+                  <Link
+                    href="/recuperar-password"
+                    className="underline hover:text-foreground"
+                  >
+                    Ver como recuperar
+                  </Link>{" "}
+                  ou contacte a direção do clube.
+                </p>
+                <p>
+                  <Link
+                    href="/privacidade"
+                    className="underline hover:text-foreground"
+                  >
+                    Política de privacidade
+                  </Link>
+                </p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
       <p className="mt-6 max-w-sm text-center text-xs text-muted-foreground">

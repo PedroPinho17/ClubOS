@@ -21,13 +21,14 @@ apps/web/src/
 
 ### Públicas
 
-| Rota | Ficheiro | Descrição |
-|------|----------|-----------|
-| `/` | `app/page.tsx` | Redirect → `/login` |
-| `/login` | `app/login/page.tsx` | Email/password + passkey |
-| `/privacidade` | `app/privacidade/page.tsx` | Política de privacidade |
-| `/dpa` | `app/dpa/page.tsx` | Acordo de tratamento de dados |
-| `/validar/[memberId]` | `app/validar/...` | Validar cartão (QR público) |
+| Rota                  | Ficheiro                          | Descrição                     |
+| --------------------- | --------------------------------- | ----------------------------- |
+| `/`                   | `app/page.tsx`                    | Redirect → `/login`           |
+| `/login`              | `app/login/page.tsx`              | Email/password + passkey      |
+| `/recuperar-password` | `app/recuperar-password/page.tsx` | Guia de recuperação (manual)  |
+| `/privacidade`        | `app/privacidade/page.tsx`        | Política de privacidade       |
+| `/dpa`                | `app/dpa/page.tsx`                | Acordo de tratamento de dados |
+| `/validar/[memberId]` | `app/validar/...`                 | Validar cartão (QR público)   |
 
 ### Backoffice — grupo `(app)`
 
@@ -37,18 +38,18 @@ Layout: `app/(app)/layout.tsx`
 - `useRequireAuth()` — espera sessão antes de renderizar
 - `OrgSwitcher` — selector de org (imperador multi-org)
 
-| Rota | Página | Módulo | Roles |
-|------|--------|--------|-------|
-| `/dashboard` | dashboard | dashboard | staff |
-| `/members` | members | members | staff |
-| `/membership-plans` | membership-plans | membership-plans | admin+ |
-| `/payments` | payments | payments | staff |
-| `/cards` | cards | cards | admin+ |
-| `/communications` | communications | communications | admin+ |
-| `/reports` | reports | reports | staff |
-| `/audit` | audit | — | admin+ |
-| `/settings` | settings | — | admin+ |
-| `/modules` | modules | — | imperador |
+| Rota                | Página           | Módulo           | Roles     |
+| ------------------- | ---------------- | ---------------- | --------- |
+| `/dashboard`        | dashboard        | dashboard        | staff     |
+| `/members`          | members          | members          | staff     |
+| `/membership-plans` | membership-plans | membership-plans | admin+    |
+| `/payments`         | payments         | payments         | staff     |
+| `/cards`            | cards            | cards            | admin+    |
+| `/communications`   | communications   | communications   | admin+    |
+| `/reports`          | reports          | reports          | staff     |
+| `/audit`            | audit            | —                | admin+    |
+| `/settings`         | settings         | —                | admin+    |
+| `/modules`          | modules          | —                | imperador |
 
 Definição central: `src/lib/nav.ts` → `NAV_ITEMS` + `filterNavItems()`.
 
@@ -56,14 +57,14 @@ Definição central: `src/lib/nav.ts` → `NAV_ITEMS` + `filterNavItems()`.
 
 Layout: `app/portal/layout.tsx` — role `socio` apenas.
 
-| Rota | Descrição |
-|------|-----------|
+| Rota      | Descrição               |
+| --------- | ----------------------- |
 | `/portal` | Quotas, cartão, recibos |
 
 ### Conta
 
-| Rota | Descrição |
-|------|-----------|
+| Rota       | Descrição                          |
+| ---------- | ---------------------------------- |
 | `/account` | Nome, password, gestão de passkeys |
 
 ## Bibliotecas principais (`lib/`)
@@ -96,10 +97,10 @@ Cliente Better Auth (`createAuthClient`).
 
 ## Hooks
 
-| Hook | Ficheiro | Uso |
-|------|----------|-----|
-| `useRequireAuth` | `hooks/use-require-auth.ts` | Guard de sessão nos layouts |
-| `useActiveOrgId` | `hooks/use-active-org.ts` | ID da org activa |
+| Hook                | Ficheiro                        | Uso                            |
+| ------------------- | ------------------------------- | ------------------------------ |
+| `useRequireAuth`    | `hooks/use-require-auth.ts`     | Guard de sessão nos layouts    |
+| `useActiveOrgId`    | `hooks/use-active-org.ts`       | ID da org activa               |
 | `useTenantQueryKey` | `hooks/use-tenant-query-key.ts` | Query keys TanStack por tenant |
 
 ## Data fetching
@@ -110,8 +111,8 @@ Padrão típico:
 
 ```tsx
 const { data } = useQuery({
-  queryKey: useTenantQueryKey(['members']),
-  queryFn: () => api.get<Member[]>('/members'),
+  queryKey: useTenantQueryKey(["members"]),
+  queryFn: () => api.get<Member[]>("/members"),
   enabled: !!session && !!activeOrgId,
 });
 ```

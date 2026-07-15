@@ -21,7 +21,7 @@ export function InvitePasswordDialog({
       await navigator.clipboard.writeText(password);
       toast.success("Password copiada");
     } catch {
-      toast.error("Não foi possível copiar. Seleccione e copie manualmente.");
+      toast.error("Não foi possível copiar. Selecione e copie manualmente.");
     }
   }
 

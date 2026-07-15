@@ -193,7 +193,7 @@ export function MembersToolsPanel({
                       checked={updateExisting}
                       onChange={(e) => onUpdateExistingChange(e.target.checked)}
                     />
-                    Actualizar sócios existentes pelo número
+                    Atualizar sócios existentes pelo número
                   </label>
                   <Button
                     variant="secondary"

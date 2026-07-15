@@ -19,8 +19,8 @@ const ACTION_LABEL: Record<string, string> = {
   "member.photo_updated": "Foto atualizada",
   "member.gdpr_export": "Export RGPD",
   "member.gdpr_erased": "Dados apagados (RGPD)",
-  "member.import_dry_run": "Importacao (simulacao)",
-  "member.imported": "Importacao concluida",
+  "member.import_dry_run": "Importação (simulação)",
+  "member.imported": "Importação concluída",
   "payment.created": "Pagamento registado",
   "user.invited": "Utilizador convidado",
 };
@@ -46,7 +46,7 @@ function AuditPageContent() {
       <div>
         <h1 className="text-2xl font-bold">Auditoria</h1>
         <p className="text-sm text-muted-foreground">
-          Registo de acoes na organizacao.
+          Registo de ações na organização.
         </p>
       </div>
 
@@ -68,7 +68,7 @@ function AuditPageContent() {
                     <tr className="text-left">
                       <th className="p-3 font-medium">Data</th>
                       <th className="p-3 font-medium">Utilizador</th>
-                      <th className="p-3 font-medium">Acao</th>
+                      <th className="p-3 font-medium">Ação</th>
                       <th className="p-3 font-medium">Entidade</th>
                     </tr>
                   </thead>

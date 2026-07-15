@@ -141,7 +141,7 @@ function SettingsPageContent() {
       uploadFile<Organization>("/organization/logo", file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organization"] });
-      toast.success("Logótipo actualizado");
+      toast.success("Logótipo atualizado");
     },
     onError: (err: Error) => toast.error(err.message),
   });

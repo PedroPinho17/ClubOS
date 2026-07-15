@@ -35,7 +35,7 @@ export function ImportResultPanel({
               {isDryRun ? "Simulação concluída" : "Importação concluída"}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Criados: {result.created} | Actualizados: {result.updated} |
+              Criados: {result.created} | Atualizados: {result.updated} |
               Pagamentos: {result.payments} | Ignorados: {result.skipped} |
               Erros: {result.errors.length}
             </p>
