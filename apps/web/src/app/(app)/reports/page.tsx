@@ -3,11 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Download } from "lucide-react";
 import { QueryErrorCard } from "@/components/query-error-card";
+import { ReportsOverviewSkeleton } from "@/components/page-skeletons";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { safeDownloadCsv } from "@/lib/safe-download";
 import { STAFF_ROLES } from "@/lib/staff-roles";
@@ -32,9 +32,10 @@ export default function ReportsPage() {
 
 function ReportsPageContent() {
   const overviewKey = useTenantQueryKey(["reports", "overview"]);
-  const { data, isLoading, isError, refetch } = useQuery<ReportsOverview>({
+  const { data, isPending, isError, refetch } = useQuery<ReportsOverview>({
     queryKey: overviewKey,
     queryFn: () => api.get<ReportsOverview>("/reports/overview"),
+    staleTime: 2 * 60_000,
   });
 
   const maxMonthly = Math.max(
@@ -77,9 +78,11 @@ function ReportsPageContent() {
 
       {isError ? (
         <QueryErrorCard onRetry={() => void refetch()} />
-      ) : isLoading || !data ? (
-        <p className="text-muted-foreground">A carregar...</p>
-      ) : data.members.total === 0 && data.revenue.paymentsCount === 0 ? (
+      ) : isPending && !data ? (
+        <ReportsOverviewSkeleton />
+      ) : data &&
+        data.members.total === 0 &&
+        data.revenue.paymentsCount === 0 ? (
         <Card>
           <CardContent>
             <EmptyState

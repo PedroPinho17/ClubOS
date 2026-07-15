@@ -2,6 +2,8 @@
 
 import { ClipboardList } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { TableBodySkeleton } from "@/components/page-skeletons";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,9 +35,10 @@ export default function AuditPage() {
 
 function AuditPageContent() {
   const auditKey = useTenantQueryKey(["audit"]);
-  const { data, isLoading } = useQuery<AuditLogEntry[]>({
+  const { data, isPending, isError, refetch } = useQuery<AuditLogEntry[]>({
     queryKey: auditKey,
     queryFn: () => api.get<AuditLogEntry[]>("/audit?limit=200"),
+    staleTime: 60_000,
   });
 
   return (
@@ -47,85 +50,82 @@ function AuditPageContent() {
         </p>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {!isLoading && data && data.length === 0 ? (
-            <EmptyState
-              icon={ClipboardList}
-              title="Sem registos de auditoria"
-              description="As acções na organização aparecerão aqui à medida que forem realizadas."
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-sm">
-                <thead className="border-b bg-muted/50">
-                  <tr className="text-left">
-                    <th className="p-3 font-medium">Data</th>
-                    <th className="p-3 font-medium">Utilizador</th>
-                    <th className="p-3 font-medium">Acao</th>
-                    <th className="p-3 font-medium">Entidade</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="p-6 text-center text-muted-foreground"
-                      >
-                        A carregar...
-                      </td>
+      {isError ? (
+        <QueryErrorCard onRetry={() => void refetch()} />
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            {!isPending && data && data.length === 0 ? (
+              <EmptyState
+                icon={ClipboardList}
+                title="Sem registos de auditoria"
+                description="As acções na organização aparecerão aqui à medida que forem realizadas."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead className="border-b bg-muted/50">
+                    <tr className="text-left">
+                      <th className="p-3 font-medium">Data</th>
+                      <th className="p-3 font-medium">Utilizador</th>
+                      <th className="p-3 font-medium">Acao</th>
+                      <th className="p-3 font-medium">Entidade</th>
                     </tr>
-                  ) : data && data.length > 0 ? (
-                    data.map((entry) => (
-                      <tr key={entry.id} className="border-b last:border-0">
-                        <td className="p-3 whitespace-nowrap text-muted-foreground">
-                          {new Date(entry.createdAt).toLocaleString("pt-PT")}
-                        </td>
-                        <td className="p-3">
-                          {entry.user ? (
-                            <div>
-                              <div className="font-medium">
-                                {entry.user.name}
+                  </thead>
+                  <tbody>
+                    {isPending && !data ? (
+                      <TableBodySkeleton rows={8} cols={4} />
+                    ) : data && data.length > 0 ? (
+                      data.map((entry) => (
+                        <tr key={entry.id} className="border-b last:border-0">
+                          <td className="p-3 whitespace-nowrap text-muted-foreground">
+                            {new Date(entry.createdAt).toLocaleString("pt-PT")}
+                          </td>
+                          <td className="p-3">
+                            {entry.user ? (
+                              <div>
+                                <div className="font-medium">
+                                  {entry.user.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {entry.user.email}
+                                </div>
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                {entry.user.email}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Sistema
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <Badge variant="secondary">
-                            {ACTION_LABEL[entry.action] ?? entry.action}
-                          </Badge>
-                        </td>
-                        <td className="p-3 text-muted-foreground">
-                          {entry.entity ? (
-                            <span>
-                              {entry.entity}
-                              {entry.entityId && (
-                                <span className="ml-1 font-mono text-xs">
-                                  ({entry.entityId.slice(-8)})
-                                </span>
-                              )}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Sistema
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <Badge variant="secondary">
+                              {ACTION_LABEL[entry.action] ?? entry.action}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            {entry.entity ? (
+                              <span>
+                                {entry.entity}
+                                {entry.entityId && (
+                                  <span className="ml-1 font-mono text-xs">
+                                    ({entry.entityId.slice(-8)})
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

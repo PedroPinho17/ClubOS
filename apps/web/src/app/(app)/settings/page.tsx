@@ -9,7 +9,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api, uploadFile } from "@/lib/api";
 import { InvitePasswordDialog } from "@/components/invite-password-dialog";
+import {
+  SettingsOrgSkeleton,
+  TableBodySkeleton,
+} from "@/components/page-skeletons";
 import { RoleGate } from "@/components/role-gate";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { canInviteAdmin } from "@/lib/permissions";
 import { toast } from "@/lib/toast";
@@ -58,22 +63,27 @@ function SettingsPageContent() {
   const orgSettingsKey = useTenantQueryKey(["organization", "settings"]);
   const staffKey = useTenantQueryKey(["users", "staff"]);
 
-  const { data: org, isLoading } = useQuery<Organization>({
+  const { data: org } = useQuery<Organization>({
     queryKey: orgKey,
     queryFn: () => api.get<Organization>("/organization"),
+    staleTime: 2 * 60_000,
   });
 
-  const { data: orgSettings } = useQuery<Record<string, unknown>>({
+  const { data: orgSettings, isPending: orgSettingsPending } = useQuery<
+    Record<string, unknown>
+  >({
     queryKey: orgSettingsKey,
     queryFn: () => api.get<Record<string, unknown>>("/organization/settings"),
+    staleTime: 2 * 60_000,
   });
 
   const [diasAvisoQuota, setDiasAvisoQuota] = useState(7);
   const [lembretesAutomaticos, setLembretesAutomaticos] = useState(false);
 
-  const { data: staff, isLoading: staffLoading } = useQuery<StaffUser[]>({
+  const { data: staff, isPending: staffPending } = useQuery<StaffUser[]>({
     queryKey: staffKey,
     queryFn: () => api.get<StaffUser[]>("/users"),
+    staleTime: 60_000,
   });
 
   useEffect(() => {
@@ -169,9 +179,7 @@ function SettingsPageContent() {
   const selectClass =
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-  if (isLoading || !org) {
-    return <p className="text-muted-foreground">A carregar...</p>;
-  }
+  const orgReady = !!org;
 
   return (
     <div className="space-y-6">
@@ -185,98 +193,102 @@ function SettingsPageContent() {
       <Card>
         <CardContent className="space-y-4 pt-6">
           <h2 className="font-semibold">Organização</h2>
-          <div className="flex flex-wrap items-start gap-6">
-            <div className="flex flex-col items-center gap-2">
-              {org.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={org.logoUrl}
-                  alt={org.name}
-                  className="h-20 w-20 rounded-lg border object-contain p-1"
-                />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg border bg-muted text-xs text-muted-foreground">
-                  Sem logo
-                </div>
-              )}
-              <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">
-                <ImagePlus className="h-4 w-4" />
-                {uploadLogo.isPending ? "A enviar..." : "Logótipo"}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  className="hidden"
-                  disabled={uploadLogo.isPending}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) uploadLogo.mutate(f);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            </div>
-
-            <form
-              className="grid flex-1 gap-3 sm:grid-cols-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                saveOrg.mutate();
-              }}
-            >
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-sm font-medium">Nome</label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Cor principal</label>
-                <div className="flex items-center gap-2">
+          {!orgReady ? (
+            <SettingsOrgSkeleton />
+          ) : (
+            <div className="flex flex-wrap items-start gap-6">
+              <div className="flex flex-col items-center gap-2">
+                {org.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={org.logoUrl}
+                    alt={org.name}
+                    className="h-20 w-20 rounded-lg border object-contain p-1"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg border bg-muted text-xs text-muted-foreground">
+                    Sem logo
+                  </div>
+                )}
+                <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">
+                  <ImagePlus className="h-4 w-4" />
+                  {uploadLogo.isPending ? "A enviar..." : "Logótipo"}
                   <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="h-10 w-12 cursor-pointer rounded border border-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    disabled={uploadLogo.isPending}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadLogo.mutate(f);
+                      e.target.value = "";
+                    }}
                   />
+                </label>
+              </div>
+
+              <form
+                className="grid flex-1 gap-3 sm:grid-cols-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  saveOrg.mutate();
+                }}
+              >
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-sm font-medium">Nome</label>
                   <Input
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
                   />
                 </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Slug</label>
-                <Input value={org.slug} disabled className="bg-muted" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Idioma</label>
-                <Input
-                  value={locale}
-                  onChange={(e) => setLocale(e.target.value)}
-                  placeholder="pt-PT"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Fuso horário</label>
-                <Input
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
-                  placeholder="Europe/Lisbon"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Button
-                  type="submit"
-                  disabled={saveOrg.isPending || !name.trim()}
-                >
-                  <Save className="h-4 w-4" />
-                  {saveOrg.isPending ? "A guardar..." : "Guardar definições"}
-                </Button>
-              </div>
-            </form>
-          </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Cor principal</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="h-10 w-12 cursor-pointer rounded border border-input"
+                    />
+                    <Input
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Slug</label>
+                  <Input value={org.slug} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Idioma</label>
+                  <Input
+                    value={locale}
+                    onChange={(e) => setLocale(e.target.value)}
+                    placeholder="pt-PT"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Fuso horário</label>
+                  <Input
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    placeholder="Europe/Lisbon"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Button
+                    type="submit"
+                    disabled={saveOrg.isPending || !name.trim()}
+                  >
+                    <Save className="h-4 w-4" />
+                    {saveOrg.isPending ? "A guardar..." : "Guardar definições"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -288,43 +300,55 @@ function SettingsPageContent() {
             próximos X dias) ou em atraso. Requer SMTP configurado e{" "}
             <code className="text-xs">REMINDERS_ENABLED=true</code> no servidor.
           </p>
-          <form
-            className="grid gap-3 sm:grid-cols-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveReminders.mutate();
-            }}
-          >
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Dias de aviso antes do vencimento
+          {orgSettingsPending && !orgSettings ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10 sm:col-span-2" />
+              <Skeleton className="h-10 w-40" />
+            </div>
+          ) : (
+            <form
+              className="grid gap-3 sm:grid-cols-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveReminders.mutate();
+              }}
+            >
+              <div className="space-y-1">
+                <label className="text-sm font-medium">
+                  Dias de aviso antes do vencimento
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={90}
+                  value={diasAvisoQuota}
+                  onChange={(e) =>
+                    setDiasAvisoQuota(Number(e.target.value) || 7)
+                  }
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={lembretesAutomaticos}
+                  onChange={(e) => setLembretesAutomaticos(e.target.checked)}
+                />
+                Lembretes automáticos activos nesta organização
               </label>
-              <Input
-                type="number"
-                min={1}
-                max={90}
-                value={diasAvisoQuota}
-                onChange={(e) => setDiasAvisoQuota(Number(e.target.value) || 7)}
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={lembretesAutomaticos}
-                onChange={(e) => setLembretesAutomaticos(e.target.checked)}
-              />
-              Lembretes automáticos activos nesta organização
-            </label>
-            <div className="sm:col-span-2">
-              <Button
-                type="submit"
-                variant="secondary"
-                disabled={saveReminders.isPending}
-              >
-                {saveReminders.isPending ? "A guardar..." : "Guardar lembretes"}
-              </Button>
-            </div>
-          </form>
+              <div className="sm:col-span-2">
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  disabled={saveReminders.isPending}
+                >
+                  {saveReminders.isPending
+                    ? "A guardar..."
+                    : "Guardar lembretes"}
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
 
@@ -394,12 +418,8 @@ function SettingsPageContent() {
               </tr>
             </thead>
             <tbody>
-              {staffLoading ? (
-                <tr>
-                  <td colSpan={3} className="py-4 text-muted-foreground">
-                    A carregar...
-                  </td>
-                </tr>
+              {staffPending && !staff ? (
+                <TableBodySkeleton rows={3} cols={3} />
               ) : staff && staff.length > 0 ? (
                 staff.map((u) => (
                   <tr key={u.id} className="border-b last:border-0">

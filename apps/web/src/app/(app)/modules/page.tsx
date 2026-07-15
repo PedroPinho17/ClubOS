@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { ModuleSectionsSkeleton } from "@/components/page-skeletons";
 import { RoleGate } from "@/components/role-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,9 +81,10 @@ function ModulesPageContent() {
   const queryClient = useQueryClient();
   const modulesKey = useTenantQueryKey(["modules"]);
 
-  const { data: modules } = useQuery<PlatformModule[]>({
+  const { data: modules, isPending } = useQuery<PlatformModule[]>({
     queryKey: modulesKey,
     queryFn: () => api.get<PlatformModule[]>("/modules"),
+    staleTime: 2 * 60_000,
   });
 
   const toggle = useMutation({
@@ -106,49 +108,55 @@ function ModulesPageContent() {
       </p>
 
       <div className="space-y-6">
-        {groups.map((category) => {
-          const items = (modules ?? []).filter((m) => m.category === category);
-          if (items.length === 0) return null;
-          return (
-            <ModuleCategorySection
-              key={category}
-              title={CATEGORY_LABEL[category]}
-              count={items.length}
-              defaultOpen={DEFAULT_OPEN[category]}
-            >
-              {items.map((m) => (
-                <div
-                  key={m.slug}
-                  className="flex items-center justify-between rounded-md border p-3"
-                >
-                  <div>
-                    <div className="flex items-center gap-2 font-medium">
-                      {m.name}
-                      {m.enabled && <Badge variant="success">Ativo</Badge>}
+        {isPending && !modules ? (
+          <ModuleSectionsSkeleton />
+        ) : (
+          groups.map((category) => {
+            const items = (modules ?? []).filter(
+              (m) => m.category === category,
+            );
+            if (items.length === 0) return null;
+            return (
+              <ModuleCategorySection
+                key={category}
+                title={CATEGORY_LABEL[category]}
+                count={items.length}
+                defaultOpen={DEFAULT_OPEN[category]}
+              >
+                {items.map((m) => (
+                  <div
+                    key={m.slug}
+                    className="flex items-center justify-between rounded-md border p-3"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 font-medium">
+                        {m.name}
+                        {m.enabled && <Badge variant="success">Ativo</Badge>}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {m.slug}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {m.slug}
-                    </div>
+                    {m.isCore ? (
+                      <Badge variant="muted">Sempre ativo</Badge>
+                    ) : (
+                      <Button
+                        variant={m.enabled ? "outline" : "default"}
+                        size="sm"
+                        disabled={toggle.isPending}
+                        onClick={() =>
+                          toggle.mutate({ slug: m.slug, enabled: !m.enabled })
+                        }
+                      >
+                        {m.enabled ? "Desativar" : "Ativar"}
+                      </Button>
+                    )}
                   </div>
-                  {m.isCore ? (
-                    <Badge variant="muted">Sempre ativo</Badge>
-                  ) : (
-                    <Button
-                      variant={m.enabled ? "outline" : "default"}
-                      size="sm"
-                      disabled={toggle.isPending}
-                      onClick={() =>
-                        toggle.mutate({ slug: m.slug, enabled: !m.enabled })
-                      }
-                    >
-                      {m.enabled ? "Desativar" : "Ativar"}
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </ModuleCategorySection>
-          );
-        })}
+                ))}
+              </ModuleCategorySection>
+            );
+          })
+        )}
       </div>
     </div>
   );

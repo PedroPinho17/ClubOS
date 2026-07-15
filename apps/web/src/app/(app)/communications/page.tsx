@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
+import { TableBodySkeleton } from "@/components/page-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RoleGate } from "@/components/role-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,15 +64,22 @@ function CommunicationsPageContent() {
   const communicationsKey = useTenantQueryKey(["communications"]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
 
-  const { data: list, isLoading } = useQuery<Communication[]>({
+  const { data: list, isLoading: listLoading } = useQuery<Communication[]>({
     queryKey: communicationsKey,
     queryFn: () => api.get<Communication[]>("/communications"),
-    refetchInterval: 5000,
+    refetchInterval: (query) => {
+      const items = query.state.data;
+      const hasActive = items?.some(
+        (c) => c.status === "QUEUED" || c.status === "SENDING",
+      );
+      return hasActive ? 5000 : false;
+    },
   });
 
   const { data: plans } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>("/membership-plans"),
+    enabled: audience === "PLAN",
   });
 
   useEffect(() => {
@@ -80,19 +89,25 @@ function CommunicationsPageContent() {
       channel === "whatsapp"
         ? `/communications/preview/whatsapp?${params}`
         : `/communications/preview?${params}`;
-    api
-      .get<{ count: number }>(previewPath)
-      .then((r) => setPreviewCount(r.count))
-      .catch((err: unknown) => {
-        setPreviewCount(null);
-        toast.error(
-          err instanceof Error
-            ? err.message
-            : "Não foi possível calcular destinatários.",
-        );
-      });
+
+    setPreviewCount(null);
+    const timer = window.setTimeout(() => {
+      api
+        .get<{ count: number }>(previewPath)
+        .then((r) => setPreviewCount(r.count))
+        .catch((err: unknown) => {
+          setPreviewCount(null);
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "Não foi possível calcular destinatários.",
+          );
+        });
+    }, 300);
+
     setWhatsappLinks([]);
     setEmailPreviewHtml(null);
+    return () => window.clearTimeout(timer);
   }, [audience, planId, channel]);
 
   const previewEmail = useMutation({
@@ -210,11 +225,13 @@ function CommunicationsPageContent() {
             )}
           </div>
 
-          {previewCount !== null && (
+          {previewCount !== null ? (
             <p className="text-sm text-muted-foreground">
               Destinatários: <strong>{previewCount}</strong>{" "}
               {channel === "email" ? "(com email)" : "(com telemóvel válido)"}
             </p>
+          ) : (
+            <Skeleton className="h-4 w-48" />
           )}
 
           {channel === "email" && (
@@ -333,8 +350,23 @@ function CommunicationsPageContent() {
       <Card>
         <CardContent className="pt-6">
           <h2 className="mb-4 font-semibold">Histórico (email)</h2>
-          {isLoading ? (
-            <p className="text-muted-foreground">A carregar...</p>
+          {listLoading ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="pb-2 font-medium">Data</th>
+                    <th className="pb-2 font-medium">Assunto</th>
+                    <th className="pb-2 font-medium">Audiência</th>
+                    <th className="pb-2 font-medium">Progresso</th>
+                    <th className="pb-2 font-medium">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <TableBodySkeleton rows={4} cols={5} />
+                </tbody>
+              </table>
+            </div>
           ) : list && list.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">
