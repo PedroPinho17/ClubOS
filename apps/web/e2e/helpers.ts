@@ -87,6 +87,11 @@ export async function loginAsMultiRole(page: Page) {
   });
 }
 
+/** Link do menu lateral/mobile — evita colisão com atalhos do dashboard. */
+export function navLink(page: Page, name: string) {
+  return page.getByRole("navigation").getByRole("link", { name });
+}
+
 /** Select de sócio com carregamento lazy (pagamentos). */
 export async function selectMemberInPaymentsForm(
   page: Page,

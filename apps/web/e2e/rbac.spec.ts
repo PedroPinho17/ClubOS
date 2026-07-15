@@ -1,15 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { loginAsTreasurer } from "./helpers";
+import { loginAsTreasurer, navLink } from "./helpers";
 
 test.describe("RBAC no frontend", () => {
   test("tesoureiro ve pagamentos mas nao definicoes", async ({ page }) => {
     await loginAsTreasurer(page);
 
-    await expect(page.getByRole("link", { name: "Pagamentos" })).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Definições" }),
-    ).not.toBeVisible();
-    await expect(page.getByRole("link", { name: "Cartões" })).not.toBeVisible();
+    await expect(navLink(page, "Pagamentos")).toBeVisible();
+    await expect(navLink(page, "Definições")).not.toBeVisible();
+    await expect(navLink(page, "Cartões")).not.toBeVisible();
   });
 
   test("tesoureiro redirecionado de /settings", async ({ page }) => {
