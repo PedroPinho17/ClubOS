@@ -61,7 +61,7 @@ export function DropdownMenu({
           id={menuId}
           role="menu"
           className={cn(
-            "absolute top-full z-50 mt-1 min-w-[11rem] rounded-md border bg-popover p-1 shadow-md",
+            "absolute top-full z-50 mt-1 min-w-[11rem] rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg",
             align === "end" ? "right-0" : "left-0",
           )}
           onClick={() => setOpen(false)}
@@ -136,7 +136,7 @@ export function DropdownMenuSeparator() {
 
 export function DropdownMenuLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+    <div className="rounded-sm bg-popover px-2 py-1.5 text-xs font-medium text-muted-foreground">
       {children}
     </div>
   );
