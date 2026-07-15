@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  keepPreviousData,
-} from "@tanstack/react-query";
-import { ImagePlus, UserPlus, Users } from "lucide-react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { UserPlus, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ImportResultPanel } from "@/components/members/import-result-panel";
 import { MemberEditDialog } from "@/components/members/member-edit-dialog";
@@ -15,29 +10,26 @@ import {
   type MemberPlanFilter,
   type MemberStatusFilter,
 } from "@/components/members/member-filters";
-import { MemberRowActions } from "@/components/members/member-row-actions";
+import { MembersTable } from "@/components/members/members-table";
 import { MembersToolsPanel } from "@/components/members/members-tools-panel";
 import {
   emptyEditForm,
-  isGdprErased,
-  memberInitials,
   memberToForm,
   PAGE_SIZE,
-  QUOTA_BADGE,
   SELECT_CLASS,
 } from "@/components/members/members-shared";
 import { PortalGrantDialog } from "@/components/members/portal-grant-dialog";
+import { RoleGate } from "@/components/role-gate";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { api, downloadJson, uploadFile } from "@/lib/api";
+import { api } from "@/lib/api";
 import { todayDateInput } from "@/lib/date-input";
 import { toast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
+import { STAFF_ROLES } from "@/lib/staff-roles";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
+import { useMembersMutations } from "@/hooks/use-members-mutations";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import {
   canAccessCards as hasCardAccess,
@@ -53,11 +45,29 @@ import type {
 } from "@/lib/types";
 
 export default function MembersPage() {
-  const queryClient = useQueryClient();
+  return (
+    <RoleGate roles={[...STAFF_ROLES]}>
+      <MembersPageContent />
+    </RoleGate>
+  );
+}
+
+function MembersPageContent() {
   const { effectiveRole, isLoading: roleLoading } = useEffectiveRole();
   const canManage = !roleLoading && canManageMembers(effectiveRole);
   const canExportReports = !roleLoading && hasReportExport(effectiveRole);
   const canAccessCards = !roleLoading && hasCardAccess(effectiveRole);
+
+  const {
+    createMember,
+    updateMember,
+    deleteMember,
+    grantPortal,
+    uploadPhoto,
+    importMembers,
+    gdprErase,
+  } = useMembersMutations();
+
   const importInputRef = useRef<HTMLInputElement>(null);
   const pendingImportFileRef = useRef<File | null>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
@@ -84,6 +94,7 @@ export default function MembersPage() {
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
   const [gdprTarget, setGdprTarget] = useState<Member | null>(null);
   const [importWarningOpen, setImportWarningOpen] = useState(false);
+  const [hasPendingImport, setHasPendingImport] = useState(false);
 
   const membersKey = useTenantQueryKey([
     "members",
@@ -124,132 +135,49 @@ export default function MembersPage() {
     placeholderData: keepPreviousData,
   });
 
-  const members = membersPage?.items ?? [];
-  const isInitialLoad = isPending && !membersPage;
-  const isPageTransition = isFetching && isPlaceholderData;
-
   const { data: plans } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>("/membership-plans"),
   });
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["members"] });
-
-  const createMember = useMutation({
-    mutationFn: () =>
-      api.post<Member>("/members", {
-        name,
-        email: email || undefined,
-        quotaPlanId: quotaPlanId || undefined,
-        joinedAt,
-      }),
-    onSuccess: () => {
-      setName("");
-      setEmail("");
-      setQuotaPlanId("");
-      setJoinedAt(todayDateInput());
-      invalidate();
-      toast.success("Sócio criado com sucesso");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const updateMember = useMutation({
-    mutationFn: () =>
-      api.patch<Member>(`/members/${editingId}`, {
-        name: editForm.name,
-        email: editForm.email || undefined,
-        phone: editForm.phone || undefined,
-        status: editForm.status,
-        quotaPlanId: editForm.quotaPlanId || null,
-        cardRole: editForm.cardRole || undefined,
-        notes: editForm.notes || undefined,
-        joinedAt: editForm.joinedAt,
-        cardValidUntil: editForm.cardValidUntil || null,
-      }),
-    onSuccess: () => {
-      setEditingId(null);
-      invalidate();
-      toast.success("Alterações guardadas");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const deleteMember = useMutation({
-    mutationFn: (id: string) => api.delete(`/members/${id}`),
-    onSuccess: () => {
-      setEditingId(null);
-      setDeleteTarget(null);
-      invalidate();
-      toast.success("Sócio removido");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const grantPortal = useMutation({
-    mutationFn: ({
-      memberId,
-      password,
-    }: {
-      memberId: string;
-      password: string;
-    }) =>
-      api.post<{ email: string; mustChangePassword: boolean }>(
-        `/portal/access/${memberId}`,
-        {
-          password,
-        },
-      ),
-    onSuccess: (res) => {
-      setPortalGrantMember(null);
-      setPortalPassword("");
-      toast.success(
-        "Acesso ao portal criado — comunique a password ao sócio",
-        `Email: ${res.email}. No primeiro login terá de definir uma nova password (mín. 12 caracteres).`,
-      );
-      invalidate();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const uploadPhoto = useMutation({
-    mutationFn: ({ memberId, file }: { memberId: string; file: File }) =>
-      uploadFile(`/members/${memberId}/photo`, file),
-    onSuccess: () => {
-      invalidate();
-      toast.success("Fotografia actualizada");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const importMembers = useMutation({
-    mutationFn: ({ file, dryRun }: { file: File; dryRun: boolean }) =>
-      uploadFile<MemberImportResult>("/members/import", file, {
-        updateExisting: updateExisting ? "true" : "false",
-        dryRun: dryRun ? "true" : "false",
-      }),
-    onSuccess: (res) => {
-      if (!res.dryRun) {
-        invalidate();
-        pendingImportFileRef.current = null;
-        setImportWarningOpen(false);
-        toast.success("Importação concluída");
-      }
-      setImportResult(res);
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
+  const members = membersPage?.items ?? [];
+  const isInitialLoad = isPending && !membersPage;
+  const isPageTransition = isFetching && isPlaceholderData;
 
   function runImport(file: File, dryRun: boolean) {
     pendingImportFileRef.current = file;
-    importMembers.mutate({ file, dryRun });
+    setHasPendingImport(true);
+    importMembers.mutate(
+      { file, dryRun, updateExisting },
+      {
+        onSuccess: (res) => {
+          if (!res.dryRun) {
+            pendingImportFileRef.current = null;
+            setHasPendingImport(false);
+            setImportWarningOpen(false);
+            toast.success("Importação concluída");
+          }
+          setImportResult(res);
+        },
+      },
+    );
   }
 
   function confirmRealImport() {
     const file = pendingImportFileRef.current;
     if (!file) return;
-    importMembers.mutate({ file, dryRun: false });
+    importMembers.mutate(
+      { file, dryRun: false, updateExisting },
+      {
+        onSuccess: (res) => {
+          pendingImportFileRef.current = null;
+          setHasPendingImport(false);
+          setImportWarningOpen(false);
+          setImportResult(res);
+          toast.success("Importação concluída");
+        },
+      },
+    );
   }
 
   function handleConfirmImport() {
@@ -260,34 +188,6 @@ export default function MembersPage() {
     }
     toast.info("A iniciar importação...");
     confirmRealImport();
-  }
-
-  const gdprErase = useMutation({
-    mutationFn: (memberId: string) =>
-      api.post(`/members/${memberId}/gdpr-erase`, { confirm: true }),
-    onSuccess: () => {
-      setEditingId(null);
-      setGdprTarget(null);
-      invalidate();
-      toast.success("Dados pessoais apagados (RGPD)");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  function startEdit(m: Member) {
-    setEditingId(m.id);
-    setEditForm(memberToForm(m));
-  }
-
-  function confirmDelete(m: Member) {
-    setDeleteTarget(m);
-  }
-
-  function clearFilters() {
-    setQuotaFilter("");
-    setStatusFilter("");
-    setPlanFilter("");
-    setPage(1);
   }
 
   return (
@@ -325,9 +225,10 @@ export default function MembersPage() {
             onDismiss={() => {
               setImportResult(null);
               pendingImportFileRef.current = null;
+              setHasPendingImport(false);
             }}
             onConfirmImport={
-              importResult.dryRun && pendingImportFileRef.current
+              importResult.dryRun && hasPendingImport
                 ? handleConfirmImport
                 : undefined
             }
@@ -341,7 +242,18 @@ export default function MembersPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (name.trim()) createMember.mutate();
+                if (!name.trim()) return;
+                createMember.mutate(
+                  { name, email, quotaPlanId, joinedAt },
+                  {
+                    onSuccess: () => {
+                      setName("");
+                      setEmail("");
+                      setQuotaPlanId("");
+                      setJoinedAt(todayDateInput());
+                    },
+                  },
+                );
               }}
               className="flex flex-wrap items-end gap-3"
             >
@@ -369,9 +281,6 @@ export default function MembersPage() {
                   onChange={(e) => setJoinedAt(e.target.value)}
                   required
                 />
-                <p className="text-xs text-muted-foreground">
-                  Adesão usada na quota se não houver pagamentos.
-                </p>
               </div>
               <div className="w-44 space-y-1">
                 <label className="text-sm font-medium">Plano</label>
@@ -435,211 +344,50 @@ export default function MembersPage() {
           setPlanFilter(value);
           setPage(1);
         }}
-        onClear={clearFilters}
+        onClear={() => {
+          setQuotaFilter("");
+          setStatusFilter("");
+          setPlanFilter("");
+          setPage(1);
+        }}
       />
 
-      <Card>
-        <CardContent className="p-0">
-          {!isInitialLoad && membersPage?.total === 0 && !search ? (
-            <EmptyState
-              icon={Users}
-              title="Ainda não há sócios nesta organização"
-              description="Importe a lista do Excel ou crie o primeiro sócio."
-              actions={[
-                ...(canManage
-                  ? [
-                      {
-                        label: "Importar Excel",
-                        variant: "outline" as const,
-                        onClick: () => importInputRef.current?.click(),
-                      },
-                      {
-                        label: "Criar sócio",
-                        onClick: () =>
-                          document
-                            .getElementById("create-member-form")
-                            ?.scrollIntoView({ behavior: "smooth" }),
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-          ) : (
-            <div
-              className={cn(
-                "overflow-x-auto transition-opacity",
-                isPageTransition && "pointer-events-none opacity-60",
-              )}
-            >
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="border-b bg-muted/50">
-                  <tr className="text-left">
-                    <th className="p-3 font-medium">Nº</th>
-                    <th className="p-3 font-medium">Foto</th>
-                    <th className="p-3 font-medium">Nome</th>
-                    <th className="p-3 font-medium">Email</th>
-                    <th className="p-3 font-medium">Plano</th>
-                    <th className="p-3 font-medium">Quota</th>
-                    <th className="p-3 font-medium">Estado</th>
-                    <th className="p-3 font-medium text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isInitialLoad ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="p-6 text-center text-muted-foreground"
-                      >
-                        A carregar...
-                      </td>
-                    </tr>
-                  ) : members.length > 0 ? (
-                    members.map((m) => (
-                      <tr
-                        key={m.id}
-                        className={`border-b last:border-0 ${editingId === m.id ? "bg-primary/5" : ""}`}
-                      >
-                        <td className="p-3">{m.number}</td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            {m.photoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={m.photoUrl}
-                                alt={m.name}
-                                className="h-9 w-9 rounded-md border object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-9 w-9 items-center justify-center rounded-md border bg-muted text-xs font-semibold">
-                                {memberInitials(m.name)}
-                              </div>
-                            )}
-                            <label className="inline-flex cursor-pointer items-center rounded-md border border-input p-1.5 hover:bg-muted">
-                              <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
-                              <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                className="hidden"
-                                disabled={
-                                  uploadPhoto.isPending || isGdprErased(m)
-                                }
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0];
-                                  if (f)
-                                    uploadPhoto.mutate({
-                                      memberId: m.id,
-                                      file: f,
-                                    });
-                                  e.target.value = "";
-                                }}
-                              />
-                            </label>
-                          </div>
-                        </td>
-                        <td className="p-3 font-medium">
-                          {m.name}
-                          {isGdprErased(m) && (
-                            <Badge variant="muted" className="ml-2">
-                              RGPD
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="p-3 text-muted-foreground">
-                          {m.email ?? "-"}
-                        </td>
-                        <td className="p-3">{m.quotaPlan?.name ?? "-"}</td>
-                        <td className="p-3">
-                          {m.quotaSituation ? (
-                            <Badge
-                              variant={
-                                QUOTA_BADGE[m.quotaSituation.status].variant
-                              }
-                            >
-                              {QUOTA_BADGE[m.quotaSituation.status].label}
-                            </Badge>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <Badge
-                            variant={
-                              m.status === "ACTIVE" ? "success" : "muted"
-                            }
-                          >
-                            {m.status === "ACTIVE" ? "Ativo" : "Inativo"}
-                          </Badge>
-                        </td>
-                        <td className="p-3">
-                          <MemberRowActions
-                            member={m}
-                            canManage={canManage}
-                            canAccessCards={canAccessCards}
-                            deletePending={deleteMember.isPending}
-                            grantPortalPending={grantPortal.isPending}
-                            isGdprErased={isGdprErased(m)}
-                            onEdit={() => startEdit(m)}
-                            onDelete={() => confirmDelete(m)}
-                            onGrantPortal={() => {
-                              setPortalGrantMember(m);
-                              setPortalPassword("");
-                            }}
-                            onExportGdpr={() =>
-                              void downloadJson(
-                                `/members/${m.id}/gdpr-export`,
-                                `gdpr-export-${m.id}.json`,
-                              )
-                            }
-                            onGdprErase={() => setGdprTarget(m)}
-                          />
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="p-6 text-center text-muted-foreground"
-                      >
-                        {search
-                          ? "Nenhum sócio encontrado para esta pesquisa."
-                          : "Sem sócios."}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {membersPage && membersPage.totalPages > 1 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Página {membersPage.page} de {membersPage.totalPages}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1 || isPageTransition}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= membersPage.totalPages || isPageTransition}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              {isPageTransition ? "A carregar..." : "Seguinte"}
-            </Button>
-          </div>
-        </div>
-      )}
+      <MembersTable
+        membersPage={membersPage}
+        members={members}
+        isInitialLoad={isInitialLoad}
+        isPageTransition={isPageTransition}
+        search={search}
+        page={page}
+        editingId={editingId}
+        canManage={canManage}
+        canAccessCards={canAccessCards}
+        canManagePhotos={canManage}
+        deletePending={deleteMember.isPending}
+        grantPortalPending={grantPortal.isPending}
+        uploadPhotoPending={uploadPhoto.isPending}
+        emptyIcon={Users}
+        onPageChange={setPage}
+        onEdit={(m) => {
+          setEditingId(m.id);
+          setEditForm(memberToForm(m));
+        }}
+        onDelete={setDeleteTarget}
+        onGrantPortal={(m) => {
+          setPortalGrantMember(m);
+          setPortalPassword("");
+        }}
+        onGdprErase={setGdprTarget}
+        onUploadPhoto={(memberId, file) =>
+          uploadPhoto.mutate({ memberId, file })
+        }
+        onImportClick={() => importInputRef.current?.click()}
+        onCreateClick={() =>
+          document
+            .getElementById("create-member-form")
+            ?.scrollIntoView({ behavior: "smooth" })
+        }
+      />
 
       <MemberEditDialog
         open={editingId !== null}
@@ -651,7 +399,13 @@ export default function MembersPage() {
         gdprErasing={gdprErase.isPending}
         onClose={() => setEditingId(null)}
         onChange={setEditForm}
-        onSubmit={() => updateMember.mutate()}
+        onSubmit={() => {
+          if (!editingId) return;
+          updateMember.mutate(
+            { memberId: editingId, form: editForm },
+            { onSuccess: () => setEditingId(null) },
+          );
+        }}
         onGdprErase={() => {
           const m = members.find((x) => x.id === editingId);
           if (m) setGdprTarget(m);
@@ -669,10 +423,18 @@ export default function MembersPage() {
             setPortalPassword("");
           }}
           onSubmit={() =>
-            grantPortal.mutate({
-              memberId: portalGrantMember.id,
-              password: portalPassword,
-            })
+            grantPortal.mutate(
+              {
+                memberId: portalGrantMember.id,
+                password: portalPassword,
+              },
+              {
+                onSuccess: () => {
+                  setPortalGrantMember(null);
+                  setPortalPassword("");
+                },
+              },
+            )
           }
         />
       )}
@@ -692,7 +454,14 @@ export default function MembersPage() {
         variant="destructive"
         loading={deleteMember.isPending}
         onConfirm={() => {
-          if (deleteTarget) deleteMember.mutate(deleteTarget.id);
+          if (deleteTarget) {
+            deleteMember.mutate(deleteTarget.id, {
+              onSuccess: () => {
+                setEditingId(null);
+                setDeleteTarget(null);
+              },
+            });
+          }
         }}
       />
 
@@ -713,7 +482,14 @@ export default function MembersPage() {
         requireCheckbox
         checkboxLabel="Confirmo o apagamento definitivo"
         onConfirm={() => {
-          if (gdprTarget) gdprErase.mutate(gdprTarget.id);
+          if (gdprTarget) {
+            gdprErase.mutate(gdprTarget.id, {
+              onSuccess: () => {
+                setEditingId(null);
+                setGdprTarget(null);
+              },
+            });
+          }
         }}
       />
 

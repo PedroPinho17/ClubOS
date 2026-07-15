@@ -36,5 +36,6 @@ test.describe("RBAC no frontend", () => {
     await expect(
       page.getByRole("button", { name: "Adicionar sócio" }),
     ).not.toBeVisible();
+    await expect(page.locator('label:has(input[type="file"])')).toHaveCount(0);
   });
 });

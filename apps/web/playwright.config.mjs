@@ -45,7 +45,7 @@ export default defineConfig({
       },
       dependencies: ["setup"],
       testIgnore:
-        /portal\.spec\.ts|portal-mobile\.spec\.ts|login-mobile\.spec\.ts|rbac\.spec\.ts/,
+        /portal\.spec\.ts|portal-mobile\.spec\.ts|login-mobile\.spec\.ts|rbac\.spec\.ts|multi-org\.spec\.ts/,
     },
     {
       name: "portal",
@@ -82,6 +82,15 @@ export default defineConfig({
       },
       dependencies: ["setup"],
       testMatch: /rbac\.spec\.ts/,
+    },
+    {
+      name: "multi-org",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: { cookies: [], origins: [] },
+      },
+      dependencies: ["setup"],
+      testMatch: /multi-org\.spec\.ts/,
     },
   ],
   webServer: process.env.E2E_SKIP_WEBSERVER

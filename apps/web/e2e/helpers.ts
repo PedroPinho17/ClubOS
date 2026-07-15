@@ -68,8 +68,19 @@ export async function loginAsSocio(page: Page) {
 export const E2E_TREASURER_EMAIL =
   readEnv("E2E_TREASURER_EMAIL") ?? "tesoureiro@crcvale.pt";
 
+export const E2E_MULTIROLE_EMAIL =
+  readEnv("E2E_MULTIROLE_EMAIL") ?? "multirole@crcvale.pt";
+
 export async function loginAsTreasurer(page: Page) {
   await submitLogin(page, E2E_TREASURER_EMAIL, requireE2EPassword());
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+    timeout: 20_000,
+  });
+}
+
+export async function loginAsMultiRole(page: Page) {
+  await submitLogin(page, E2E_MULTIROLE_EMAIL, requireE2EPassword());
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
     timeout: 20_000,
