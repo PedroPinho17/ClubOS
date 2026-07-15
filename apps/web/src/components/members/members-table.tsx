@@ -12,7 +12,7 @@ import {
   QUOTA_BADGE,
 } from "@/components/members/members-shared";
 import { cn } from "@/lib/utils";
-import { downloadJson } from "@/lib/api";
+import { safeDownloadJson } from "@/lib/safe-download";
 import type { Member, PaginatedResult } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
 
@@ -39,6 +39,7 @@ type MembersTableProps = {
   onUploadPhoto: (memberId: string, file: File) => void;
   onImportClick?: () => void;
   onCreateClick?: () => void;
+  onClearFilters?: () => void;
 };
 
 export function MembersTable({
@@ -64,7 +65,10 @@ export function MembersTable({
   onUploadPhoto,
   onImportClick,
   onCreateClick,
+  onClearFilters,
 }: MembersTableProps) {
+  const showActionsColumn = canManage || canAccessCards;
+  const colSpan = showActionsColumn ? 8 : 7;
   return (
     <>
       <Card>
@@ -111,14 +115,16 @@ export function MembersTable({
                     <th className="p-3 font-medium">Plano</th>
                     <th className="p-3 font-medium">Quota</th>
                     <th className="p-3 font-medium">Estado</th>
-                    <th className="p-3 font-medium text-right">Ações</th>
+                    {showActionsColumn && (
+                      <th className="p-3 font-medium text-right">Ações</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {isInitialLoad ? (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={colSpan}
                         className="p-6 text-center text-muted-foreground"
                       >
                         A carregar...
@@ -197,37 +203,52 @@ export function MembersTable({
                             {m.status === "ACTIVE" ? "Ativo" : "Inativo"}
                           </Badge>
                         </td>
-                        <td className="p-3">
-                          <MemberRowActions
-                            member={m}
-                            canManage={canManage}
-                            canAccessCards={canAccessCards}
-                            deletePending={deletePending}
-                            grantPortalPending={grantPortalPending}
-                            isGdprErased={isGdprErased(m)}
-                            onEdit={() => onEdit(m)}
-                            onDelete={() => onDelete(m)}
-                            onGrantPortal={() => onGrantPortal(m)}
-                            onExportGdpr={() =>
-                              void downloadJson(
-                                `/members/${m.id}/gdpr-export`,
-                                `gdpr-export-${m.id}.json`,
-                              )
-                            }
-                            onGdprErase={() => onGdprErase(m)}
-                          />
-                        </td>
+                        {showActionsColumn && (
+                          <td className="p-3">
+                            <MemberRowActions
+                              member={m}
+                              canManage={canManage}
+                              canAccessCards={canAccessCards}
+                              deletePending={deletePending}
+                              grantPortalPending={grantPortalPending}
+                              isGdprErased={isGdprErased(m)}
+                              onEdit={() => onEdit(m)}
+                              onDelete={() => onDelete(m)}
+                              onGrantPortal={() => onGrantPortal(m)}
+                              onExportGdpr={() =>
+                                void safeDownloadJson(
+                                  `/members/${m.id}/gdpr-export`,
+                                  `gdpr-export-${m.id}.json`,
+                                )
+                              }
+                              onGdprErase={() => onGdprErase(m)}
+                            />
+                          </td>
+                        )}
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={colSpan}
                         className="p-6 text-center text-muted-foreground"
                       >
-                        {search
-                          ? "Nenhum sócio encontrado para esta pesquisa."
-                          : "Sem sócios."}
+                        {search ? (
+                          <div className="space-y-3">
+                            <p>Nenhum sócio encontrado para esta pesquisa.</p>
+                            {onClearFilters && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onClearFilters}
+                              >
+                                Limpar filtros
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          "Sem sócios."
+                        )}
                       </td>
                     </tr>
                   )}

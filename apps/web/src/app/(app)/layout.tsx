@@ -13,6 +13,7 @@ import { OrgBrandHeader } from "@/components/org-brand-header";
 import { OrgDocumentBranding } from "@/components/org-document-branding";
 import { RoleContextError } from "@/components/role-context-error";
 import { UserMenu } from "@/components/user-menu";
+import { Badge } from "@/components/ui/badge";
 import { AppShellSkeleton } from "@/components/app-shell-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveOrgId } from "@/hooks/use-active-org";
@@ -20,6 +21,7 @@ import { useBootstrapActiveOrganization } from "@/hooks/use-bootstrap-active-org
 import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
+import { roleLabel } from "@/lib/role-labels";
 
 const OrgSwitcher = dynamic(
   () => import("@/components/org-switcher").then((m) => m.OrgSwitcher),
@@ -121,7 +123,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <OrgBrandHeader name={org?.name} logoUrl={org?.logoUrl} />
             </div>
           </div>
-          <UserMenu name={session.user?.name} email={session.user?.email} />
+          <Badge variant="secondary" className="hidden shrink-0 sm:inline-flex">
+            {roleLabel(effectiveRole)}
+          </Badge>
+          <UserMenu
+            name={session.user?.name}
+            email={session.user?.email}
+            effectiveRole={effectiveRole}
+          />
         </header>
         <nav className="flex gap-1 overflow-x-auto border-b bg-card p-2 md:hidden">
           {visibleNav.map((item) => {

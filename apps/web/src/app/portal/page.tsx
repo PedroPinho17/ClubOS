@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { usePortalCardWidth } from "@/hooks/use-portal-card-width";
-import { api, openBlob } from "@/lib/api";
+import { api } from "@/lib/api";
+import { safeOpenBlob } from "@/lib/safe-download";
 import { readPortalCache, writePortalCache } from "@/lib/portal-cache";
 import {
   enrichPortalMeCache,
@@ -66,6 +67,20 @@ export default function PortalPage() {
   }
 
   if (!display) {
+    if (isError && isFetched && !cached) {
+      return (
+        <Card>
+          <CardContent>
+            <EmptyState
+              icon={WifiOff}
+              title="Não foi possível carregar os dados"
+              description="Verifique a ligação à internet e tente novamente dentro de momentos."
+            />
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card>
         <CardContent>
@@ -184,7 +199,9 @@ export default function PortalPage() {
                             className="min-h-11"
                             disabled={offline}
                             onClick={() =>
-                              openBlob(`/portal/payments/${p.id}/receipt`)
+                              void safeOpenBlob(
+                                `/portal/payments/${p.id}/receipt`,
+                              )
                             }
                           >
                             <FileText className="h-4 w-4" />
@@ -241,7 +258,7 @@ export default function PortalPage() {
                       variant="outline"
                       disabled={offline}
                       onClick={() =>
-                        openBlob(`/portal/payments/${p.id}/receipt`)
+                        void safeOpenBlob(`/portal/payments/${p.id}/receipt`)
                       }
                     >
                       <FileText className="h-4 w-4" />

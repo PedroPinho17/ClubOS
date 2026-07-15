@@ -10,14 +10,24 @@ import {
   Users,
 } from "lucide-react";
 import { RoleGate } from "@/components/role-gate";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { STAFF_ROLES } from "@/lib/staff-roles";
+import { NAV_ITEMS, filterNavItems } from "@/lib/nav";
+import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type { DashboardStats } from "@/lib/types";
+
+const QUICK_LINK_HREFS = [
+  "/reports",
+  "/communications",
+  "/members",
+  "/payments",
+];
 
 export default function DashboardPage() {
   return (
@@ -28,11 +38,25 @@ export default function DashboardPage() {
 }
 
 function DashboardPageContent() {
+  const { effectiveRole } = useEffectiveRole();
   const statsKey = useTenantQueryKey(["dashboard", "stats"]);
-  const { data, isLoading } = useQuery<DashboardStats>({
+  const modulesKey = useTenantQueryKey(["modules", "enabled"]);
+
+  const { data, isLoading, isError, refetch } = useQuery<DashboardStats>({
     queryKey: statsKey,
     queryFn: () => api.get<DashboardStats>("/dashboard/stats"),
   });
+
+  const { data: enabled } = useQuery<string[]>({
+    queryKey: modulesKey,
+    queryFn: () => api.get<string[]>("/modules/enabled"),
+  });
+
+  const quickLinks = filterNavItems(
+    NAV_ITEMS.filter((item) => QUICK_LINK_HREFS.includes(item.href)),
+    new Set(enabled ?? []),
+    effectiveRole,
+  );
 
   const kpis = [
     { label: "Membros", value: data?.members ?? 0, icon: Users },
@@ -52,6 +76,15 @@ function DashboardPageContent() {
       icon: CreditCard,
     },
   ];
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <QueryErrorCard onRetry={() => void refetch()} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -160,26 +193,19 @@ function DashboardPageContent() {
         </Card>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href="/reports"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Relatórios
-        </Link>
-        <Link
-          href="/communications"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Comunicações
-        </Link>
-        <Link
-          href="/members"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Membros
-        </Link>
-      </div>
+      {quickLinks.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {quickLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

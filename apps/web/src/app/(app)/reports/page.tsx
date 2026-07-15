@@ -2,11 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Download } from "lucide-react";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
-import { api, downloadCsv } from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
+import { safeDownloadCsv } from "@/lib/safe-download";
 import { STAFF_ROLES } from "@/lib/staff-roles";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type { QuotaStatus, ReportsOverview } from "@/lib/types";
@@ -29,7 +32,7 @@ export default function ReportsPage() {
 
 function ReportsPageContent() {
   const overviewKey = useTenantQueryKey(["reports", "overview"]);
-  const { data, isLoading } = useQuery<ReportsOverview>({
+  const { data, isLoading, isError, refetch } = useQuery<ReportsOverview>({
     queryKey: overviewKey,
     queryFn: () => api.get<ReportsOverview>("/reports/overview"),
   });
@@ -52,7 +55,9 @@ function ReportsPageContent() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => downloadCsv("/reports/members.csv", "socios.csv")}
+            onClick={() =>
+              void safeDownloadCsv("/reports/members.csv", "socios.csv")
+            }
           >
             <Download className="h-4 w-4" />
             CSV Sócios
@@ -61,7 +66,7 @@ function ReportsPageContent() {
             variant="outline"
             size="sm"
             onClick={() =>
-              downloadCsv("/reports/payments.csv", "pagamentos.csv")
+              void safeDownloadCsv("/reports/payments.csv", "pagamentos.csv")
             }
           >
             <Download className="h-4 w-4" />
@@ -70,7 +75,9 @@ function ReportsPageContent() {
         </div>
       </div>
 
-      {isLoading || !data ? (
+      {isError ? (
+        <QueryErrorCard onRetry={() => void refetch()} />
+      ) : isLoading || !data ? (
         <p className="text-muted-foreground">A carregar...</p>
       ) : data.members.total === 0 && data.revenue.paymentsCount === 0 ? (
         <Card>

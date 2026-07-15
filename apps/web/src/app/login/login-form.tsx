@@ -17,8 +17,13 @@ import { postLoginPath } from "@/lib/auth-redirect";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { useApiHealth } from "@/hooks/use-api-health";
 
-const API_OFFLINE_MSG =
+const API_OFFLINE_MSG_DEV =
   "A API nao esta acessivel (porta 4000). Corre `pnpm dev` na raiz do projeto e aguarda a mensagem «ClubOS API a correr».";
+
+const API_OFFLINE_MSG =
+  process.env.NODE_ENV === "development"
+    ? API_OFFLINE_MSG_DEV
+    : "Serviço temporariamente indisponível. Tente novamente dentro de momentos.";
 
 async function redirectAfterLogin(
   router: ReturnType<typeof useRouter>,

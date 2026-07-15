@@ -3,6 +3,8 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { UserPlus, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ConsultModeBanner } from "@/components/consult-mode-banner";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { ImportResultPanel } from "@/components/members/import-result-panel";
 import { MemberEditDialog } from "@/components/members/member-edit-dialog";
 import {
@@ -119,6 +121,8 @@ function MembersPageContent() {
     isPending,
     isFetching,
     isPlaceholderData,
+    isError: membersError,
+    refetch: refetchMembers,
   } = useQuery<PaginatedResult<Member>>({
     queryKey: membersKey,
     queryFn: () => {
@@ -193,6 +197,14 @@ function MembersPageContent() {
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">Membros</h1>
+
+      {!canManage && !roleLoading && <ConsultModeBanner />}
+
+      {membersError && (
+        <div className="mb-6">
+          <QueryErrorCard onRetry={() => void refetchMembers()} />
+        </div>
+      )}
 
       <MembersToolsPanel
         canManage={canManage}
@@ -387,6 +399,14 @@ function MembersPageContent() {
             .getElementById("create-member-form")
             ?.scrollIntoView({ behavior: "smooth" })
         }
+        onClearFilters={() => {
+          setSearchInput("");
+          setSearch("");
+          setQuotaFilter("");
+          setStatusFilter("");
+          setPlanFilter("");
+          setPage(1);
+        }}
       />
 
       <MemberEditDialog

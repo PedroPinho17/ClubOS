@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import type { PlatformModule } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -87,9 +88,11 @@ function ModulesPageContent() {
   const toggle = useMutation({
     mutationFn: ({ slug, enabled }: { slug: string; enabled: boolean }) =>
       api.put(`/modules/${slug}`, { enabled }),
-    onSuccess: () => {
+    onSuccess: (_, { enabled }) => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
+      toast.success(enabled ? "Módulo activado" : "Módulo desactivado");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const groups: PlatformModule["category"][] = ["CORE", "BASE", "PLUGIN"];

@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
 import { STAFF_ROLES } from "@/lib/staff-roles";
-import { api, openBlob } from "@/lib/api";
+import { api } from "@/lib/api";
+import { safeOpenBlob } from "@/lib/safe-download";
 import { todayDateInput } from "@/lib/date-input";
 import { toast } from "@/lib/toast";
 import { useMembersPicker } from "@/hooks/use-members-picker";
@@ -59,7 +61,12 @@ function PaymentsPageContent() {
   const paymentsKey = useTenantQueryKey(["payments"]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
 
-  const { data: paymentsPage, isLoading } = useQuery<PaginatedResult<Payment>>({
+  const {
+    data: paymentsPage,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<PaginatedResult<Payment>>({
     queryKey: paymentsKey,
     queryFn: () => api.get<PaginatedResult<Payment>>("/payments?limit=500"),
   });
@@ -70,6 +77,8 @@ function PaymentsPageContent() {
     activate: activateMembersPicker,
     isLoading: membersLoading,
     hasMore: membersHasMore,
+    searchInput: memberSearchInput,
+    setSearchInput: setMemberSearchInput,
   } = useMembersPicker();
 
   const { data: plans } = useQuery<MembershipPlan[]>({
@@ -116,6 +125,12 @@ function PaymentsPageContent() {
         Regista pagamentos de quotas e emite comprovativos em PDF.
       </p>
 
+      {isError && (
+        <div className="mb-6">
+          <QueryErrorCard onRetry={() => void refetch()} />
+        </div>
+      )}
+
       <Card id="register-payment-form" className="mb-6">
         <CardContent className="pt-6">
           <form
@@ -127,6 +142,16 @@ function PaymentsPageContent() {
           >
             <div className="flex-1 space-y-1">
               <label className="text-sm font-medium">Sócio</label>
+              <Input
+                value={memberSearchInput}
+                onChange={(e) => {
+                  activateMembersPicker();
+                  setMemberSearchInput(e.target.value);
+                }}
+                onFocus={activateMembersPicker}
+                placeholder="Pesquisar por nome ou número..."
+                className="mb-2"
+              />
               <select
                 value={memberId}
                 onChange={(e) => setMemberId(e.target.value)}
@@ -147,8 +172,8 @@ function PaymentsPageContent() {
               </select>
               {membersHasMore ? (
                 <p className="text-xs text-muted-foreground">
-                  A mostrar os primeiros 100 sócios. Use Membros para pesquisar
-                  todos.
+                  Pesquise pelo nome ou número para encontrar mais sócios (50
+                  mostrados).
                 </p>
               ) : null}
             </div>
@@ -269,7 +294,7 @@ function PaymentsPageContent() {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                openBlob(`/payments/${p.id}/receipt`)
+                                void safeOpenBlob(`/payments/${p.id}/receipt`)
                               }
                             >
                               <FileText className="h-4 w-4" />

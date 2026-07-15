@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Member, PaginatedResult } from "@/lib/types";
 import { useTenantQueryKey } from "./use-tenant-query-key";
 
-const PICKER_LIMIT = 100;
+const PICKER_LIMIT = 50;
 
 type UseMembersPickerOptions = {
   /** Carrega logo ao montar (ex.: cartões com auto-seleção). Default: lazy no focus do select. */
@@ -14,19 +14,32 @@ type UseMembersPickerOptions = {
 };
 
 /**
- * Lista leve de sócios para selects (pagamentos, cartões).
- * Cache separado da lista paginada em /members e limite menor que 500.
+ * Lista de sócios para selects (pagamentos, cartões) com pesquisa no servidor.
  */
 export function useMembersPicker(opts: UseMembersPickerOptions = {}) {
   const [activated, setActivated] = useState(opts.immediate ?? false);
-  const membersKey = useTenantQueryKey(["members", "picker"]);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  const membersKey = useTenantQueryKey(["members", "picker", search]);
 
   const query = useQuery<PaginatedResult<Member>>({
     queryKey: membersKey,
-    queryFn: () =>
-      api.get<PaginatedResult<Member>>(`/members?limit=${PICKER_LIMIT}&page=1`),
+    queryFn: () => {
+      const params = new URLSearchParams({
+        limit: String(PICKER_LIMIT),
+        page: "1",
+      });
+      if (search) params.set("search", search);
+      return api.get<PaginatedResult<Member>>(`/members?${params}`);
+    },
     enabled: activated,
-    staleTime: 5 * 60_000,
+    staleTime: 60_000,
   });
 
   const activate = () => {
@@ -41,6 +54,8 @@ export function useMembersPicker(opts: UseMembersPickerOptions = {}) {
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     activate,
-    hasMore: total > PICKER_LIMIT,
+    hasMore: !search && total > PICKER_LIMIT,
+    searchInput,
+    setSearchInput,
   };
 }

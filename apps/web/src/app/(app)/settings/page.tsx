@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api, uploadFile } from "@/lib/api";
+import { InvitePasswordDialog } from "@/components/invite-password-dialog";
 import { RoleGate } from "@/components/role-gate";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { canInviteAdmin } from "@/lib/permissions";
@@ -48,6 +49,10 @@ function SettingsPageContent() {
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<StaffRole>("tesoureiro");
+  const [invitePasswordDialog, setInvitePasswordDialog] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
 
   const orgKey = useTenantQueryKey(["organization"]);
   const orgSettingsKey = useTenantQueryKey(["organization", "settings"]);
@@ -147,10 +152,10 @@ function SettingsPageContent() {
       setInviteRole("tesoureiro");
       queryClient.invalidateQueries({ queryKey: ["users", "staff"] });
       if (res.tempPassword) {
-        toast.success(
-          "Convite enviado",
-          `Email: ${res.email}\nPassword temporária: ${res.tempPassword}`,
-        );
+        setInvitePasswordDialog({
+          email: res.email,
+          password: res.tempPassword,
+        });
       } else {
         toast.success(
           "Convite enviado",
@@ -418,6 +423,14 @@ function SettingsPageContent() {
           </table>
         </CardContent>
       </Card>
+
+      {invitePasswordDialog && (
+        <InvitePasswordDialog
+          email={invitePasswordDialog.email}
+          password={invitePasswordDialog.password}
+          onClose={() => setInvitePasswordDialog(null)}
+        />
+      )}
     </div>
   );
 }

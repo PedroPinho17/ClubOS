@@ -10,7 +10,7 @@ import {
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { downloadBlob } from "@/lib/api";
+import { safeDownloadBlob } from "@/lib/safe-download";
 import { cn } from "@/lib/utils";
 
 interface MembersToolsPanelProps {
@@ -82,7 +82,7 @@ export function MembersToolsPanel({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      void downloadBlob(
+                      void safeDownloadBlob(
                         "/reports/members/paying.pdf",
                         "socios_pagantes.pdf",
                       )
@@ -95,7 +95,7 @@ export function MembersToolsPanel({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      void downloadBlob(
+                      void safeDownloadBlob(
                         "/reports/members/paying.csv",
                         "socios_pagantes.csv",
                       )
@@ -108,7 +108,7 @@ export function MembersToolsPanel({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      void downloadBlob(
+                      void safeDownloadBlob(
                         "/reports/members/overdue.pdf",
                         "socios_em_atraso.pdf",
                       )
@@ -121,7 +121,7 @@ export function MembersToolsPanel({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      void downloadBlob(
+                      void safeDownloadBlob(
                         "/reports/members/overdue.csv",
                         "socios_em_atraso.csv",
                       )
@@ -149,7 +149,7 @@ export function MembersToolsPanel({
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        void downloadBlob(
+                        void safeDownloadBlob(
                           "/members/export",
                           "socios_exportacao.xlsx",
                         )
@@ -164,7 +164,7 @@ export function MembersToolsPanel({
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        void downloadBlob(
+                        void safeDownloadBlob(
                           "/members/import/template",
                           "modelo_importacao_socios.xlsx",
                         )

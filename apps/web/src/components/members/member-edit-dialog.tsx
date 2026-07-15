@@ -4,7 +4,7 @@ import { FileDown, ShieldAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { downloadJson } from "@/lib/api";
+import { safeDownloadJson } from "@/lib/safe-download";
 import type { MembershipPlan } from "@/lib/types";
 
 export interface MemberEditForm {
@@ -197,7 +197,7 @@ export function MemberEditDialog({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      void downloadJson(
+                      void safeDownloadJson(
                         `/members/${memberId}/gdpr-export`,
                         `gdpr-export-${memberId}.json`,
                       )

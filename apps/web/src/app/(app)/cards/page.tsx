@@ -18,6 +18,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api, uploadFile } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import {
   CARD_MM,
   captureCardElement,
@@ -119,7 +120,9 @@ function CardsPageContent() {
       setLayout(res.layout);
       queryClient.invalidateQueries({ queryKey: ["card-settings"] });
       queryClient.invalidateQueries({ queryKey: ["card"] });
+      toast.success("Layout guardado");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const uploadPhoto = useMutation({
@@ -127,14 +130,18 @@ function CardsPageContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["card", memberId] });
       queryClient.invalidateQueries({ queryKey: ["members"] });
+      toast.success("Foto actualizada");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const uploadLogo = useMutation({
     mutationFn: (file: File) => uploadFile("/organization/logo", file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["card"] });
+      toast.success("Logótipo actualizado");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   if (!layout) {

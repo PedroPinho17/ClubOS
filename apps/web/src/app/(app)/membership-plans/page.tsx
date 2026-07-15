@@ -58,13 +58,19 @@ function MembershipPlansPageContent() {
       setAmount("");
       setPeriodicity("MONTHLY");
       invalidate();
+      toast.success("Plano criado");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const toggleActive = useMutation({
     mutationFn: (plan: MembershipPlan) =>
       api.patch(`/membership-plans/${plan.id}`, { active: !plan.active }),
-    onSuccess: invalidate,
+    onSuccess: (_, plan) => {
+      invalidate();
+      toast.success(plan.active ? "Plano desactivado" : "Plano activado");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const removePlan = useMutation({

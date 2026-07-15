@@ -32,9 +32,7 @@ export function ImportResultPanel({
           )}
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold">
-              {isDryRun
-                ? "Simulação concluída (dry-run)"
-                : "Importação concluída"}
+              {isDryRun ? "Simulação concluída" : "Importação concluída"}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Criados: {result.created} | Actualizados: {result.updated} |

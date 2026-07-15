@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { redirectSocioFromAdmin } from "@/lib/auth-redirect";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { toast } from "@/lib/toast";
 
 type UseRequireRoleOptions = {
   roles: string[];
@@ -33,10 +34,19 @@ export function useRequireRole({
   const isLoading = authLoading || (!!session && roleLoading);
   const allowed =
     !roleError && effectiveRole != null && roles.includes(effectiveRole);
+  const deniedNotified = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading && session) {
+      deniedNotified.current = false;
+    }
+  }, [isLoading, session, redirectTo]);
 
   useEffect(() => {
     if (isLoading || !session || roleError) return;
-    if (effectiveRole != null && !allowed) {
+    if (effectiveRole != null && !allowed && !deniedNotified.current) {
+      deniedNotified.current = true;
+      toast.info("Não tem permissão para aceder a esta página.");
       router.replace(redirectTo);
     }
   }, [

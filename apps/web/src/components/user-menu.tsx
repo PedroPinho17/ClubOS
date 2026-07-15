@@ -7,11 +7,13 @@ import { useEffect, useRef, useState } from "react";
 import { passkey, signOut } from "@/lib/auth-client";
 import { ThemeMenuItems } from "@/components/theme-menu-items";
 import { toast } from "@/lib/toast";
+import { roleLabel } from "@/lib/role-labels";
 import { cn } from "@/lib/utils";
 
 interface UserMenuProps {
   name?: string | null;
   email?: string | null;
+  effectiveRole?: string | null;
 }
 
 function MenuItem({
@@ -36,7 +38,7 @@ function MenuItem({
   );
 }
 
-export function UserMenu({ name, email }: UserMenuProps) {
+export function UserMenu({ name, email, effectiveRole }: UserMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -85,6 +87,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={`Menu de ${displayName}`}
         className={cn(
           "flex h-9 items-center gap-2 rounded-full py-1 pl-1 pr-2.5 text-sm transition-colors",
           "hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
@@ -112,6 +115,11 @@ export function UserMenu({ name, email }: UserMenuProps) {
         >
           <div className="mb-1.5 rounded-md bg-muted/50 px-3 py-2.5">
             <div className="truncate text-sm font-medium">{displayName}</div>
+            {effectiveRole && (
+              <div className="mt-0.5 text-xs font-medium text-primary">
+                {roleLabel(effectiveRole)}
+              </div>
+            )}
             {email ? (
               <div className="truncate text-xs text-muted-foreground">
                 {email}

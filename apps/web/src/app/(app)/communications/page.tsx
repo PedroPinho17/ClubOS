@@ -83,7 +83,14 @@ function CommunicationsPageContent() {
     api
       .get<{ count: number }>(previewPath)
       .then((r) => setPreviewCount(r.count))
-      .catch(() => setPreviewCount(null));
+      .catch((err: unknown) => {
+        setPreviewCount(null);
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Não foi possível calcular destinatários.",
+        );
+      });
     setWhatsappLinks([]);
     setEmailPreviewHtml(null);
   }, [audience, planId, channel]);
@@ -118,6 +125,7 @@ function CommunicationsPageContent() {
       setEmailPreviewHtml(null);
       setShowPreview(false);
       queryClient.invalidateQueries({ queryKey: ["communications"] });
+      toast.success("Email enviado");
     },
   });
 
