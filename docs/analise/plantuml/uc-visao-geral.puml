@@ -1,0 +1,77 @@
+@startuml clubos-uc-visao-geral
+!theme plain
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor White
+  BorderColor #333333
+}
+skinparam actor {
+  BackgroundColor White
+  BorderColor #333333
+}
+skinparam rectangle {
+  BackgroundColor #F5F5F5
+  BorderColor #666666
+}
+left to right direction
+
+actor "Imperador" as Imp
+actor "Administrador" as Adm
+actor "Tesoureiro" as Tes
+actor "Sócio" as Soc
+actor "Visitante" as Vis
+actor "Sistema\n(cron/filas)" as Sis
+
+rectangle "ClubOS" {
+  usecase "UC01 Autenticar-se" as UC01
+  usecase "UC02 Recuperar password" as UC02
+  usecase "UC10 Trocar org activa" as UC10
+  usecase "UC12 Activar módulos" as UC12
+  usecase "UC20 Gerir sócios" as UC20
+  usecase "UC21 Importar Excel" as UC21
+  usecase "UC30 Registar pagamento" as UC30
+  usecase "UC31 Emitir recibo PDF" as UC31
+  usecase "UC40 Gerar cartões" as UC40
+  usecase "UC41 Validar QR" as UC41
+  usecase "UC50 Conceder portal" as UC50
+  usecase "UC51 Consultar portal" as UC51
+  usecase "UC63 Lembretes quota" as UC63
+}
+
+Imp --> UC01
+Imp --> UC02
+Imp --> UC10
+Imp --> UC12
+Imp --> UC20
+Imp --> UC21
+Imp --> UC30
+Imp --> UC40
+Imp --> UC50
+
+Adm --> UC01
+Adm --> UC02
+Adm --> UC10
+Adm --> UC20
+Adm --> UC21
+Adm --> UC30
+Adm --> UC40
+Adm --> UC50
+
+Tes --> UC01
+Tes --> UC10
+Tes --> UC20
+Tes --> UC30
+
+Soc --> UC01
+Soc --> UC02
+Soc --> UC51
+
+Vis --> UC41
+
+UC30 ..> UC31 : «include»
+Sis --> UC31
+Sis --> UC63
+
+@enduml

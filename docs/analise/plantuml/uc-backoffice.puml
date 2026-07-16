@@ -1,0 +1,57 @@
+@startuml clubos-uc-backoffice
+!theme plain
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor White
+  BorderColor #333333
+}
+skinparam rectangle {
+  BackgroundColor #F5F5F5
+  BorderColor #666666
+}
+left to right direction
+
+actor "Administrador" as Adm
+actor "Tesoureiro" as Tes
+actor "Imperador" as Imp
+
+rectangle "ClubOS — Backoffice" {
+  usecase "Gerir sócios" as UC20
+  usecase "Importar Excel" as UC21
+  usecase "Export / RGPD" as UC22
+  usecase "Gerir planos quota" as UC23
+  usecase "Registar pagamento" as UC30
+  usecase "Consultar relatórios" as UC32
+  usecase "Gerar cartões" as UC40
+  usecase "Comunicações" as UC60
+  usecase "Auditoria" as UC61
+  usecase "Configurar clube" as UC62
+  usecase "Activar módulos" as UC12
+  usecase "Criar organização" as UC11
+}
+
+Adm --> UC20
+Adm --> UC21
+Adm --> UC22
+Adm --> UC23
+Adm --> UC30
+Adm --> UC32
+Adm --> UC40
+Adm --> UC60
+Adm --> UC61
+Adm --> UC62
+
+Tes --> UC20
+Tes --> UC30
+Tes --> UC32
+
+Imp --> UC11
+Imp --> UC12
+Imp --> UC20
+Imp --> UC62
+
+UC21 ..> UC20 : «extend»
+UC22 ..> UC20 : «extend»
+
+@enduml

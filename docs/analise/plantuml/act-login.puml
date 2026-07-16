@@ -1,0 +1,35 @@
+@startuml clubos-act-login
+!theme plain
+skinparam shadowing false
+skinparam ActivityBackgroundColor White
+skinparam ActivityBorderColor #333333
+
+start
+:Abrir /login;
+if (Método?) then (email/password)
+  :Submeter credenciais;
+else (passkey)
+  :WebAuthn;
+endif
+if (Válido?) then (não)
+  :Mostrar erro;
+  stop
+else (sim)
+  :Cookie de sessão;
+endif
+if (Role?) then (socio)
+  :Redirect /portal;
+  stop
+else (staff)
+  :Bootstrap org activa;
+  if (Org válida?) then (não)
+    :Erro de contexto;
+    stop
+  else (sim)
+    :Resolver papel efectivo;
+    :Redirect /dashboard;
+  endif
+endif
+stop
+
+@enduml

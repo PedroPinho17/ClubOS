@@ -1,0 +1,24 @@
+@startuml clubos-act-import
+!theme plain
+skinparam shadowing false
+
+start
+:Descarregar template Excel;
+:Preencher ficheiro;
+:Upload dry-run=true;
+if (Erros de validação?) then (sim)
+  :Mostrar painel de erros;
+  stop
+else (não)
+endif
+if (Confirmar importação?) then (não)
+  stop
+else (sim)
+  :POST import dry-run=false;
+  :Criar/actualizar Members;
+  :AuditLog;
+  :Mostrar resumo;
+endif
+stop
+
+@enduml

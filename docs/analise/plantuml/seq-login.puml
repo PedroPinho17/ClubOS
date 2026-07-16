@@ -1,0 +1,26 @@
+@startuml clubos-seq-login
+!theme plain
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor "Staff" as U
+participant "Next.js Web" as W
+participant "Better Auth\n(NestJS)" as A
+participant "PostgreSQL" as DB
+
+U -> W: Submete email + password
+W -> A: POST /api/auth/sign-in/email
+A -> DB: Validar credenciais
+A --> W: Set-Cookie (sessão)
+W -> A: GET /api/me/organizations
+A -> DB: OrganizationMember
+A --> W: orgs + orgRole
+W -> A: POST /api/me/active-organization
+A -> DB: Session.activeOrganizationId
+A --> W: 200
+W -> A: GET /api/me/context
+A --> W: organizationId + effectiveRole
+W --> U: /dashboard
+
+@enduml

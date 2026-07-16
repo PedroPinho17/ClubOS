@@ -9,7 +9,9 @@ e o projecto tenta aderir a [Semantic Versioning](https://semver.org/lang/pt-BR/
 
 ### Added
 
-- Documentação: ADRs (Better Auth, papel efectivo por org), `CONTRIBUTING.md`, este changelog
+- Documentação: ADRs (Better Auth, papel efectivo por org), `CONTRIBUTING.md`, changelog
+- Análise UML: actores/casos de uso, diagramas de actividade e sequência (`docs/analise/`)
+- Diagramas UML clássicos em PNG (PlantUML): casos de uso, sequência, actividade
 - Reset de password por email (`/recuperar-password`, `/reset-password`) + template SMTP
 - Guias de ajuda no backoffice e formulário de settings de cartões
 - Bootstrap da org activa e papel efectivo por organização (API + web)

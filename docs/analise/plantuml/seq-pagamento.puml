@@ -1,0 +1,24 @@
+@startuml clubos-seq-pagamento
+!theme plain
+skinparam shadowing false
+
+actor "Tesoureiro" as T
+participant "Web" as W
+participant "Payments API" as API
+participant "PostgreSQL" as DB
+participant "BullMQ" as Q
+participant "Worker PDF" as WK
+participant "MinIO/S3" as S3
+
+T -> W: Regista pagamento
+W -> API: POST /api/payments
+API -> DB: INSERT Payment
+API -> DB: Actualizar quota
+API -> Q: enqueue recibo
+API -> DB: AuditLog
+API --> W: 201
+Q -> WK: process job
+WK -> S3: upload PDF
+WK -> DB: estado emissão = ready
+
+@enduml

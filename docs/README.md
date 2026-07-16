@@ -7,6 +7,7 @@ Guia para desenvolvedores — equivalente ao **Javadoc** neste stack TypeScript/
 | Documento                                         | Conteúdo                                               |
 | ------------------------------------------------- | ------------------------------------------------------ |
 | [Arquitetura](ARQUITETURA.md)                     | Visão geral, monorepo, multi-tenancy, fluxo de pedidos |
+| [Análise UML](analise/README.md)                  | Actores, casos de uso, actividade, sequência           |
 | [API Backend](API-BACKEND.md)                     | Módulos NestJS, mapa de endpoints; Swagger = detalhe   |
 | [Frontend Web](FRONTEND.md)                       | Rotas Next.js, layouts, auth client, navegação         |
 | [Base de dados](BASE-DE-DADOS.md)                 | Modelos Prisma, relações, isolamento por tenant        |

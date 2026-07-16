@@ -1,0 +1,47 @@
+@startuml clubos-uc-portal-auth
+!theme plain
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor White
+  BorderColor #333333
+}
+skinparam rectangle {
+  BackgroundColor #F5F5F5
+  BorderColor #666666
+}
+left to right direction
+
+actor "Sócio" as Soc
+actor "Administrador" as Adm
+actor "Visitante" as Vis
+actor "Sistema" as Sis
+
+rectangle "ClubOS — Portal, auth e validação" {
+  usecase "Autenticar-se" as UC01
+  usecase "Recuperar password" as UC02
+  usecase "Gerir passkeys" as UC03
+  usecase "Conceder acesso portal" as UC50
+  usecase "Consultar quotas e cartão" as UC51
+  usecase "Descarregar recibos" as UC52
+  usecase "Validar QR cartão" as UC41
+  usecase "Enviar lembretes quota" as UC63
+}
+
+Soc --> UC01
+Soc --> UC02
+Soc --> UC03
+Soc --> UC51
+Soc --> UC52
+
+Adm --> UC50
+Adm --> UC01
+
+Vis --> UC41
+
+Sis --> UC63
+
+UC50 ..> UC01 : «include»
+UC51 ..> UC01 : «include»
+
+@enduml
