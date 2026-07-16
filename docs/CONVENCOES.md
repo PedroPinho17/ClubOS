@@ -20,22 +20,22 @@ async resolveActiveOrganizationId(request: Request): Promise<string> { ... }
 
 ### Tags úteis
 
-| Tag | Uso |
-|-----|-----|
-| `@param` | Parâmetro e significado |
-| `@returns` | O que devolve |
-| `@throws` | Excepções |
-| `@example` | Exemplo de uso |
-| `@module` | Descrição do ficheiro/módulo (no topo) |
-| `@see` | Referência a outro símbolo ou doc |
+| Tag        | Uso                                    |
+| ---------- | -------------------------------------- |
+| `@param`   | Parâmetro e significado                |
+| `@returns` | O que devolve                          |
+| `@throws`  | Excepções                              |
+| `@example` | Exemplo de uso                         |
+| `@module`  | Descrição do ficheiro/módulo (no topo) |
+| `@see`     | Referência a outro símbolo ou doc      |
 
 ### Onde documentar
 
-| Prioridade | Local |
-|------------|-------|
-| Alta | `common/`, `auth/`, `lib/` (web), serviços públicos |
-| Média | Controllers (resumo no topo do ficheiro) |
-| Baixa | DTOs, tipos internos (só se não óbvio) |
+| Prioridade | Local                                               |
+| ---------- | --------------------------------------------------- |
+| Alta       | `common/`, `auth/`, `lib/` (web), serviços públicos |
+| Média      | Controllers (resumo no topo do ficheiro)            |
+| Baixa      | DTOs, tipos internos (só se não óbvio)              |
 
 ## Adicionar um módulo de negócio
 
@@ -53,21 +53,21 @@ async resolveActiveOrganizationId(request: Request): Promise<string> { ... }
 
 ## Naming
 
-| Contexto | Convenção |
-|----------|-----------|
-| Ficheiros API | `kebab-case` (pastas e ficheiros) |
-| Classes Nest | `PascalCase` + sufixo `Service`, `Controller`, `Module` |
-| Slugs de módulo | `kebab-case` (`membership-plans`) |
-| Rotas API | `/api/<recurso>` plural ou singular consistente por módulo |
-| Roles | minúsculas em PT-origem: `imperador`, `administrador`, … |
+| Contexto        | Convenção                                                  |
+| --------------- | ---------------------------------------------------------- |
+| Ficheiros API   | `kebab-case` (pastas e ficheiros)                          |
+| Classes Nest    | `PascalCase` + sufixo `Service`, `Controller`, `Module`    |
+| Slugs de módulo | `kebab-case` (`membership-plans`)                          |
+| Rotas API       | `/api/<recurso>` plural ou singular consistente por módulo |
+| Roles           | minúsculas em PT-origem: `imperador`, `administrador`, …   |
 
 ## Testes
 
-| Camada | Ferramenta | Local |
-|--------|------------|-------|
-| API unit | Vitest | `*.spec.ts` junto ao código |
-| API E2E | Vitest + supertest | `apps/api/test/e2e/` |
-| Web E2E | Playwright | `apps/web/e2e/` |
+| Camada   | Ferramenta         | Local                       |
+| -------- | ------------------ | --------------------------- |
+| API unit | Vitest             | `*.spec.ts` junto ao código |
+| API E2E  | Vitest + supertest | `apps/api/test/e2e/`        |
+| Web E2E  | Playwright         | `apps/web/e2e/`             |
 
 Antes de PR: `pnpm typecheck && pnpm test`
 
@@ -85,5 +85,8 @@ Antes de PR: `pnpm typecheck && pnpm test`
 ## Links
 
 - [README principal](../README.md) — setup e estado do projecto
-- [API Backend](API-BACKEND.md) — endpoints
+- [CONTRIBUTING](../CONTRIBUTING.md) — como contribuir / checklist de PR
+- [ADRs](adr/README.md) — decisões de arquitectura
+- [CHANGELOG](../CHANGELOG.md) — notas de release
+- [API Backend](API-BACKEND.md) — mapa de módulos (Swagger = detalhe)
 - [Autenticação](AUTENTICACAO-RBAC.md) — guards e roles

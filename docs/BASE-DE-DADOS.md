@@ -7,11 +7,19 @@ Cliente: `@clubos/database` → `packages/database/src/index.ts`
 
 ```bash
 pnpm db:generate    # Gerar Prisma Client
-pnpm db:migrate     # Criar/aplicar migration (dev)
-pnpm db:push        # Sync schema sem migration
+pnpm db:migrate     # Criar/aplicar migration (dev) — caminho canónico
+pnpm db:deploy      # Aplicar migrations existentes (CI / produção)
+pnpm db:push        # Sync schema sem migration — só protótipos locais
 pnpm db:seed        # Dados demo + módulos
 pnpm db:studio      # UI visual
 ```
+
+| Situação                                               | Comando                                                  |
+| ------------------------------------------------------ | -------------------------------------------------------- |
+| Primeiro arranque / após pull com schema novo          | `pnpm db:migrate`                                        |
+| Alteraste `schema.prisma` e queres commit da migration | `pnpm db:migrate` (cria ficheiro em `prisma/migrations`) |
+| Produção / Coolify                                     | `pnpm db:deploy`                                         |
+| Experimento local sem gravar migration                 | `pnpm db:push` (não usar em PRs)                         |
 
 ## Diagrama simplificado
 
@@ -33,44 +41,44 @@ Organization ──┬── Member ── QuotaPlan
 
 ### Autenticação (Better Auth)
 
-| Modelo | Descrição |
-|--------|-----------|
-| `User` | Conta de login; `role` global |
-| `Session` | Sessão; `activeOrganizationId` para tenant |
-| `Account` | Credenciais OAuth/password |
-| `Verification` | Tokens de verificação email |
-| `Passkey` | Credenciais WebAuthn |
+| Modelo         | Descrição                                  |
+| -------------- | ------------------------------------------ |
+| `User`         | Conta de login; `role` global              |
+| `Session`      | Sessão; `activeOrganizationId` para tenant |
+| `Account`      | Credenciais OAuth/password                 |
+| `Verification` | Tokens de verificação email                |
+| `Passkey`      | Credenciais WebAuthn                       |
 
 ### Core multi-tenant
 
-| Modelo | Descrição |
-|--------|-----------|
-| `Organization` | Tenant (nome, slug, branding, plano) |
-| `OrganizationMember` | Staff N:N user ↔ org |
-| `OrganizationSetting` | KV por org (ex.: lembretes) |
-| `Module` | Catálogo global de módulos |
-| `OrganizationModule` | Módulo activo por org |
-| `AuditLog` | Trilho de auditoria |
+| Modelo                | Descrição                            |
+| --------------------- | ------------------------------------ |
+| `Organization`        | Tenant (nome, slug, branding, plano) |
+| `OrganizationMember`  | Staff N:N user ↔ org                 |
+| `OrganizationSetting` | KV por org (ex.: lembretes)          |
+| `Module`              | Catálogo global de módulos           |
+| `OrganizationModule`  | Módulo activo por org                |
+| `AuditLog`            | Trilho de auditoria                  |
 
 ### Negócio
 
-| Modelo | Descrição |
-|--------|-----------|
-| `Member` | Sócio do clube; opcional `userId` para portal |
-| `QuotaPlan` | Plano de quota (valor, periodicidade) |
-| `Payment` | Pagamento registado |
-| `QuotaReminderSent` | Dedup de emails de lembrete |
-| `Communication` | Campanha de email em massa |
+| Modelo              | Descrição                                     |
+| ------------------- | --------------------------------------------- |
+| `Member`            | Sócio do clube; opcional `userId` para portal |
+| `QuotaPlan`         | Plano de quota (valor, periodicidade)         |
+| `Payment`           | Pagamento registado                           |
+| `QuotaReminderSent` | Dedup de emails de lembrete                   |
+| `Communication`     | Campanha de email em massa                    |
 
 ## Enums importantes
 
-| Enum | Valores |
-|------|---------|
-| `MemberStatus` | ACTIVE, INACTIVE |
-| `PaymentStatus` | PENDING, PAID, … |
-| `Periodicity` | MONTHLY, QUARTERLY, ANNUAL, … |
-| `ModuleCategory` | CORE, BASE, PLUGIN |
-| `OrganizationStatus` | ACTIVE, SUSPENDED, … |
+| Enum                 | Valores                       |
+| -------------------- | ----------------------------- |
+| `MemberStatus`       | ACTIVE, INACTIVE              |
+| `PaymentStatus`      | PENDING, PAID, …              |
+| `Periodicity`        | MONTHLY, QUARTERLY, ANNUAL, … |
+| `ModuleCategory`     | CORE, BASE, PLUGIN            |
+| `OrganizationStatus` | ACTIVE, SUSPENDED, …          |
 
 ## Regras de isolamento
 

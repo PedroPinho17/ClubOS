@@ -27,12 +27,13 @@ Copy-Item .env.example .env
 
 pnpm docker:up          # Postgres + Redis + MinIO
 pnpm db:generate
-pnpm db:push
+pnpm db:migrate         # aplicar migrations (caminho canónico)
 pnpm db:seed            # catálogo + orgs + pnpm --filter @clubos/api seed:users
 
 pnpm dev                # API :4000 + Web :3000
 ```
 
+> **BD:** usa `pnpm db:migrate` no dia a dia e em PRs. `pnpm db:push` só para protótipos locais descartáveis (não cria migration). Produção: `pnpm db:deploy`.  
 > **Infra:** só precisas de `pnpm docker:up` se Postgres, Redis ou MinIO não estiverem a correr.
 
 ---
@@ -152,12 +153,13 @@ pnpm --filter @clubos/web test:e2e
 
 ## Referência rápida
 
-| Comando                                   | Descrição                         |
-| ----------------------------------------- | --------------------------------- |
-| `pnpm dev`                                | API + Web em modo desenvolvimento |
-| `pnpm docker:up`                          | Postgres, Redis, MinIO            |
-| `pnpm db:seed`                            | Dados demo + utilizadores         |
-| `pnpm db:backup`                          | Dump PostgreSQL                   |
-| `pnpm --filter @clubos/api reminders:run` | Lembretes manuais                 |
-| `pnpm --filter @clubos/api test`          | Testes API                        |
-| `pnpm --filter @clubos/web test:e2e`      | Testes Playwright                 |
+| Comando                                   | Descrição                             |
+| ----------------------------------------- | ------------------------------------- |
+| `pnpm dev`                                | API + Web em modo desenvolvimento     |
+| `pnpm docker:up`                          | Postgres, Redis, MinIO                |
+| `pnpm db:migrate`                         | Aplicar / criar migrations (canónico) |
+| `pnpm db:seed`                            | Dados demo + utilizadores             |
+| `pnpm db:backup`                          | Dump PostgreSQL                       |
+| `pnpm --filter @clubos/api reminders:run` | Lembretes manuais                     |
+| `pnpm --filter @clubos/api test`          | Testes API                            |
+| `pnpm --filter @clubos/web test:e2e`      | Testes Playwright                     |

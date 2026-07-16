@@ -2,6 +2,9 @@
 
 Base URL em desenvolvimento: `http://localhost:4000/api`
 
+> **Fonte de verdade dos endpoints:** Swagger em [http://localhost:4000/api/docs](http://localhost:4000/api/docs) (rotas, DTOs, auth).  
+> Este documento é o **mapa de módulos e responsabilidades** — não precisa de listar todos os campos de cada DTO.
+
 ## Estrutura de pastas
 
 ```
@@ -20,41 +23,41 @@ apps/api/src/
 
 ### Health — `HealthController`
 
-| Método | Rota | Auth | Descrição |
-|--------|------|------|-----------|
-| GET | `/api/health` | Público | Liveness |
-| GET | `/api/ready` | Público | Readiness (Postgres + Redis) |
+| Método | Rota          | Auth    | Descrição                    |
+| ------ | ------------- | ------- | ---------------------------- |
+| GET    | `/api/health` | Público | Liveness                     |
+| GET    | `/api/ready`  | Público | Readiness (Postgres + Redis) |
 
 ### Organizations — `OrganizationsController` (`/api/organization`)
 
 Requer org activa (`@OrgId()`). Roles: `@StaffOnly` leitura, `@AdminOnly` escrita.
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/` | Perfil da org activa |
-| GET | `/logo` | Logotipo binário |
-| PATCH | `/` | Actualizar nome, cor, locale |
-| POST | `/logo` | Upload logotipo |
-| GET | `/settings` | Settings key/value |
-| PUT | `/settings` | Upsert setting |
+| Método | Rota        | Descrição                    |
+| ------ | ----------- | ---------------------------- |
+| GET    | `/`         | Perfil da org activa         |
+| GET    | `/logo`     | Logotipo binário             |
+| PATCH  | `/`         | Actualizar nome, cor, locale |
+| POST   | `/logo`     | Upload logotipo              |
+| GET    | `/settings` | Settings key/value           |
+| PUT    | `/settings` | Upsert setting               |
 
 ### Organizations list — `OrganizationsListController` (`/api/organizations`)
 
 `@NoOrgContext()` — não exige tenant. `@ImperadorOnly()`.
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/` | Listar todas as orgs |
-| POST | `/` | Criar org + memberships |
+| Método | Rota | Descrição               |
+| ------ | ---- | ----------------------- |
+| GET    | `/`  | Listar todas as orgs    |
+| POST   | `/`  | Criar org + memberships |
 
 ### Me — `MeController` (`/api/me`)
 
 `@NoOrgContext()` — gestão de memberships do utilizador.
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/organizations` | Orgs a que o user tem acesso |
-| POST | `/active-organization` | Trocar org activa (sessão + cookie) |
+| Método | Rota                   | Descrição                           |
+| ------ | ---------------------- | ----------------------------------- |
+| GET    | `/organizations`       | Orgs a que o user tem acesso        |
+| POST   | `/active-organization` | Trocar org activa (sessão + cookie) |
 
 ### Users — `UsersController` (`/api/users`)
 
@@ -62,11 +65,11 @@ Requer org activa (`@OrgId()`). Roles: `@StaffOnly` leitura, `@AdminOnly` escrit
 
 ### Modules — `ModulesController` (`/api/modules`)
 
-| Método | Rota | Role | Descrição |
-|--------|------|------|-----------|
-| GET | `/` | Staff | Catálogo + estado por org |
-| GET | `/enabled` | Staff | Slugs activos |
-| PUT | `/:slug` | Imperador | Activar/desactivar módulo |
+| Método | Rota       | Role      | Descrição                 |
+| ------ | ---------- | --------- | ------------------------- |
+| GET    | `/`        | Staff     | Catálogo + estado por org |
+| GET    | `/enabled` | Staff     | Slugs activos             |
+| PUT    | `/:slug`   | Imperador | Activar/desactivar módulo |
 
 ### Audit — `AuditController` (`/api/audit`)
 
@@ -82,19 +85,19 @@ Todos usam `@OrgId()` e `@RequireModule('slug')` + `ModuleGuard` (excepto onde i
 
 ### Members — `members`
 
-| Método | Rota | Role | Descrição |
-|--------|------|------|-----------|
-| GET | `/` | Staff | Listar sócios |
-| GET | `/:id` | Staff | Detalhe |
-| POST | `/` | Admin | Criar |
-| PATCH | `/:id` | Admin | Actualizar |
-| DELETE | `/:id` | Admin | Remover |
-| POST | `/:id/photo` | Admin | Foto |
-| GET | `/import/template` | Admin | Modelo Excel |
-| POST | `/import` | Admin | Importar (dry-run opcional) |
-| GET | `/export` | Staff | Exportar Excel |
-| GET | `/:id/gdpr-export` | Admin | Export RGPD |
-| POST | `/:id/gdpr-erase` | Admin | Apagar dados pessoais |
+| Método | Rota               | Role  | Descrição                   |
+| ------ | ------------------ | ----- | --------------------------- |
+| GET    | `/`                | Staff | Listar sócios               |
+| GET    | `/:id`             | Staff | Detalhe                     |
+| POST   | `/`                | Admin | Criar                       |
+| PATCH  | `/:id`             | Admin | Actualizar                  |
+| DELETE | `/:id`             | Admin | Remover                     |
+| POST   | `/:id/photo`       | Admin | Foto                        |
+| GET    | `/import/template` | Admin | Modelo Excel                |
+| POST   | `/import`          | Admin | Importar (dry-run opcional) |
+| GET    | `/export`          | Staff | Exportar Excel              |
+| GET    | `/:id/gdpr-export` | Admin | Export RGPD                 |
+| POST   | `/:id/gdpr-erase`  | Admin | Apagar dados pessoais       |
 
 **Import Excel** — orquestrado por `MemberImportService`; ver `import/`:
 
@@ -129,11 +132,11 @@ Overview, CSV, PDF/Excel pagantes e em atraso.
 
 ### Portal — `member-portal`
 
-| Rota | Role | Descrição |
-|------|------|-----------|
-| GET `/api/portal/me` | socio | Dados do sócio |
-| GET `/api/portal/payments/:id/receipt` | socio | Recibo PDF |
-| POST `/api/portal/access/:memberId` | Admin | Conceder acesso portal |
+| Rota                                   | Role  | Descrição              |
+| -------------------------------------- | ----- | ---------------------- |
+| GET `/api/portal/me`                   | socio | Dados do sócio         |
+| GET `/api/portal/payments/:id/receipt` | socio | Recibo PDF             |
+| POST `/api/portal/access/:memberId`    | Admin | Conceder acesso portal |
 
 ### Reminders — `reminders`
 
@@ -149,19 +152,19 @@ Configuração: `apps/api/src/auth/auth.ts`
 
 ## Infra partilhada (`common/`)
 
-| Ficheiro | Função |
-|----------|--------|
-| `organization-context.guard.ts` | Resolve org activa; 403 se inválida |
-| `organization-context.service.ts` | Lógica de resolução e membership |
-| `module.guard.ts` | Verifica módulo activo |
-| `decorators.ts` | `@OrgId`, `@CurrentUser`, `@RequireModule` |
-| `decorators/no-org-context.ts` | `@NoOrgContext()` |
-| `decorators/roles-shortcuts.ts` | `@StaffOnly`, `@AdminOnly`, … |
-| `roles.ts` | Constantes `STAFF_ROLES`, `ADMIN_ROLES`, … |
+| Ficheiro                          | Função                                     |
+| --------------------------------- | ------------------------------------------ |
+| `organization-context.guard.ts`   | Resolve org activa; 403 se inválida        |
+| `organization-context.service.ts` | Lógica de resolução e membership           |
+| `module.guard.ts`                 | Verifica módulo activo                     |
+| `decorators.ts`                   | `@OrgId`, `@CurrentUser`, `@RequireModule` |
+| `decorators/no-org-context.ts`    | `@NoOrgContext()`                          |
+| `decorators/roles-shortcuts.ts`   | `@StaffOnly`, `@AdminOnly`, …              |
+| `roles.ts`                        | Constantes `STAFF_ROLES`, `ADMIN_ROLES`, … |
 
 ## Testes
 
-| Tipo | Comando | Local |
-|------|---------|-------|
-| Unit | `pnpm --filter @clubos/api test:unit` | `src/**/*.spec.ts` |
-| E2E HTTP | `pnpm --filter @clubos/api test:e2e` | `test/e2e/` |
+| Tipo     | Comando                               | Local              |
+| -------- | ------------------------------------- | ------------------ |
+| Unit     | `pnpm --filter @clubos/api test:unit` | `src/**/*.spec.ts` |
+| E2E HTTP | `pnpm --filter @clubos/api test:e2e`  | `test/e2e/`        |

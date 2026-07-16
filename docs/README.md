@@ -7,11 +7,14 @@ Guia para desenvolvedores — equivalente ao **Javadoc** neste stack TypeScript/
 | Documento                                         | Conteúdo                                               |
 | ------------------------------------------------- | ------------------------------------------------------ |
 | [Arquitetura](ARQUITETURA.md)                     | Visão geral, monorepo, multi-tenancy, fluxo de pedidos |
-| [API Backend](API-BACKEND.md)                     | Módulos NestJS, endpoints, guards, serviços            |
+| [API Backend](API-BACKEND.md)                     | Módulos NestJS, mapa de endpoints; Swagger = detalhe   |
 | [Frontend Web](FRONTEND.md)                       | Rotas Next.js, layouts, auth client, navegação         |
 | [Base de dados](BASE-DE-DADOS.md)                 | Modelos Prisma, relações, isolamento por tenant        |
 | [Autenticação e RBAC](AUTENTICACAO-RBAC.md)       | Better Auth, roles, org activa, decorators             |
+| [ADRs / decisões](adr/README.md)                  | Porque Better Auth, papel efectivo por org, …          |
 | [Convenções](CONVENCOES.md)                       | Como adicionar módulos, testes, TSDoc                  |
+| [Contribuir](../CONTRIBUTING.md)                  | Setup, PRs, checklist — aponta para convenções         |
+| [Changelog](../CHANGELOG.md)                      | Notas de release (Keep a Changelog)                    |
 | [Observabilidade](OBSERVABILIDADE.md)             | Alertas Sentry, uptime externo, go-live                |
 | [Go-live CRC Vale](GO-LIVE-CRC-VALE.md)           | Deploy piloto, import, paralelo com gestao_socios      |
 | [Runbook ops](RUNBOOK-OPS.md)                     | API down, SMTP, backup — 1 página                      |

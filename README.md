@@ -2,7 +2,8 @@
 
 Plataforma **SaaS modular multi-tenant** para gestao de organizacoes (clubes, academias, associacoes, escolas). Uma unica aplicacao e base de dados servem todos os clientes; cada cliente e uma **Organization** (tenant). As funcionalidades sao entregues como **modulos** que se ativam por organizacao.
 
-> **Documentacao para desenvolvedores:** [docs/README.md](docs/README.md) — arquitectura, API, frontend, base de dados, auth/RBAC e convencoes (estilo Javadoc/TSDoc).
+> **Documentacao para desenvolvedores:** [docs/README.md](docs/README.md) — arquitectura, API, frontend, base de dados, auth/RBAC e convencoes (estilo Javadoc/TSDoc).  
+> **Contribuir:** [CONTRIBUTING.md](CONTRIBUTING.md) · **Decisoes:** [docs/adr/](docs/adr/) · **Alteracoes:** [CHANGELOG.md](CHANGELOG.md)
 
 Sucessor do projeto `gestao_socios` (Laravel/Filament), reconstruido com uma stack moderna e escalavel.
 
@@ -56,7 +57,7 @@ Endpoints:
 
 | Camada          | Tecnologia                                                                                 |
 | --------------- | ------------------------------------------------------------------------------------------ |
-| Frontend        | Next.js 15 + React 19 + shadcn/ui + Tailwind                                               |
+| Frontend        | Next.js 16 + React 19 + shadcn/ui + Tailwind                                               |
 | Data fetching   | TanStack Query                                                                             |
 | Backend         | NestJS 11 (modular)                                                                        |
 | ORM / BD        | **Prisma + PostgreSQL**                                                                    |

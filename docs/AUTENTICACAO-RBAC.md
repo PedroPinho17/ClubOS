@@ -1,5 +1,7 @@
 # Autenticação e RBAC
 
+Decisões: [ADR 001 — Better Auth](adr/001-better-auth.md) · [ADR 002 — Papel efectivo](adr/002-effective-role-por-org.md)
+
 ## Better Auth
 
 Configuração única: `apps/api/src/auth/auth.ts`
