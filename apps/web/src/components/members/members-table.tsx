@@ -1,6 +1,10 @@
 "use client";
 
 import { ImagePlus } from "lucide-react";
+import {
+  MobileCardsSkeleton,
+  TableBodySkeleton,
+} from "@/components/page-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,14 +128,7 @@ export function MembersTable({
                   </thead>
                   <tbody>
                     {isInitialLoad ? (
-                      <tr>
-                        <td
-                          colSpan={colSpan}
-                          className="p-6 text-center text-muted-foreground"
-                        >
-                          A carregar...
-                        </td>
-                      </tr>
+                      <TableBodySkeleton rows={6} cols={colSpan} />
                     ) : members.length > 0 ? (
                       members.map((m) => (
                         <tr
@@ -261,9 +258,7 @@ export function MembersTable({
               {/* Mobile: cards */}
               <div className="space-y-3 p-4 sm:hidden">
                 {isInitialLoad ? (
-                  <p className="py-4 text-center text-sm text-muted-foreground">
-                    A carregar...
-                  </p>
+                  <MobileCardsSkeleton count={4} />
                 ) : members.length > 0 ? (
                   members.map((m) => (
                     <div

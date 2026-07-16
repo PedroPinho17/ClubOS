@@ -32,6 +32,9 @@ export function PortalGrantDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       {...a11y}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <Card className="w-full max-w-md">
         <CardContent className="space-y-4 pt-6">

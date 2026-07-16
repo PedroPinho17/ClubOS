@@ -3,6 +3,7 @@
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useDialogA11y } from "@/hooks/use-dialog-a11y";
 import { toast } from "@/lib/toast";
 
 type InvitePasswordDialogProps = {
@@ -16,6 +17,8 @@ export function InvitePasswordDialog({
   password,
   onClose,
 }: InvitePasswordDialogProps) {
+  const a11y = useDialogA11y(true, onClose, "invite-password-title");
+
   async function copyPassword() {
     try {
       await navigator.clipboard.writeText(password);
@@ -28,9 +31,10 @@ export function InvitePasswordDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="invite-password-title"
+      {...a11y}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <Card className="w-full max-w-md">
         <CardContent className="space-y-4 pt-6">

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { RoleGateSkeleton } from "@/components/page-skeletons";
 import { RoleContextError } from "@/components/role-context-error";
 import { useRequireRole } from "@/hooks/use-require-role";
 
@@ -16,9 +17,7 @@ export function RoleGate({
   roles,
   redirectTo,
   children,
-  fallback = (
-    <p className="text-sm text-muted-foreground">A verificar permissões...</p>
-  ),
+  fallback = <RoleGateSkeleton />,
 }: RoleGateProps) {
   const { isLoading, allowed, isError, refetch } = useRequireRole({
     roles,

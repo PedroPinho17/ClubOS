@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PortalPageSkeleton } from "@/components/page-skeletons";
 import { usePortalCardWidth } from "@/hooks/use-portal-card-width";
 import { api } from "@/lib/api";
 import { safeOpenBlob } from "@/lib/safe-download";
@@ -63,7 +64,7 @@ export default function PortalPage() {
   const offline = isError && !!cached;
 
   if (isLoading && !display) {
-    return <p className="text-muted-foreground">A carregar...</p>;
+    return <PortalPageSkeleton />;
   }
 
   if (!display) {
@@ -99,7 +100,7 @@ export default function PortalPage() {
   return (
     <div className="space-y-5">
       {offline && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
           <WifiOff className="h-4 w-4 shrink-0" />
           Sem ligação — a mostrar dados guardados. Ligue-se à internet para
           atualizar.

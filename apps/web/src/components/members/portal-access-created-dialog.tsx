@@ -3,6 +3,7 @@
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useDialogA11y } from "@/hooks/use-dialog-a11y";
 import { toast } from "@/lib/toast";
 
 type PortalAccessCreatedDialogProps = {
@@ -47,6 +48,7 @@ export function PortalAccessCreatedDialog({
   isReset = false,
   onClose,
 }: PortalAccessCreatedDialogProps) {
+  const a11y = useDialogA11y(true, onClose, "portal-access-created-title");
   const instructions = buildInstructions(memberName, email, password);
 
   async function copyText(value: string, okMessage: string) {
@@ -61,9 +63,10 @@ export function PortalAccessCreatedDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="portal-access-created-title"
+      {...a11y}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <Card className="w-full max-w-lg">
         <CardContent className="space-y-4 pt-6">

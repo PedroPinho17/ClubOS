@@ -26,6 +26,7 @@ e o projecto tenta aderir a [Semantic Versioning](https://semver.org/lang/pt-BR/
 - Caminho canónico de BD em docs: `pnpm db:migrate` (dev) / `pnpm db:deploy` (prod); `db:push` só para protótipos
 - `API-BACKEND.md`: Swagger como fonte de verdade dos endpoints
 - UI: páginas `settings`, `cards`, `communications`, `payments` e `member-card` partidas em componentes/hooks
+- UI polish: skeletons em listas, dialogs Escape/foco, cartões responsivos, dark mode, histórico comunicações mobile
 
 ### Fixed
 

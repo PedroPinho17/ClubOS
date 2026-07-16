@@ -204,7 +204,7 @@ export function CommunicationsComposeForm({
               </Button>
             </div>
             <div
-              className="max-h-96 overflow-auto rounded-lg border bg-white p-4 text-sm"
+              className="max-h-96 overflow-auto rounded-lg border bg-white p-4 text-sm text-slate-900 dark:bg-zinc-950 dark:text-zinc-100"
               dangerouslySetInnerHTML={{ __html: emailPreviewHtml }}
             />
           </div>
@@ -231,7 +231,7 @@ export function CommunicationsComposeForm({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-green-700 hover:underline"
+                    className="inline-flex items-center gap-1 text-green-700 hover:underline dark:text-green-400"
                   >
                     Abrir <ExternalLink className="h-3.5 w-3.5" />
                   </a>

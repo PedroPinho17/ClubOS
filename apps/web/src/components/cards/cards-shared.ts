@@ -1,6 +1,10 @@
 import { CARD_MM, captureCardElement } from "@/lib/card-export";
 
-export const CARD_PREVIEW_WIDTH = 420;
+/** Largura máxima da pré-visualização no backoffice (desktop). */
+export const CARD_PREVIEW_MAX_WIDTH = 420;
+
+/** @deprecated Preferir largura fluida via `useFluidCardWidth` */
+export const CARD_PREVIEW_WIDTH = CARD_PREVIEW_MAX_WIDTH;
 export const CARD_PREVIEW_HEIGHT = CARD_PREVIEW_WIDTH * (540 / 856);
 
 export const MEMBER_SELECT_CLASS =

@@ -5,19 +5,21 @@ import type { RefObject } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useFluidCardWidth } from "@/hooks/use-portal-card-width";
 import type { CardData } from "@/lib/types";
 import { CardsExportControls } from "./cards-export-controls";
 import { CardsMemberPicker } from "./cards-member-picker";
-import { CARD_PREVIEW_HEIGHT, CARD_PREVIEW_WIDTH } from "./cards-shared";
+import { CARD_PREVIEW_MAX_WIDTH } from "./cards-shared";
+
+function previewHeight(width: number) {
+  return width * (540 / 856);
+}
 
 const MemberCard = dynamic(
   () => import("@/components/cards/member-card").then((mod) => mod.MemberCard),
   {
     loading: () => (
-      <Skeleton
-        className="rounded-[24px] shadow-lg"
-        style={{ width: CARD_PREVIEW_WIDTH, height: CARD_PREVIEW_HEIGHT }}
-      />
+      <Skeleton className="h-[265px] w-full max-w-[420px] rounded-[24px] shadow-lg" />
     ),
     ssr: false,
   },
@@ -68,6 +70,13 @@ export function CardsPreviewPanel({
   onExportAllPdf,
   exporting,
 }: CardsPreviewPanelProps) {
+  const previewWidth = useFluidCardWidth({
+    min: 280,
+    max: CARD_PREVIEW_MAX_WIDTH,
+    padding: 64,
+  });
+  const height = previewHeight(previewWidth);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -84,15 +93,12 @@ export function CardsPreviewPanel({
           {cardLoading || !previewData ? (
             <Skeleton
               className="rounded-[24px] shadow-lg"
-              style={{
-                width: CARD_PREVIEW_WIDTH,
-                height: CARD_PREVIEW_HEIGHT,
-              }}
+              style={{ width: previewWidth, height }}
             />
           ) : (
             <>
               {isCrcVale && (
-                <div className="flex w-full gap-2">
+                <div className="flex w-full max-w-[420px] gap-2">
                   <Button
                     type="button"
                     variant={cardSide === "front" ? "default" : "outline"}
@@ -116,7 +122,7 @@ export function CardsPreviewPanel({
               <MemberCard
                 ref={cardRef}
                 data={previewData}
-                width={CARD_PREVIEW_WIDTH}
+                width={previewWidth}
                 side={cardSide}
               />
             </>

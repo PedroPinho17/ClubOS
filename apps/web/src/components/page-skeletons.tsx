@@ -71,3 +71,55 @@ export function ModuleSectionsSkeleton() {
     </div>
   );
 }
+
+/** Cartões mobile enquanto a lista carrega. */
+export function MobileCardsSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="space-y-3 rounded-lg border p-4">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Fallback curto para RoleGate / páginas a verificar sessão. */
+export function RoleGateSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="A carregar">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-4 w-72 max-w-full" />
+      <Skeleton className="h-40 w-full" />
+    </div>
+  );
+}
+
+/** Conteúdo do portal enquanto `/portal/me` carrega. */
+export function PortalPageSkeleton() {
+  return (
+    <div className="space-y-5" aria-busy="true" aria-label="A carregar portal">
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-6 w-32" />
+        </CardContent>
+      </Card>
+      <div className="flex justify-center">
+        <Skeleton className="h-[200px] w-full max-w-[340px] rounded-[24px]" />
+      </div>
+      <Card>
+        <CardContent className="space-y-3 pt-6">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
