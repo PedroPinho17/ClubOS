@@ -68,6 +68,9 @@ jobs:
       - name: Build Database package
         run: pnpm --filter @clubos/database build
 
+      - name: Build Shared package
+        run: pnpm --filter @clubos/shared build
+
       - name: Deploy database migrations
         run: pnpm db:deploy
 

@@ -26,6 +26,7 @@ import { ModuleGuard } from "../../common/guards/module.guard";
 import type { AuthUser } from "../../common/types";
 import { AuditService } from "../../core/audit/audit.service";
 import { CreateMemberDto, GdprEraseDto, UpdateMemberDto } from "./dto";
+import { ListMembersQueryDto } from "../../common/dto/pagination-query.dto";
 import { buildImportTemplateBuffer } from "./import/member-spreadsheet";
 import { MemberExportService } from "./import/member-export.service";
 import { MemberImportService } from "./import/member-import.service";
@@ -46,23 +47,8 @@ export class MembersController {
 
   @Get()
   @StaffOnly()
-  list(
-    @OrgId() organizationId: string,
-    @Query("search") search?: string,
-    @Query("page") page?: string,
-    @Query("limit") limit?: string,
-    @Query("status") status?: string,
-    @Query("quotaPlanId") quotaPlanId?: string,
-    @Query("quotaStatus") quotaStatus?: string,
-  ) {
-    return this.members.list(organizationId, {
-      search,
-      page,
-      limit,
-      status,
-      quotaPlanId,
-      quotaStatus,
-    });
+  list(@OrgId() organizationId: string, @Query() query: ListMembersQueryDto) {
+    return this.members.list(organizationId, query);
   }
 
   @Get("import/template")

@@ -12,6 +12,9 @@ e o projecto tenta aderir a [Semantic Versioning](https://semver.org/lang/pt-BR/
 - Documentação: ADRs (Better Auth, papel efectivo por org), `CONTRIBUTING.md`, changelog
 - Análise UML: actores/casos de uso, diagramas de actividade e sequência (`docs/analise/`)
 - Diagramas UML clássicos em PNG (PlantUML): casos de uso, sequência, actividade
+- Pacote `@clubos/shared` — roles e `PaginatedResult` partilhados API ↔ Web
+- Query DTOs validados para listagens (members, payments, audit)
+- Unit tests de isolamento por org: `members.service`, `payments.service`
 - Reset de password por email (`/recuperar-password`, `/reset-password`) + template SMTP
 - Guias de ajuda no backoffice e formulário de settings de cartões
 - Bootstrap da org activa e papel efectivo por organização (API + web)
@@ -22,6 +25,7 @@ e o projecto tenta aderir a [Semantic Versioning](https://semver.org/lang/pt-BR/
 - Stack documentada: Next.js 16 (alinhado com `apps/web`)
 - Caminho canónico de BD em docs: `pnpm db:migrate` (dev) / `pnpm db:deploy` (prod); `db:push` só para protótipos
 - `API-BACKEND.md`: Swagger como fonte de verdade dos endpoints
+- UI: páginas `settings`, `cards`, `communications`, `payments` e `member-card` partidas em componentes/hooks
 
 ### Fixed
 

@@ -1,17 +1,5 @@
-/** Roles com acesso ao backoffice (staff). */
-export const STAFF_ROLES = [
-  "imperador",
-  "administrador",
-  "tesoureiro",
-] as const;
-
-export type StaffRole = (typeof STAFF_ROLES)[number];
-
-export function isStaffRole(
-  role: string | null | undefined,
-): role is StaffRole {
-  return role != null && (STAFF_ROLES as readonly string[]).includes(role);
-}
+/** Roles com acesso ao backoffice (staff) — fonte: `@clubos/shared`. */
+export { STAFF_ROLES, isStaffRole, type StaffRole } from "@clubos/shared";
 
 /** @deprecated Preferir isStaffRole — alias para compatibilidade. */
-export const isAdminRole = isStaffRole;
+export { isStaffRole as isAdminRole } from "@clubos/shared";

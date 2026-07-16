@@ -27,7 +27,10 @@ export class PaymentsService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  list(organizationId: string, opts: { page?: string; limit?: string } = {}) {
+  list(
+    organizationId: string,
+    opts: { page?: string | number; limit?: string | number } = {},
+  ) {
     const { page, limit, skip } = parsePagination(opts, {
       limit: 50,
       maxLimit: 500,

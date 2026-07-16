@@ -19,6 +19,7 @@ import type { AuthUser } from "../../common/types";
 import { ModuleGuard } from "../../common/guards/module.guard";
 import { AuditService } from "../../core/audit/audit.service";
 import { CreatePaymentDto } from "./dto";
+import { ListPaymentsQueryDto } from "../../common/dto/pagination-query.dto";
 import { PaymentsService } from "./payments.service";
 
 @Controller("api/payments")
@@ -32,12 +33,8 @@ export class PaymentsController {
   ) {}
 
   @Get()
-  list(
-    @OrgId() organizationId: string,
-    @Query("page") page?: string,
-    @Query("limit") limit?: string,
-  ) {
-    return this.payments.list(organizationId, { page, limit });
+  list(@OrgId() organizationId: string, @Query() query: ListPaymentsQueryDto) {
+    return this.payments.list(organizationId, query);
   }
 
   @Get(":id")

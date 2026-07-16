@@ -82,6 +82,24 @@ Antes de PR: `pnpm typecheck && pnpm test`
 - ESLint + TypeScript strict nos apps
 - Prisma: seguir `schema-conventions` (relations, timestamps, indexes)
 
+## Pacotes partilhados
+
+| Pacote             | Uso                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `@clubos/database` | Prisma Client + schema                                                                 |
+| `@clubos/shared`   | `STAFF_ROLES`, `ADMIN_ROLES`, `PaginatedResult`, helpers `isStaffRole` / `isAdminRole` |
+
+Roles: **não** duplicar arrays em `apps/api` / `apps/web` — importar de `@clubos/shared` (re-exports em `common/roles.ts` e `lib/staff-roles.ts` para compatibilidade).
+
+## Páginas web gordas
+
+Preferir o padrão de `members` / `payments`:
+
+1. `page.tsx` — `RoleGate` + estado + queries + composição
+2. `components/<domínio>/*` — UI presentacional
+3. `hooks/use-<domínio>-mutations.ts` — mutações + invalidação de tenant keys
+4. `*-shared.ts` — labels / badges / constantes
+
 ## Links
 
 - [README principal](../README.md) — setup e estado do projecto

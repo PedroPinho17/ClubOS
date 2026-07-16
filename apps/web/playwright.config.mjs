@@ -93,13 +93,14 @@ export default defineConfig({
       testMatch: /multi-org\.spec\.ts/,
     },
   ],
-  webServer: process.env.E2E_SKIP_WEBSERVER
-    ? undefined
-    : {
-        command: "node scripts/run-e2e-servers.mjs",
-        cwd: repoRoot,
-        url: "http://localhost:3000/login",
-        timeout: 180_000,
-        reuseExistingServer: !process.env.CI,
-      },
+  webServer:
+    process.env.E2E_SKIP_WEBSERVER === "true"
+      ? undefined
+      : {
+          command: "node scripts/run-e2e-servers.mjs",
+          cwd: repoRoot,
+          url: "http://localhost:3000/login",
+          timeout: 180_000,
+          reuseExistingServer: !process.env.CI,
+        },
 });

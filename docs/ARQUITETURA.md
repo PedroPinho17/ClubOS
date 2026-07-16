@@ -24,11 +24,11 @@ ClubOS é uma plataforma **SaaS multi-tenant** para gestão de clubes e associa�
 
 ## Camadas funcionais
 
-| Camada | Descrição | Exemplos |
-|--------|-----------|----------|
-| **Core** | Sempre presente; não se desactiva | Auth, orgs, users, audit, modules |
-| **Módulos base** | Activáveis por organização | members, payments, cards, reports |
-| **Plugins** | Modalidades específicas (futuro) | football, padel — só no seed |
+| Camada           | Descrição                         | Exemplos                          |
+| ---------------- | --------------------------------- | --------------------------------- |
+| **Core**         | Sempre presente; não se desactiva | Auth, orgs, users, audit, modules |
+| **Módulos base** | Activáveis por organização        | members, payments, cards, reports |
+| **Plugins**      | Modalidades específicas (futuro)  | football, padel — só no seed      |
 
 ## Multi-tenancy
 
@@ -59,19 +59,20 @@ Sócios (`role: socio`) usam a org do registo `Member` ligado ao `User`.
 
 ## Monorepo (pnpm + Turbo)
 
-| Pacote | Responsabilidade |
-|--------|------------------|
-| `@clubos/api` | REST API, cron, filas |
-| `@clubos/web` | UI backoffice + portal |
-| `@clubos/database` | Schema Prisma, migrations, seed |
+| Pacote             | Responsabilidade                                           |
+| ------------------ | ---------------------------------------------------------- |
+| `@clubos/api`      | REST API, cron, filas                                      |
+| `@clubos/web`      | UI backoffice + portal                                     |
+| `@clubos/database` | Schema Prisma, migrations, seed                            |
+| `@clubos/shared`   | Roles, `PaginatedResult` e contratos partilhados API ↔ Web |
 
 Comandos via root: `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm db:*`.
 
 ## Ficheiros de entrada
 
-| Ficheiro | Papel |
-|----------|-------|
-| `apps/api/src/main.ts` | Bootstrap NestJS, CORS, rate limit, validation pipe |
-| `apps/api/src/app.module.ts` | Registo de todos os módulos |
-| `apps/web/src/app/layout.tsx` | Root layout + providers |
-| `packages/database/prisma/schema.prisma` | Modelo de dados |
+| Ficheiro                                 | Papel                                               |
+| ---------------------------------------- | --------------------------------------------------- |
+| `apps/api/src/main.ts`                   | Bootstrap NestJS, CORS, rate limit, validation pipe |
+| `apps/api/src/app.module.ts`             | Registo de todos os módulos                         |
+| `apps/web/src/app/layout.tsx`            | Root layout + providers                             |
+| `packages/database/prisma/schema.prisma` | Modelo de dados                                     |

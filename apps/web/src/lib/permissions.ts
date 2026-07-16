@@ -1,23 +1,30 @@
-/** Permissoes do backoffice com base no papel efectivo por organizacao. */
+import {
+  ADMIN_ROLES,
+  isAdminRole,
+  isImperadorRole,
+  isStaffRole,
+} from "@clubos/shared";
+
+/** Permissões do backoffice com base no papel efectivo por organização. */
 
 export function canManageMembers(role: string | null | undefined): boolean {
-  return role === "imperador" || role === "administrador";
+  return isAdminRole(role);
 }
 
 export function canExportReports(role: string | null | undefined): boolean {
-  return (
-    role === "imperador" || role === "administrador" || role === "tesoureiro"
-  );
+  return isStaffRole(role);
 }
 
 export function canAccessCards(role: string | null | undefined): boolean {
-  return role === "imperador" || role === "administrador";
+  return isAdminRole(role);
 }
 
 export function isImperador(role: string | null | undefined): boolean {
-  return role === "imperador";
+  return isImperadorRole(role);
 }
 
 export function canInviteAdmin(role: string | null | undefined): boolean {
-  return role === "imperador";
+  return isImperadorRole(role);
 }
+
+export { ADMIN_ROLES };

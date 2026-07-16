@@ -1,17 +1,20 @@
 /**
  * @module Roles
- * Constantes de roles da plataforma ClubOS.
+ * Re-exporta constantes de `@clubos/shared` (fonte única).
  * Usar com `@StaffOnly()`, `@AdminOnly()`, etc. em vez de arrays inline.
  */
 
-/** Staff do backoffice (exclui socio do portal). */
-export const STAFF_ROLES = ['imperador', 'administrador', 'tesoureiro'] as const;
-
-/** Administracao da organizacao. */
-export const ADMIN_ROLES = ['imperador', 'administrador'] as const;
-
-/** Portal do socio. */
-export const PORTAL_ROLES = ['socio'] as const;
-
-/** Super-admin da plataforma. */
-export const IMPERADOR_ROLES = ['imperador'] as const;
+export {
+  ADMIN_ROLES,
+  IMPERADOR_ROLES,
+  PORTAL_ROLES,
+  STAFF_ROLES,
+  isAdminRole,
+  isImperadorRole,
+  isPortalRole,
+  isStaffRole,
+  type AdminRole,
+  type PlatformRole,
+  type PortalRole,
+  type StaffRole,
+} from "@clubos/shared";

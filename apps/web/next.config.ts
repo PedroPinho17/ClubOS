@@ -12,6 +12,7 @@ const useStandalone =
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["@clubos/shared"],
   experimental: {
     optimizePackageImports: ["lucide-react", "@radix-ui/react-alert-dialog"],
     // Cache em disco entre restarts do `next dev` — 2.ª visita muito mais rápida.

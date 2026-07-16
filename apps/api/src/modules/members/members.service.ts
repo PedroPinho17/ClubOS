@@ -39,8 +39,8 @@ export class MembersService {
     organizationId: string,
     opts: {
       search?: string;
-      page?: string;
-      limit?: string;
+      page?: string | number;
+      limit?: string | number;
       status?: string;
       quotaPlanId?: string;
       quotaStatus?: string;

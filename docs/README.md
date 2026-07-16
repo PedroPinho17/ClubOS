@@ -38,6 +38,7 @@ ClubOS/
 ├── apps/api/          → Backend NestJS (@clubos/api)
 ├── apps/web/          → Frontend Next.js (@clubos/web)
 ├── packages/database/ → Prisma schema + client (@clubos/database)
+├── packages/shared/   → Roles + contratos partilhados (@clubos/shared)
 ├── docs/              → Esta documentação
 └── scripts/           → Backup DB, fixtures E2E
 ```

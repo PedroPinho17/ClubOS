@@ -1,10 +1,6 @@
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+import type { PaginatedResult } from "@clubos/shared";
+
+export type { PaginatedResult };
 
 export interface AuthUser {
   id: string;
@@ -228,14 +224,6 @@ export interface CardData {
   quotaStatus: QuotaStatus;
   active: boolean;
   qrPayload: string;
-}
-
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
 }
 
 export interface DashboardStats {
