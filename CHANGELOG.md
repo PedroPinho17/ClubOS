@@ -12,25 +12,32 @@ e o projecto tenta aderir a [Semantic Versioning](https://semver.org/lang/pt-BR/
 - Documentação: ADRs (Better Auth, papel efectivo por org), `CONTRIBUTING.md`, changelog
 - Análise UML: actores/casos de uso, diagramas de actividade e sequência (`docs/analise/`)
 - Diagramas UML clássicos em PNG (PlantUML): casos de uso, sequência, actividade
-- Pacote `@clubos/shared` — roles e `PaginatedResult` partilhados API ↔ Web
+- Pacote `@clubos/shared` — roles, `PaginatedResult` e tipos de domínio críticos API ↔ Web
 - Query DTOs validados para listagens (members, payments, audit)
 - Unit tests de isolamento por org: `members.service`, `payments.service`
 - Reset de password por email (`/recuperar-password`, `/reset-password`) + template SMTP
 - Guias de ajuda no backoffice e formulário de settings de cartões
 - Bootstrap da org activa e papel efectivo por organização (API + web)
 - Testes E2E: recuperar password, settings/help, reforço RBAC / multi-org
+- Onboarding: dialog **Novo clube** (Imperador, Módulos) + checklist «Primeiros passos» alargado
+- Docs operacionais: [Como adicionar um clube](docs/COMO-ADICIONAR-CLUBE.md), [Import Excel — erros](docs/IMPORT-EXCEL-ERROS.md), [FAQ CRC Vale](docs/FAQ-CRC-VALE.md)
 
 ### Changed
 
 - Stack documentada: Next.js 16 (alinhado com `apps/web`)
 - Caminho canónico de BD em docs: `pnpm db:migrate` (dev) / `pnpm db:deploy` (prod); `db:push` só para protótipos
 - `API-BACKEND.md`: Swagger como fonte de verdade dos endpoints
-- UI: páginas `settings`, `cards`, `communications`, `payments` e `member-card` partidas em componentes/hooks
+- UI: páginas `settings`, `cards`, `communications`, `payments`, `members`, `membership-plans` e `member-card` partidas em componentes/hooks
 - UI polish: skeletons em listas, dialogs Escape/foco, cartões responsivos, dark mode, histórico comunicações mobile
+- Web `lib/types` reexporta contratos de `@clubos/shared` (menos drift API↔Web)
 
 ### Fixed
 
 - (registar aqui correcções user-facing à medida que saem)
+
+### Release hygiene
+
+- Manter este ficheiro actualizado em cada release: mover itens de `[Unreleased]` para a secção `## [x.y.z] — AAAA-MM-DD` e etiquetar no GitHub.
 
 ---
 

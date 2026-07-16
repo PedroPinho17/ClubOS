@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { CreditCard } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +11,10 @@ import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api";
-import { toast } from "@/lib/toast";
+import { TableBodySkeleton } from "@/components/page-skeletons";
+import { useMembershipPlansMutations } from "@/hooks/use-membership-plans-mutations";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
+import { api } from "@/lib/api";
 import type { MembershipPlan, Periodicity } from "@/lib/types";
 
 const PERIODICITY_LABEL: Record<Periodicity, string> = {
@@ -33,13 +34,14 @@ export default function MembershipPlansPage() {
 }
 
 function MembershipPlansPageContent() {
-  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [periodicity, setPeriodicity] = useState<Periodicity>("MONTHLY");
   const [planToRemove, setPlanToRemove] = useState<MembershipPlan | null>(null);
 
   const plansKey = useTenantQueryKey(["membership-plans"]);
+  const { createPlan, toggleActive, removePlan } =
+    useMembershipPlansMutations();
 
   const {
     data: plans,
@@ -49,46 +51,6 @@ function MembershipPlansPageContent() {
   } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>("/membership-plans"),
-  });
-
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["membership-plans"] });
-
-  const createPlan = useMutation({
-    mutationFn: () =>
-      api.post<MembershipPlan>("/membership-plans", {
-        name,
-        amount: Number(amount),
-        periodicity,
-      }),
-    onSuccess: () => {
-      setName("");
-      setAmount("");
-      setPeriodicity("MONTHLY");
-      invalidate();
-      toast.success("Plano criado");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const toggleActive = useMutation({
-    mutationFn: (plan: MembershipPlan) =>
-      api.patch(`/membership-plans/${plan.id}`, { active: !plan.active }),
-    onSuccess: (_, plan) => {
-      invalidate();
-      toast.success(plan.active ? "Plano desativado" : "Plano ativado");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const removePlan = useMutation({
-    mutationFn: (id: string) => api.delete(`/membership-plans/${id}`),
-    onSuccess: () => {
-      setPlanToRemove(null);
-      invalidate();
-      toast.success("Plano removido");
-    },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   return (
@@ -103,7 +65,17 @@ function MembershipPlansPageContent() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (name.trim() && Number(amount) > 0) createPlan.mutate();
+              if (!name.trim() || Number(amount) <= 0) return;
+              createPlan.mutate(
+                { name, amount, periodicity },
+                {
+                  onSuccess: () => {
+                    setName("");
+                    setAmount("");
+                    setPeriodicity("MONTHLY");
+                  },
+                },
+              );
             }}
             className="flex flex-wrap items-end gap-3"
           >
@@ -186,14 +158,7 @@ function MembershipPlansPageContent() {
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="p-6 text-center text-muted-foreground"
-                      >
-                        A carregar...
-                      </td>
-                    </tr>
+                    <TableBodySkeleton rows={4} cols={6} />
                   ) : plans && plans.length > 0 ? (
                     plans.map((p) => (
                       <tr key={p.id} className="border-b last:border-0">
@@ -251,7 +216,11 @@ function MembershipPlansPageContent() {
         variant="destructive"
         loading={removePlan.isPending}
         onConfirm={() => {
-          if (planToRemove) removePlan.mutate(planToRemove.id);
+          if (planToRemove) {
+            removePlan.mutate(planToRemove.id, {
+              onSuccess: () => setPlanToRemove(null),
+            });
+          }
         }}
       />
     </div>

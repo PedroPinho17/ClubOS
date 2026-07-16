@@ -6,9 +6,30 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
-import { canManageMembers } from "@/lib/permissions";
+import { canManageMembers, isImperador } from "@/lib/permissions";
 
-const STEPS = [
+type Step = {
+  title: string;
+  description: string;
+  href: string;
+  adminOnly?: boolean;
+  imperadorOnly?: boolean;
+};
+
+const STEPS: Step[] = [
+  {
+    title: "Criar organização (se ainda não existe)",
+    description:
+      "Imperador: Módulos → Novo clube. Activa módulos base automaticamente.",
+    href: "/modules",
+    imperadorOnly: true,
+  },
+  {
+    title: "Branding e staff",
+    description: "Logótipo, cor e convite de administrador / tesoureiro.",
+    href: "/settings",
+    adminOnly: true,
+  },
   {
     title: "Criar um plano de quota",
     description: "Define valores e periodicidade das quotas.",
@@ -17,7 +38,7 @@ const STEPS = [
   },
   {
     title: "Importar ou criar sócios",
-    description: "Excel ou adicionar o primeiro sócio em Membros.",
+    description: "Excel (dry-run) ou adicionar o primeiro sócio em Membros.",
     href: "/members",
     adminOnly: true,
   },
@@ -25,23 +46,34 @@ const STEPS = [
     title: "Registar o 1.º pagamento",
     description: "Começa o histórico de quotas e recibos.",
     href: "/payments",
-    adminOnly: false,
   },
-] as const;
+  {
+    title: "Cartões e portal (opcional)",
+    description:
+      "Layout CRC Vale / clássico e conceder acesso ao portal do sócio.",
+    href: "/cards",
+    adminOnly: true,
+  },
+];
 
 type GettingStartedCardProps = {
   /** Versão sem margem exterior / header reduzido (modal Ajuda). */
   compact?: boolean;
 };
 
-/** Checklist visível quando a organização ainda não tem sócios (ou no guia Ajuda). */
+/** Checklist de onboarding da organização (dashboard / guia Ajuda). */
 export function GettingStartedCard({
   compact = false,
 }: GettingStartedCardProps) {
   const { effectiveRole, isLoading } = useEffectiveRole();
   const canManage = !isLoading && canManageMembers(effectiveRole);
+  const imperador = !isLoading && isImperador(effectiveRole);
 
-  const steps = STEPS.filter((s) => canManage || !s.adminOnly);
+  const steps = STEPS.filter((s) => {
+    if (s.imperadorOnly && !imperador) return false;
+    if (s.adminOnly && !canManage) return false;
+    return true;
+  });
 
   return (
     <Card
@@ -54,15 +86,15 @@ export function GettingStartedCard({
         <CardHeader>
           <CardTitle className="text-lg">Primeiros passos</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Esta organização ainda não tem sócios. Siga a ordem abaixo para
-            começar a usar o ClubOS.
+            Ordem sugerida para pôr um clube a funcionar no ClubOS. Guia
+            completo: documentação «Como adicionar um clube novo».
           </p>
         </CardHeader>
       )}
       <CardContent className={cn("space-y-3", compact && "p-0")}>
         {steps.map((step, index) => (
           <div
-            key={step.href}
+            key={`${step.href}-${step.title}`}
             className="flex flex-col gap-3 rounded-lg border bg-background p-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="flex gap-3">

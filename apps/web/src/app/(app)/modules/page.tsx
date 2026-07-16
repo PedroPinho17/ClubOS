@@ -1,8 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Puzzle } from "lucide-react";
+import { Building2, ChevronDown, Puzzle } from "lucide-react";
 import { useState } from "react";
+import { CreateOrganizationDialog } from "@/components/create-organization-dialog";
 import { ModuleSectionsSkeleton } from "@/components/page-skeletons";
 import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
@@ -82,6 +83,7 @@ export default function ModulesPage() {
 function ModulesPageContent() {
   const queryClient = useQueryClient();
   const modulesKey = useTenantQueryKey(["modules"]);
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
 
   const {
     data: modules,
@@ -108,11 +110,29 @@ function ModulesPageContent() {
 
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Módulos</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
-        Ativa ou desativa módulos para esta organização. Os módulos core estão
-        sempre ativos.
-      </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="mb-2 text-2xl font-bold">Módulos</h1>
+          <p className="text-sm text-muted-foreground">
+            Ativa ou desativa módulos para esta organização. Os módulos core
+            estão sempre ativos. Para um clube novo, cria primeiro a
+            organização.
+          </p>
+        </div>
+        <Button
+          type="button"
+          className="shrink-0"
+          onClick={() => setCreateOrgOpen(true)}
+        >
+          <Building2 className="mr-2 h-4 w-4" />
+          Novo clube
+        </Button>
+      </div>
+
+      <CreateOrganizationDialog
+        open={createOrgOpen}
+        onClose={() => setCreateOrgOpen(false)}
+      />
 
       <div className="space-y-6">
         {isError ? (

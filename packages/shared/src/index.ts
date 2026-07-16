@@ -1,7 +1,9 @@
 /**
- * Contratos partilhados API ↔ Web (roles, paginação).
+ * Contratos partilhados API ↔ Web (roles, paginação, domínio).
  * Evita drift entre `apps/api` e `apps/web`.
  */
+
+export * from "./domain";
 
 /** Staff do backoffice (exclui socio do portal). */
 export const STAFF_ROLES = [

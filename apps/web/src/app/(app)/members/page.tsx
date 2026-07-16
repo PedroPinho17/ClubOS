@@ -1,23 +1,17 @@
 "use client";
 
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { UserPlus, Users } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { ConsultModeBanner } from "@/components/consult-mode-banner";
 import { QueryErrorCard } from "@/components/query-error-card";
 import { ImportResultPanel } from "@/components/members/import-result-panel";
 import { MemberEditDialog } from "@/components/members/member-edit-dialog";
-import {
-  MemberFilters,
-  type MemberPlanFilter,
-  type MemberStatusFilter,
-} from "@/components/members/member-filters";
+import { MemberFilters } from "@/components/members/member-filters";
 import { MembersTable } from "@/components/members/members-table";
 import { MembersToolsPanel } from "@/components/members/members-tools-panel";
 import {
   emptyEditForm,
   memberToForm,
-  PAGE_SIZE,
   SELECT_CLASS,
 } from "@/components/members/members-shared";
 import { PortalAccessCreatedDialog } from "@/components/members/portal-access-created-dialog";
@@ -27,25 +21,18 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api";
 import { todayDateInput } from "@/lib/date-input";
-import { toast } from "@/lib/toast";
 import { STAFF_ROLES } from "@/lib/staff-roles";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
+import { useMemberImport } from "@/hooks/use-member-import";
+import { useMembersList } from "@/hooks/use-members-list";
 import { useMembersMutations } from "@/hooks/use-members-mutations";
-import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import {
   canAccessCards as hasCardAccess,
   canExportReports as hasReportExport,
   canManageMembers,
 } from "@/lib/permissions";
-import type {
-  Member,
-  MemberImportResult,
-  MembershipPlan,
-  PaginatedResult,
-  QuotaStatus,
-} from "@/lib/types";
+import type { Member } from "@/lib/types";
 
 export default function MembersPage() {
   return (
@@ -61,29 +48,18 @@ function MembersPageContent() {
   const canExportReports = !roleLoading && hasReportExport(effectiveRole);
   const canAccessCards = !roleLoading && hasCardAccess(effectiveRole);
 
+  const list = useMembersList();
+  const importFlow = useMemberImport();
+
   const {
     createMember,
     updateMember,
     deleteMember,
     grantPortal,
     uploadPhoto,
-    importMembers,
     gdprErase,
   } = useMembersMutations();
 
-  const importInputRef = useRef<HTMLInputElement>(null);
-  const pendingImportFileRef = useRef<File | null>(null);
-  const [updateExisting, setUpdateExisting] = useState(true);
-  const [importDryRun, setImportDryRun] = useState(false);
-  const [importResult, setImportResult] = useState<MemberImportResult | null>(
-    null,
-  );
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [quotaFilter, setQuotaFilter] = useState<QuotaStatus | "">("");
-  const [statusFilter, setStatusFilter] = useState<MemberStatusFilter>("");
-  const [planFilter, setPlanFilter] = useState<MemberPlanFilter>("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [quotaPlanId, setQuotaPlanId] = useState("");
@@ -102,104 +78,19 @@ function MembersPageContent() {
   } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
   const [gdprTarget, setGdprTarget] = useState<Member | null>(null);
-  const [importWarningOpen, setImportWarningOpen] = useState(false);
-  const [hasPendingImport, setHasPendingImport] = useState(false);
 
-  const membersKey = useTenantQueryKey([
-    "members",
-    search,
-    page,
-    quotaFilter,
-    statusFilter,
-    planFilter,
-  ]);
-  const plansKey = useTenantQueryKey(["membership-plans"]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
-
-  const {
-    data: membersPage,
-    isPending,
-    isFetching,
-    isPlaceholderData,
-    isError: membersError,
-    refetch: refetchMembers,
-  } = useQuery<PaginatedResult<Member>>({
-    queryKey: membersKey,
-    queryFn: () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(PAGE_SIZE),
-      });
-      if (search) params.set("search", search);
-      if (quotaFilter) params.set("quotaStatus", quotaFilter);
-      if (statusFilter) params.set("status", statusFilter);
-      if (planFilter) params.set("quotaPlanId", planFilter);
-      return api.get<PaginatedResult<Member>>(`/members?${params}`);
-    },
-    placeholderData: keepPreviousData,
-  });
-
-  const { data: plans } = useQuery<MembershipPlan[]>({
-    queryKey: plansKey,
-    queryFn: () => api.get<MembershipPlan[]>("/membership-plans"),
-  });
-
-  const members = membersPage?.items ?? [];
-  const isInitialLoad = isPending && !membersPage;
-  const isPageTransition = isFetching && isPlaceholderData;
-
-  function runImport(file: File, dryRun: boolean) {
-    pendingImportFileRef.current = file;
-    setHasPendingImport(true);
-    importMembers.mutate(
-      { file, dryRun, updateExisting },
-      {
-        onSuccess: (res) => {
-          if (!res.dryRun) {
-            pendingImportFileRef.current = null;
-            setHasPendingImport(false);
-            setImportWarningOpen(false);
-            toast.success("Importação concluída");
-          }
-          setImportResult(res);
-        },
-      },
-    );
-  }
-
-  function confirmRealImport() {
-    const file = pendingImportFileRef.current;
-    if (!file) return;
-    importMembers.mutate(
-      { file, dryRun: false, updateExisting },
-      {
-        onSuccess: (res) => {
-          pendingImportFileRef.current = null;
-          setHasPendingImport(false);
-          setImportWarningOpen(false);
-          setImportResult(res);
-          toast.success("Importação concluída");
-        },
-      },
-    );
-  }
-
-  function handleConfirmImport() {
-    if (!importResult || !pendingImportFileRef.current) return;
-    if (importResult.errors.length > 0) {
-      setImportWarningOpen(true);
-      return;
-    }
-    toast.info("A iniciar importação...");
-    confirmRealImport();
-  }
+  const setFilterPage1 =
+    <T,>(set: (v: T) => void) =>
+    (value: T) => {
+      set(value);
+      list.setPage(1);
+    };
+  const clearMemberFilters = () => {
+    list.setQuotaFilter("");
+    list.setStatusFilter("");
+    list.setPlanFilter("");
+    list.setPage(1);
+  };
 
   return (
     <div>
@@ -207,48 +98,44 @@ function MembersPageContent() {
 
       {!canManage && !roleLoading && <ConsultModeBanner />}
 
-      {membersError && (
+      {list.membersError && (
         <div className="mb-6">
-          <QueryErrorCard onRetry={() => void refetchMembers()} />
+          <QueryErrorCard onRetry={() => void list.refetchMembers()} />
         </div>
       )}
 
       <MembersToolsPanel
         canManage={canManage}
         canExportReports={canExportReports}
-        updateExisting={updateExisting}
-        importDryRun={importDryRun}
-        importPending={importMembers.isPending}
-        onUpdateExistingChange={setUpdateExisting}
-        onImportDryRunChange={setImportDryRun}
-        onImportClick={() => importInputRef.current?.click()}
+        updateExisting={importFlow.updateExisting}
+        importDryRun={importFlow.importDryRun}
+        importPending={importFlow.importPending}
+        onUpdateExistingChange={importFlow.setUpdateExisting}
+        onImportDryRunChange={importFlow.setImportDryRun}
+        onImportClick={importFlow.openFilePicker}
       />
 
       <input
-        ref={importInputRef}
+        ref={importFlow.importInputRef}
         type="file"
         accept=".xlsx,.xls,.csv"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) runImport(file, importDryRun);
+          if (file) importFlow.runImport(file, importFlow.importDryRun);
           e.target.value = "";
         }}
       />
 
-      {importResult && (
+      {importFlow.importResult && (
         <div className="mb-6">
           <ImportResultPanel
-            result={importResult}
-            isConfirming={importMembers.isPending}
-            onDismiss={() => {
-              setImportResult(null);
-              pendingImportFileRef.current = null;
-              setHasPendingImport(false);
-            }}
+            result={importFlow.importResult}
+            isConfirming={importFlow.importPending}
+            onDismiss={importFlow.dismissResult}
             onConfirmImport={
-              importResult.dryRun && hasPendingImport
-                ? handleConfirmImport
+              importFlow.importResult.dryRun && importFlow.hasPendingImport
+                ? importFlow.handleConfirmImport
                 : undefined
             }
           />
@@ -309,7 +196,7 @@ function MembersPageContent() {
                   className={SELECT_CLASS}
                 >
                   <option value="">Sem plano</option>
-                  {(plans ?? [])
+                  {(list.plans ?? [])
                     .filter((p) => p.active)
                     .map((p) => (
                       <option key={p.id} value={p.id}>
@@ -333,51 +220,38 @@ function MembersPageContent() {
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="max-w-sm flex-1">
           <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            value={list.searchInput}
+            onChange={(e) => list.setSearchInput(e.target.value)}
             placeholder="Pesquisar sócios..."
           />
         </div>
-        {membersPage && membersPage.total > 0 && (
+        {list.membersPage && list.membersPage.total > 0 && (
           <p className="text-sm text-muted-foreground">
-            {membersPage.total} sócio{membersPage.total !== 1 ? "s" : ""}
-            {isPageTransition ? " · A atualizar..." : ""}
+            {list.membersPage.total} sócio
+            {list.membersPage.total !== 1 ? "s" : ""}
+            {list.isPageTransition ? " · A atualizar..." : ""}
           </p>
         )}
       </div>
 
       <MemberFilters
-        quotaStatus={quotaFilter}
-        memberStatus={statusFilter}
-        planId={planFilter}
-        plans={plans}
-        onQuotaStatusChange={(value) => {
-          setQuotaFilter(value);
-          setPage(1);
-        }}
-        onMemberStatusChange={(value) => {
-          setStatusFilter(value);
-          setPage(1);
-        }}
-        onPlanIdChange={(value) => {
-          setPlanFilter(value);
-          setPage(1);
-        }}
-        onClear={() => {
-          setQuotaFilter("");
-          setStatusFilter("");
-          setPlanFilter("");
-          setPage(1);
-        }}
+        quotaStatus={list.quotaFilter}
+        memberStatus={list.statusFilter}
+        planId={list.planFilter}
+        plans={list.plans}
+        onQuotaStatusChange={setFilterPage1(list.setQuotaFilter)}
+        onMemberStatusChange={setFilterPage1(list.setStatusFilter)}
+        onPlanIdChange={setFilterPage1(list.setPlanFilter)}
+        onClear={clearMemberFilters}
       />
 
       <MembersTable
-        membersPage={membersPage}
-        members={members}
-        isInitialLoad={isInitialLoad}
-        isPageTransition={isPageTransition}
-        search={search}
-        page={page}
+        membersPage={list.membersPage}
+        members={list.members}
+        isInitialLoad={list.isInitialLoad}
+        isPageTransition={list.isPageTransition}
+        search={list.search}
+        page={list.page}
         editingId={editingId}
         canManage={canManage}
         canAccessCards={canAccessCards}
@@ -386,7 +260,7 @@ function MembersPageContent() {
         grantPortalPending={grantPortal.isPending}
         uploadPhotoPending={uploadPhoto.isPending}
         emptyIcon={Users}
-        onPageChange={setPage}
+        onPageChange={list.setPage}
         onEdit={(m) => {
           setEditingId(m.id);
           setEditForm(memberToForm(m));
@@ -400,27 +274,20 @@ function MembersPageContent() {
         onUploadPhoto={(memberId, file) =>
           uploadPhoto.mutate({ memberId, file })
         }
-        onImportClick={() => importInputRef.current?.click()}
+        onImportClick={importFlow.openFilePicker}
         onCreateClick={() =>
           document
             .getElementById("create-member-form")
             ?.scrollIntoView({ behavior: "smooth" })
         }
-        onClearFilters={() => {
-          setSearchInput("");
-          setSearch("");
-          setQuotaFilter("");
-          setStatusFilter("");
-          setPlanFilter("");
-          setPage(1);
-        }}
+        onClearFilters={list.clearFilters}
       />
 
       <MemberEditDialog
         open={editingId !== null}
         memberId={editingId}
         form={editForm}
-        plans={plans}
+        plans={list.plans}
         canManage={canManage}
         saving={updateMember.isPending}
         gdprErasing={gdprErase.isPending}
@@ -434,7 +301,7 @@ function MembersPageContent() {
           );
         }}
         onGdprErase={() => {
-          const m = members.find((x) => x.id === editingId);
+          const m = list.members.find((x) => x.id === editingId);
           if (m) setGdprTarget(m);
         }}
       />
@@ -454,10 +321,7 @@ function MembersPageContent() {
             const member = portalGrantMember;
             const password = portalPassword;
             grantPortal.mutate(
-              {
-                memberId: member.id,
-                password,
-              },
+              { memberId: member.id, password },
               {
                 onSuccess: (res) => {
                   setPortalGrantMember(null);
@@ -500,14 +364,13 @@ function MembersPageContent() {
         variant="destructive"
         loading={deleteMember.isPending}
         onConfirm={() => {
-          if (deleteTarget) {
-            deleteMember.mutate(deleteTarget.id, {
-              onSuccess: () => {
-                setEditingId(null);
-                setDeleteTarget(null);
-              },
-            });
-          }
+          if (!deleteTarget) return;
+          deleteMember.mutate(deleteTarget.id, {
+            onSuccess: () => {
+              setEditingId(null);
+              setDeleteTarget(null);
+            },
+          });
         }}
       />
 
@@ -528,26 +391,25 @@ function MembersPageContent() {
         requireCheckbox
         checkboxLabel="Confirmo o apagamento definitivo"
         onConfirm={() => {
-          if (gdprTarget) {
-            gdprErase.mutate(gdprTarget.id, {
-              onSuccess: () => {
-                setEditingId(null);
-                setGdprTarget(null);
-              },
-            });
-          }
+          if (!gdprTarget) return;
+          gdprErase.mutate(gdprTarget.id, {
+            onSuccess: () => {
+              setEditingId(null);
+              setGdprTarget(null);
+            },
+          });
         }}
       />
 
       <ConfirmDialog
-        open={importWarningOpen}
-        onOpenChange={setImportWarningOpen}
+        open={importFlow.importWarningOpen}
+        onOpenChange={importFlow.setImportWarningOpen}
         title="Importar com erros?"
-        description={`A simulação encontrou ${importResult?.errors.length ?? 0} erro(s). Deseja importar mesmo assim? Linhas com erro serão ignoradas.`}
+        description={`A simulação encontrou ${importFlow.importResult?.errors.length ?? 0} erro(s). Deseja importar mesmo assim? Linhas com erro serão ignoradas.`}
         confirmLabel="Importar mesmo assim"
         variant="destructive"
-        loading={importMembers.isPending}
-        onConfirm={() => confirmRealImport()}
+        loading={importFlow.importPending}
+        onConfirm={() => importFlow.confirmRealImport()}
       />
     </div>
   );
