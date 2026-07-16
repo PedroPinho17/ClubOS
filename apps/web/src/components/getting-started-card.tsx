@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
@@ -10,21 +10,18 @@ import { canManageMembers } from "@/lib/permissions";
 
 const STEPS = [
   {
-    n: 1,
     title: "Criar um plano de quota",
     description: "Define valores e periodicidade das quotas.",
     href: "/membership-plans",
     adminOnly: true,
   },
   {
-    n: 2,
     title: "Importar ou criar sócios",
     description: "Excel ou adicionar o primeiro sócio em Membros.",
     href: "/members",
     adminOnly: true,
   },
   {
-    n: 3,
     title: "Registar o 1.º pagamento",
     description: "Começa o histórico de quotas e recibos.",
     href: "/payments",
@@ -32,23 +29,37 @@ const STEPS = [
   },
 ] as const;
 
-/** Checklist visível quando a organização ainda não tem sócios. */
-export function GettingStartedCard() {
+type GettingStartedCardProps = {
+  /** Versão sem margem exterior / header reduzido (modal Ajuda). */
+  compact?: boolean;
+};
+
+/** Checklist visível quando a organização ainda não tem sócios (ou no guia Ajuda). */
+export function GettingStartedCard({
+  compact = false,
+}: GettingStartedCardProps) {
   const { effectiveRole, isLoading } = useEffectiveRole();
   const canManage = !isLoading && canManageMembers(effectiveRole);
 
   const steps = STEPS.filter((s) => canManage || !s.adminOnly);
 
   return (
-    <Card className="border-primary/25 bg-primary/5">
-      <CardHeader>
-        <CardTitle className="text-lg">Primeiros passos</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Esta organização ainda não tem sócios. Siga a ordem abaixo para
-          começar a usar o ClubOS.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Card
+      className={cn(
+        !compact && "border-primary/25 bg-primary/5",
+        compact && "border-0 shadow-none",
+      )}
+    >
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="text-lg">Primeiros passos</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Esta organização ainda não tem sócios. Siga a ordem abaixo para
+            começar a usar o ClubOS.
+          </p>
+        </CardHeader>
+      )}
+      <CardContent className={cn("space-y-3", compact && "p-0")}>
         {steps.map((step, index) => (
           <div
             key={step.href}

@@ -9,6 +9,7 @@ type PortalAccessCreatedDialogProps = {
   memberName: string;
   email: string;
   password: string;
+  isReset?: boolean;
   onClose: () => void;
 };
 
@@ -43,6 +44,7 @@ export function PortalAccessCreatedDialog({
   memberName,
   email,
   password,
+  isReset = false,
   onClose,
 }: PortalAccessCreatedDialogProps) {
   const instructions = buildInstructions(memberName, email, password);
@@ -70,7 +72,9 @@ export function PortalAccessCreatedDialog({
               id="portal-access-created-title"
               className="text-lg font-semibold"
             >
-              Acesso ao portal criado
+              {isReset
+                ? "Acesso ao portal redefinido"
+                : "Acesso ao portal criado"}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Envie estas informações ao sócio. A password só é mostrada uma

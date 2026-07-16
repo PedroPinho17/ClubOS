@@ -1,10 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CreditCard } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -38,7 +41,12 @@ function MembershipPlansPageContent() {
 
   const plansKey = useTenantQueryKey(["membership-plans"]);
 
-  const { data: plans, isLoading } = useQuery<MembershipPlan[]>({
+  const {
+    data: plans,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>("/membership-plans"),
   });
@@ -90,7 +98,7 @@ function MembershipPlansPageContent() {
         Define os planos, valores e periodicidade das quotas dos sócios.
       </p>
 
-      <Card className="mb-6">
+      <Card id="create-plan-form" className="mb-6">
         <CardContent className="pt-6">
           <form
             onSubmit={(e) => {
@@ -144,77 +152,91 @@ function MembershipPlansPageContent() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr className="text-left">
-                <th className="p-3 font-medium">Nome</th>
-                <th className="p-3 font-medium">Valor</th>
-                <th className="p-3 font-medium">Periodicidade</th>
-                <th className="p-3 font-medium">Sócios</th>
-                <th className="p-3 font-medium">Estado</th>
-                <th className="p-3 font-medium text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="p-6 text-center text-muted-foreground"
-                  >
-                    A carregar...
-                  </td>
-                </tr>
-              ) : plans && plans.length > 0 ? (
-                plans.map((p) => (
-                  <tr key={p.id} className="border-b last:border-0">
-                    <td className="p-3 font-medium">{p.name}</td>
-                    <td className="p-3">{Number(p.amount).toFixed(2)} €</td>
-                    <td className="p-3">{PERIODICITY_LABEL[p.periodicity]}</td>
-                    <td className="p-3">{p._count?.members ?? 0}</td>
-                    <td className="p-3">
-                      <Badge variant={p.active ? "success" : "muted"}>
-                        {p.active ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={toggleActive.isPending}
-                          onClick={() => toggleActive.mutate(p)}
-                        >
-                          {p.active ? "Desativar" : "Ativar"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={removePlan.isPending}
-                          onClick={() => setPlanToRemove(p)}
-                        >
-                          Remover
-                        </Button>
-                      </div>
-                    </td>
+      {isError ? (
+        <QueryErrorCard onRetry={() => void refetch()} />
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            {!isLoading && plans && plans.length === 0 ? (
+              <EmptyState
+                icon={CreditCard}
+                title="Sem planos de quota"
+                description="Crie o primeiro plano para começar a atribuir quotas aos sócios."
+                actions={[
+                  {
+                    label: "Criar plano",
+                    onClick: () =>
+                      document
+                        .getElementById("create-plan-form")
+                        ?.scrollIntoView({ behavior: "smooth" }),
+                  },
+                ]}
+              />
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="border-b bg-muted/50">
+                  <tr className="text-left">
+                    <th className="p-3 font-medium">Nome</th>
+                    <th className="p-3 font-medium">Valor</th>
+                    <th className="p-3 font-medium">Periodicidade</th>
+                    <th className="p-3 font-medium">Sócios</th>
+                    <th className="p-3 font-medium">Estado</th>
+                    <th className="p-3 font-medium text-right">Ações</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="p-6 text-center text-muted-foreground"
-                  >
-                    Sem planos. Cria o primeiro acima.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="p-6 text-center text-muted-foreground"
+                      >
+                        A carregar...
+                      </td>
+                    </tr>
+                  ) : plans && plans.length > 0 ? (
+                    plans.map((p) => (
+                      <tr key={p.id} className="border-b last:border-0">
+                        <td className="p-3 font-medium">{p.name}</td>
+                        <td className="p-3">{Number(p.amount).toFixed(2)} €</td>
+                        <td className="p-3">
+                          {PERIODICITY_LABEL[p.periodicity]}
+                        </td>
+                        <td className="p-3">{p._count?.members ?? 0}</td>
+                        <td className="p-3">
+                          <Badge variant={p.active ? "success" : "muted"}>
+                            {p.active ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={toggleActive.isPending}
+                              onClick={() => toggleActive.mutate(p)}
+                            >
+                              {p.active ? "Desativar" : "Ativar"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={removePlan.isPending}
+                              onClick={() => setPlanToRemove(p)}
+                            >
+                              Remover
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : null}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <ConfirmDialog
         open={planToRemove !== null}

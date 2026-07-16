@@ -98,6 +98,7 @@ function MembersPageContent() {
     memberName: string;
     email: string;
     password: string;
+    reset: boolean;
   } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
   const [gdprTarget, setGdprTarget] = useState<Member | null>(null);
@@ -443,6 +444,7 @@ function MembersPageContent() {
           member={portalGrantMember}
           password={portalPassword}
           pending={grantPortal.isPending}
+          isReset={!!portalGrantMember.userId}
           onPasswordChange={setPortalPassword}
           onClose={() => {
             setPortalGrantMember(null);
@@ -464,6 +466,7 @@ function MembersPageContent() {
                     memberName: member.name,
                     email: res.email,
                     password,
+                    reset: !!member.userId,
                   });
                 },
               },
@@ -477,6 +480,7 @@ function MembersPageContent() {
           memberName={portalAccessCreated.memberName}
           email={portalAccessCreated.email}
           password={portalAccessCreated.password}
+          isReset={portalAccessCreated.reset}
           onClose={() => setPortalAccessCreated(null)}
         />
       )}

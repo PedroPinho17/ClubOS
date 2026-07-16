@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { api, uploadFile } from "@/lib/api";
 import { InvitePasswordDialog } from "@/components/invite-password-dialog";
 import {
@@ -63,15 +64,22 @@ function SettingsPageContent() {
   const orgSettingsKey = useTenantQueryKey(["organization", "settings"]);
   const staffKey = useTenantQueryKey(["users", "staff"]);
 
-  const { data: org } = useQuery<Organization>({
+  const {
+    data: org,
+    isError: orgError,
+    refetch: refetchOrg,
+  } = useQuery<Organization>({
     queryKey: orgKey,
     queryFn: () => api.get<Organization>("/organization"),
     staleTime: 2 * 60_000,
   });
 
-  const { data: orgSettings, isPending: orgSettingsPending } = useQuery<
-    Record<string, unknown>
-  >({
+  const {
+    data: orgSettings,
+    isPending: orgSettingsPending,
+    isError: orgSettingsError,
+    refetch: refetchOrgSettings,
+  } = useQuery<Record<string, unknown>>({
     queryKey: orgSettingsKey,
     queryFn: () => api.get<Record<string, unknown>>("/organization/settings"),
     staleTime: 2 * 60_000,
@@ -80,7 +88,12 @@ function SettingsPageContent() {
   const [diasAvisoQuota, setDiasAvisoQuota] = useState(7);
   const [lembretesAutomaticos, setLembretesAutomaticos] = useState(false);
 
-  const { data: staff, isPending: staffPending } = useQuery<StaffUser[]>({
+  const {
+    data: staff,
+    isPending: staffPending,
+    isError: staffError,
+    refetch: refetchStaff,
+  } = useQuery<StaffUser[]>({
     queryKey: staffKey,
     queryFn: () => api.get<StaffUser[]>("/users"),
     staleTime: 60_000,
@@ -193,7 +206,9 @@ function SettingsPageContent() {
       <Card>
         <CardContent className="space-y-4 pt-6">
           <h2 className="font-semibold">Organização</h2>
-          {!orgReady ? (
+          {orgError ? (
+            <QueryErrorCard onRetry={() => void refetchOrg()} />
+          ) : !orgReady ? (
             <SettingsOrgSkeleton />
           ) : (
             <div className="flex flex-wrap items-start gap-6">
@@ -300,7 +315,9 @@ function SettingsPageContent() {
             próximos X dias) ou em atraso. Requer SMTP configurado e{" "}
             <code className="text-xs">REMINDERS_ENABLED=true</code> no servidor.
           </p>
-          {orgSettingsPending && !orgSettings ? (
+          {orgSettingsError ? (
+            <QueryErrorCard onRetry={() => void refetchOrgSettings()} />
+          ) : orgSettingsPending && !orgSettings ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Skeleton className="h-10" />
               <Skeleton className="h-10 sm:col-span-2" />
@@ -418,7 +435,13 @@ function SettingsPageContent() {
               </tr>
             </thead>
             <tbody>
-              {staffPending && !staff ? (
+              {staffError ? (
+                <tr>
+                  <td colSpan={3} className="py-4">
+                    <QueryErrorCard onRetry={() => void refetchStaff()} />
+                  </td>
+                </tr>
+              ) : staffPending && !staff ? (
                 <TableBodySkeleton rows={3} cols={3} />
               ) : staff && staff.length > 0 ? (
                 staff.map((u) => (

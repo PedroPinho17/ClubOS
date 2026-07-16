@@ -9,6 +9,7 @@ import { redirectSocioFromAdmin } from "@/lib/auth-redirect";
 import { NAV_ITEMS, filterNavItems } from "@/lib/nav";
 import type { Organization } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { HelpGuideButton } from "@/components/help-guide-button";
 import { OrgBrandHeader } from "@/components/org-brand-header";
 import { OrgDocumentBranding } from "@/components/org-document-branding";
 import { RoleContextError } from "@/components/role-context-error";
@@ -126,6 +127,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Badge variant="secondary" className="hidden shrink-0 sm:inline-flex">
             {roleLabel(effectiveRole)}
           </Badge>
+          <HelpGuideButton />
           <UserMenu
             name={session.user?.name}
             email={session.user?.email}

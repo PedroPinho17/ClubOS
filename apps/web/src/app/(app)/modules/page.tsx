@@ -1,13 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Puzzle } from "lucide-react";
 import { useState } from "react";
 import { ModuleSectionsSkeleton } from "@/components/page-skeletons";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
@@ -81,7 +83,12 @@ function ModulesPageContent() {
   const queryClient = useQueryClient();
   const modulesKey = useTenantQueryKey(["modules"]);
 
-  const { data: modules, isPending } = useQuery<PlatformModule[]>({
+  const {
+    data: modules,
+    isPending,
+    isError,
+    refetch,
+  } = useQuery<PlatformModule[]>({
     queryKey: modulesKey,
     queryFn: () => api.get<PlatformModule[]>("/modules"),
     staleTime: 2 * 60_000,
@@ -108,8 +115,20 @@ function ModulesPageContent() {
       </p>
 
       <div className="space-y-6">
-        {isPending && !modules ? (
+        {isError ? (
+          <QueryErrorCard onRetry={() => void refetch()} />
+        ) : isPending && !modules ? (
           <ModuleSectionsSkeleton />
+        ) : (modules ?? []).length === 0 ? (
+          <Card>
+            <CardContent>
+              <EmptyState
+                icon={Puzzle}
+                title="Sem módulos disponíveis"
+                description="Não há módulos configurados para esta organização."
+              />
+            </CardContent>
+          </Card>
         ) : (
           groups.map((category) => {
             const items = (modules ?? []).filter(

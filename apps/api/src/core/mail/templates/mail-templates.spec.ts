@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { communicationEmail } from "./communication";
+import { passwordResetEmail } from "./password-reset";
 import { portalAccessEmail } from "./portal-access";
 import { quotaDueSoonEmail } from "./quota-due-soon";
 import { quotaOverdueEmail } from "./quota-overdue";
@@ -44,6 +45,17 @@ describe("mail templates", () => {
     expect(email.html).toContain("joao@example.com");
     expect(email.html).toContain("primeiro acesso");
     expect(email.text).toContain("primeiro acesso");
+  });
+
+  it("password reset inclui link", () => {
+    const email = passwordResetEmail({
+      userName: "Ana",
+      resetUrl:
+        "http://localhost:4000/api/auth/reset-password/tok?callbackURL=%2Freset-password",
+    });
+    expect(email.html).toContain("Ana");
+    expect(email.html).toContain("Redefinir password");
+    expect(email.text).toContain("redefinir");
   });
 
   it("communication preserva quebras de linha", () => {

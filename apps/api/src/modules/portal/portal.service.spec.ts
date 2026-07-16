@@ -62,6 +62,7 @@ describe("PortalService", () => {
     member: { findFirst: vi.fn(), update: vi.fn() },
     payment: { findFirst: vi.fn() },
     user: { findUnique: vi.fn(), update: vi.fn() },
+    account: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
     organization: { findUnique: vi.fn() },
     organizationSetting: { findMany: vi.fn().mockResolvedValue([]) },
   };
@@ -321,16 +322,35 @@ describe("PortalService", () => {
       );
     });
 
-    it("rejeita socio que ja tem acesso", async () => {
+    it("redefine password quando o socio ja tem portal", async () => {
       prisma.member.findFirst.mockResolvedValue({
         ...memberWithoutAccess,
         userId: "user-existing",
       });
+      prisma.organization.findUnique.mockResolvedValue({
+        name: "CRC Vale",
+        primaryColor: "#1d4ed8",
+        logoUrl: null,
+      });
+      prisma.user.findUnique.mockResolvedValue({
+        id: "user-existing",
+        email: "joao@clube.pt",
+      });
+      prisma.account.findFirst.mockResolvedValue({
+        id: "acc-1",
+        userId: "user-existing",
+        providerId: "credential",
+      });
 
-      await expect(
-        service.grantAccess("org-1", "mem-2", "MinhaPass8!"),
-      ).rejects.toThrow(
-        new BadRequestException("Este socio ja tem acesso ao portal."),
+      const result = await service.grantAccess("org-1", "mem-2", "NovaPass9!");
+
+      expect(result.reset).toBe(true);
+      expect(result.email).toBe("joao@clube.pt");
+      expect(prisma.member.update).not.toHaveBeenCalled();
+      expect(mail.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: "Acesso ao Portal do Sócio atualizado",
+        }),
       );
     });
 

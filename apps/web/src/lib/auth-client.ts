@@ -36,4 +36,6 @@ export const {
   changePassword,
   updateUser,
   useListPasskeys,
+  requestPasswordReset,
+  resetPassword,
 } = authClient;

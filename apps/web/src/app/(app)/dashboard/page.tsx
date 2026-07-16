@@ -95,6 +95,22 @@ function DashboardPageContent() {
 
       {isEmptyOrg && <GettingStartedCard />}
 
+      {!isLoading && data != null && data.overdue > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+          <p className="min-w-0 flex-1 font-medium">
+            {data.overdue} {data.overdue === 1 ? "sócio" : "sócios"} em atraso
+          </p>
+          <Link
+            href="/members"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Ver em Membros
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((c) => (
           <Card key={c.label}>

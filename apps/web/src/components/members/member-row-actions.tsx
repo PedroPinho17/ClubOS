@@ -4,6 +4,7 @@ import {
   FileDown,
   FileText,
   IdCard,
+  KeyRound,
   MoreHorizontal,
   Pencil,
   ShieldAlert,
@@ -61,9 +62,12 @@ export function MemberRowActions({
           canManage={canManage}
           canAccessCards={canAccessCards}
           deletePending={deletePending}
+          grantPortalPending={grantPortalPending}
           isGdprErased={isGdprErased}
+          hasPortal
           onEdit={onEdit}
           onDelete={onDelete}
+          onGrantPortal={onGrantPortal}
           onExportGdpr={onExportGdpr}
           onGdprErase={onGdprErase}
         />
@@ -80,9 +84,12 @@ export function MemberRowActions({
           canManage={canManage}
           canAccessCards={canAccessCards}
           deletePending={deletePending}
+          grantPortalPending={grantPortalPending}
           isGdprErased={isGdprErased}
+          hasPortal={false}
           onEdit={onEdit}
           onDelete={onDelete}
+          onGrantPortal={onGrantPortal}
           onExportGdpr={onExportGdpr}
           onGdprErase={onGdprErase}
         />
@@ -105,9 +112,12 @@ export function MemberRowActions({
       canManage={canManage}
       canAccessCards={canAccessCards}
       deletePending={deletePending}
+      grantPortalPending={grantPortalPending}
       isGdprErased={isGdprErased}
+      hasPortal={false}
       onEdit={onEdit}
       onDelete={onDelete}
+      onGrantPortal={onGrantPortal}
       onExportGdpr={onExportGdpr}
       onGdprErase={onGdprErase}
     />
@@ -119,12 +129,18 @@ function RowActionsMenu({
   canManage,
   canAccessCards,
   deletePending,
+  grantPortalPending,
   isGdprErased,
+  hasPortal,
   onEdit,
   onDelete,
+  onGrantPortal,
   onExportGdpr,
   onGdprErase,
-}: Omit<MemberRowActionsProps, "grantPortalPending" | "onGrantPortal">) {
+}: Omit<MemberRowActionsProps, "grantPortalPending"> & {
+  grantPortalPending: boolean;
+  hasPortal: boolean;
+}) {
   return (
     <DropdownMenu
       align="end"
@@ -141,6 +157,12 @@ function RowActionsMenu({
         <DropdownMenuItem onClick={onEdit}>
           <Pencil className="h-4 w-4" />
           Editar sócio
+        </DropdownMenuItem>
+      )}
+      {canManage && hasPortal && !isGdprErased && member.email && (
+        <DropdownMenuItem disabled={grantPortalPending} onClick={onGrantPortal}>
+          <KeyRound className="h-4 w-4" />
+          Redefinir acesso
         </DropdownMenuItem>
       )}
       {canManage && !isGdprErased && (

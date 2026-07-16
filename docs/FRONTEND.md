@@ -21,14 +21,15 @@ apps/web/src/
 
 ### Públicas
 
-| Rota                  | Ficheiro                          | Descrição                     |
-| --------------------- | --------------------------------- | ----------------------------- |
-| `/`                   | `app/page.tsx`                    | Redirect → `/login`           |
-| `/login`              | `app/login/page.tsx`              | Email/password + passkey      |
-| `/recuperar-password` | `app/recuperar-password/page.tsx` | Guia de recuperação (manual)  |
-| `/privacidade`        | `app/privacidade/page.tsx`        | Política de privacidade       |
-| `/dpa`                | `app/dpa/page.tsx`                | Acordo de tratamento de dados |
-| `/validar/[memberId]` | `app/validar/...`                 | Validar cartão (QR público)   |
+| Rota                  | Ficheiro                          | Descrição                               |
+| --------------------- | --------------------------------- | --------------------------------------- |
+| `/`                   | `app/page.tsx`                    | Redirect → `/login`                     |
+| `/login`              | `app/login/page.tsx`              | Email/password + passkey                |
+| `/recuperar-password` | `app/recuperar-password/page.tsx` | Pedido de reset por email + guia manual |
+| `/reset-password`     | `app/reset-password/page.tsx`     | Definir nova password (token email)     |
+| `/privacidade`        | `app/privacidade/page.tsx`        | Política de privacidade                 |
+| `/dpa`                | `app/dpa/page.tsx`                | Acordo de tratamento de dados           |
+| `/validar/[memberId]` | `app/validar/...`                 | Validar cartão (QR público)             |
 
 ### Backoffice — grupo `(app)`
 

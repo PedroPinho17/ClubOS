@@ -4,12 +4,13 @@
 
 Configuração única: `apps/api/src/auth/auth.ts`
 
-| Funcionalidade       | Estado                |
-| -------------------- | --------------------- |
-| Email + password     | ✅                    |
-| Passkey / WebAuthn   | ✅                    |
-| Roles (admin plugin) | ✅                    |
-| OAuth Google/GitHub  | Preparado (env vazio) |
+| Funcionalidade         | Estado                                        |
+| ---------------------- | --------------------------------------------- |
+| Email + password       | ✅                                            |
+| Reset password (email) | ✅ via `sendResetPassword` + MailService/SMTP |
+| Passkey / WebAuthn     | ✅                                            |
+| Roles (admin plugin)   | ✅                                            |
+| OAuth Google/GitHub    | Preparado (env vazio)                         |
 
 ### Roles da plataforma
 

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TableBodySkeleton } from "@/components/page-skeletons";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoleGate } from "@/components/role-gate";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,12 @@ function CommunicationsPageContent() {
   const communicationsKey = useTenantQueryKey(["communications"]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
 
-  const { data: list, isLoading: listLoading } = useQuery<Communication[]>({
+  const {
+    data: list,
+    isLoading: listLoading,
+    isError: listError,
+    refetch: refetchList,
+  } = useQuery<Communication[]>({
     queryKey: communicationsKey,
     queryFn: () => api.get<Communication[]>("/communications"),
     refetchInterval: (query) => {
@@ -350,7 +356,9 @@ function CommunicationsPageContent() {
       <Card>
         <CardContent className="pt-6">
           <h2 className="mb-4 font-semibold">Histórico (email)</h2>
-          {listLoading ? (
+          {listError ? (
+            <QueryErrorCard onRetry={() => void refetchList()} />
+          ) : listLoading ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">
                 <thead>

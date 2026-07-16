@@ -170,7 +170,7 @@ export class PortalService {
     };
   }
 
-  /** Cria conta de acesso ao portal com password definida pelo admin. */
+  /** Cria ou redefine acesso ao portal com password definida pelo admin. */
   async grantAccess(
     organizationId: string,
     memberId: string,
@@ -182,14 +182,14 @@ export class PortalService {
     if (!member) throw new NotFoundException("Socio nao encontrado.");
     if (!member.email)
       throw new BadRequestException("O socio nao tem email definido.");
-    if (member.userId)
-      throw new BadRequestException("Este socio ja tem acesso ao portal.");
 
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       select: { name: true, primaryColor: true },
     });
     if (!org) throw new NotFoundException("Organizacao nao encontrada.");
+
+    const isReset = !!member.userId;
 
     let user = await this.prisma.user.findUnique({
       where: { email: member.email },
@@ -213,10 +213,12 @@ export class PortalService {
       where: { id: user.id },
       data: { role: "socio", emailVerified: true, mustChangePassword: true },
     });
-    await this.prisma.member.update({
-      where: { id: member.id },
-      data: { userId: user.id },
-    });
+    if (!member.userId) {
+      await this.prisma.member.update({
+        where: { id: member.id },
+        data: { userId: user.id },
+      });
+    }
 
     const origin = (process.env.WEB_ORIGIN ?? "http://localhost:3000")
       .split(",")[0]
@@ -229,12 +231,18 @@ export class PortalService {
     });
     await this.mail.send({
       to: member.email,
-      subject: "Acesso ao Portal do Sócio",
+      subject: isReset
+        ? "Acesso ao Portal do Sócio atualizado"
+        : "Acesso ao Portal do Sócio",
       text: rendered.text,
       html: rendered.html,
     });
 
-    return { email: member.email, mustChangePassword: true };
+    return {
+      email: member.email,
+      mustChangePassword: true,
+      reset: isReset,
+    };
   }
 
   /** Recibo PDF de um pagamento do socio autenticado. */

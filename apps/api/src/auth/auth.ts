@@ -1,12 +1,15 @@
-import { prisma } from "@clubos/database";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
 import { passkey } from "@better-auth/passkey";
+import { prisma } from "@clubos/database";
+import { MailService } from "../core/mail/mail.service";
+import { passwordResetEmail } from "../core/mail/templates/password-reset";
 
 const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
+const mail = new MailService();
 
 // Access control: roles da plataforma (PDF V1).
 // imperador = super admin; administrador = admin do clube; tesoureiro = pagamentos; socio = base.
@@ -20,11 +23,9 @@ const roles = {
 
 /**
  * Instancia Better Auth (fonte unica de verdade da autenticacao).
- * - Email + password
+ * - Email + password (+ reset por email via SMTP)
  * - Passkey / WebAuthn
  * - Admin plugin (roles: imperador | administrador | tesoureiro | socio)
- *
- * Roles/OAuth/SSO adicionais entram por aqui sem tocar no resto da app.
  */
 export const auth = betterAuth({
   appName: "ClubOS",
@@ -38,6 +39,25 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      const rendered = passwordResetEmail({
+        userName: user.name || user.email,
+        resetUrl: url,
+      });
+      await mail.send({
+        to: user.email,
+        subject: "Redefinir password — ClubOS",
+        text: rendered.text,
+        html: rendered.html,
+      });
+    },
+    onPasswordReset: async ({ user }) => {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { mustChangePassword: false },
+      });
+    },
   },
 
   user: {

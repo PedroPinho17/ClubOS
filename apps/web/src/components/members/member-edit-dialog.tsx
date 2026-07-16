@@ -4,6 +4,7 @@ import { FileDown, ShieldAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useDialogA11y } from "@/hooks/use-dialog-a11y";
 import { safeDownloadJson } from "@/lib/safe-download";
 import type { MembershipPlan } from "@/lib/types";
 
@@ -49,17 +50,24 @@ export function MemberEditDialog({
   onSubmit,
   onGdprErase,
 }: MemberEditDialogProps) {
+  const a11y = useDialogA11y(open, onClose, "member-edit-title");
+
   if (!open || !memberId) return null;
 
   const isGdprErased = form.name === "Apagado RGPD";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
+      {...a11y}
+    >
       <Card className="my-4 w-full max-w-2xl border-primary/40">
         <CardContent className="space-y-4 pt-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Editar sócio</h2>
+              <h2 id="member-edit-title" className="text-lg font-semibold">
+                Editar sócio
+              </h2>
               <p className="text-sm text-muted-foreground">
                 Altere os dados e guarde as alterações.
               </p>
