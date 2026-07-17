@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+# Strip Cursor attribution so it never lands in GitHub contributors.
+msg_file="$1"
+tmp_file="${msg_file}.tmp"
+
+# Remove Co-authored-by / Made-with lines that attribute Cursor Agent
+grep -v -E -i \
+  '^[[:space:]]*(Co-authored-by:[[:space:]]*Cursor[[:space:]]*<cursoragent@cursor\.com>|Made-with:[[:space:]]*Cursor)' \
+  "$msg_file" > "$tmp_file" || true
+
+# Collapse trailing blank lines left by removals
+# (portable: rewrite file from tmp)
+cat "$tmp_file" > "$msg_file"
+rm -f "$tmp_file"
