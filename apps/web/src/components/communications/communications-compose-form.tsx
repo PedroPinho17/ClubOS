@@ -66,7 +66,7 @@ export function CommunicationsComposeForm({
   whatsappLinks,
 }: CommunicationsComposeFormProps) {
   return (
-    <Card className="mb-6">
+    <Card id="compose-communication-form" className="mb-6">
       <CardContent className="space-y-4 pt-6">
         <div className="flex flex-wrap gap-2">
           <Button

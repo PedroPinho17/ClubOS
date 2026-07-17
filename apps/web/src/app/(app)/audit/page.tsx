@@ -2,7 +2,10 @@
 
 import { ClipboardList } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { TableBodySkeleton } from "@/components/page-skeletons";
+import {
+  MobileCardsSkeleton,
+  TableBodySkeleton,
+} from "@/components/page-skeletons";
 import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
 import { Badge } from "@/components/ui/badge";
@@ -130,9 +133,7 @@ function AuditPageContent() {
                 {/* Mobile: cards */}
                 <div className="space-y-3 p-4 sm:hidden">
                   {isPending && !data ? (
-                    <p className="py-4 text-center text-sm text-muted-foreground">
-                      A carregar...
-                    </p>
+                    <MobileCardsSkeleton count={5} />
                   ) : data && data.length > 0 ? (
                     data.map((entry) => (
                       <div key={entry.id} className="rounded-lg border p-4">

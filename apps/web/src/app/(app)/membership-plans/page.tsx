@@ -1,8 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard } from "lucide-react";
+import { CreditCard, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
+import {
+  MobileCardsSkeleton,
+  TableBodySkeleton,
+} from "@/components/page-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +14,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { TableBodySkeleton } from "@/components/page-skeletons";
 import { useMembershipPlansMutations } from "@/hooks/use-membership-plans-mutations";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
 import { api } from "@/lib/api";
@@ -77,19 +86,25 @@ function MembershipPlansPageContent() {
                 },
               );
             }}
-            className="flex flex-wrap items-end gap-3"
+            className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
           >
-            <div className="flex-1 space-y-1">
-              <label className="text-sm font-medium">Nome</label>
+            <div className="min-w-0 flex-1 space-y-1">
+              <label htmlFor="plan-name" className="text-sm font-medium">
+                Nome
+              </label>
               <Input
+                id="plan-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Quota Mensal"
               />
             </div>
-            <div className="w-32 space-y-1">
-              <label className="text-sm font-medium">Valor (€)</label>
+            <div className="w-full space-y-1 sm:w-32">
+              <label htmlFor="plan-amount" className="text-sm font-medium">
+                Valor (€)
+              </label>
               <Input
+                id="plan-amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 type="number"
@@ -98,9 +113,12 @@ function MembershipPlansPageContent() {
                 placeholder="10.00"
               />
             </div>
-            <div className="w-40 space-y-1">
-              <label className="text-sm font-medium">Periodicidade</label>
+            <div className="w-full space-y-1 sm:w-40">
+              <label htmlFor="plan-periodicity" className="text-sm font-medium">
+                Periodicidade
+              </label>
               <select
+                id="plan-periodicity"
                 value={periodicity}
                 onChange={(e) => setPeriodicity(e.target.value as Periodicity)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -114,6 +132,7 @@ function MembershipPlansPageContent() {
             </div>
             <Button
               type="submit"
+              className="min-h-11 w-full sm:w-auto"
               disabled={
                 createPlan.isPending || !name.trim() || Number(amount) <= 0
               }
@@ -145,59 +164,92 @@ function MembershipPlansPageContent() {
                 ]}
               />
             ) : (
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/50">
-                  <tr className="text-left">
-                    <th className="p-3 font-medium">Nome</th>
-                    <th className="p-3 font-medium">Valor</th>
-                    <th className="p-3 font-medium">Periodicidade</th>
-                    <th className="p-3 font-medium">Sócios</th>
-                    <th className="p-3 font-medium">Estado</th>
-                    <th className="p-3 font-medium text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className="w-full min-w-[640px] text-sm">
+                    <thead className="border-b bg-muted/50">
+                      <tr className="text-left">
+                        <th className="p-3 font-medium">Nome</th>
+                        <th className="p-3 font-medium">Valor</th>
+                        <th className="p-3 font-medium">Periodicidade</th>
+                        <th className="p-3 font-medium">Sócios</th>
+                        <th className="p-3 font-medium">Estado</th>
+                        <th className="p-3 font-medium text-right">Acções</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoading ? (
+                        <TableBodySkeleton rows={4} cols={6} />
+                      ) : plans && plans.length > 0 ? (
+                        plans.map((p) => (
+                          <tr key={p.id} className="border-b last:border-0">
+                            <td className="p-3 font-medium">{p.name}</td>
+                            <td className="p-3">
+                              {Number(p.amount).toFixed(2)} €
+                            </td>
+                            <td className="p-3">
+                              {PERIODICITY_LABEL[p.periodicity]}
+                            </td>
+                            <td className="p-3">{p._count?.members ?? 0}</td>
+                            <td className="p-3">
+                              <Badge variant={p.active ? "success" : "muted"}>
+                                {p.active ? "Ativo" : "Inativo"}
+                              </Badge>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex justify-end">
+                                <PlanRowActions
+                                  plan={p}
+                                  togglePending={toggleActive.isPending}
+                                  removePending={removePlan.isPending}
+                                  onToggle={() => toggleActive.mutate(p)}
+                                  onRemove={() => setPlanToRemove(p)}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 p-4 sm:hidden">
                   {isLoading ? (
-                    <TableBodySkeleton rows={4} cols={6} />
+                    <MobileCardsSkeleton count={3} />
                   ) : plans && plans.length > 0 ? (
                     plans.map((p) => (
-                      <tr key={p.id} className="border-b last:border-0">
-                        <td className="p-3 font-medium">{p.name}</td>
-                        <td className="p-3">{Number(p.amount).toFixed(2)} €</td>
-                        <td className="p-3">
-                          {PERIODICITY_LABEL[p.periodicity]}
-                        </td>
-                        <td className="p-3">{p._count?.members ?? 0}</td>
-                        <td className="p-3">
+                      <div key={p.id} className="rounded-lg border p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold">{p.name}</p>
+                            <p className="mt-1 text-sm font-medium">
+                              {Number(p.amount).toFixed(2)} €
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {PERIODICITY_LABEL[p.periodicity]} ·{" "}
+                              {p._count?.members ?? 0} sócios
+                            </p>
+                          </div>
                           <Badge variant={p.active ? "success" : "muted"}>
                             {p.active ? "Ativo" : "Inativo"}
                           </Badge>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={toggleActive.isPending}
-                              onClick={() => toggleActive.mutate(p)}
-                            >
-                              {p.active ? "Desativar" : "Ativar"}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={removePlan.isPending}
-                              onClick={() => setPlanToRemove(p)}
-                            >
-                              Remover
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                        </div>
+                        <div className="mt-3">
+                          <PlanRowActions
+                            plan={p}
+                            togglePending={toggleActive.isPending}
+                            removePending={removePlan.isPending}
+                            onToggle={() => toggleActive.mutate(p)}
+                            onRemove={() => setPlanToRemove(p)}
+                            fullWidth
+                          />
+                        </div>
+                      </div>
                     ))
                   ) : null}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -224,5 +276,48 @@ function MembershipPlansPageContent() {
         }}
       />
     </div>
+  );
+}
+
+function PlanRowActions({
+  plan,
+  togglePending,
+  removePending,
+  onToggle,
+  onRemove,
+  fullWidth,
+}: {
+  plan: MembershipPlan;
+  togglePending: boolean;
+  removePending: boolean;
+  onToggle: () => void;
+  onRemove: () => void;
+  fullWidth?: boolean;
+}) {
+  return (
+    <DropdownMenu
+      align="end"
+      className={fullWidth ? "w-full [&>div:first-child]:w-full" : undefined}
+      trigger={
+        <Button
+          variant="outline"
+          size="sm"
+          className={fullWidth ? "min-h-11 w-full" : "min-h-11"}
+          aria-label={`Acções do plano ${plan.name}`}
+        >
+          <MoreHorizontal className="h-4 w-4" aria-hidden />
+          Acções
+        </Button>
+      }
+    >
+      <DropdownMenuLabel>{plan.name}</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem disabled={togglePending} onClick={onToggle}>
+        {plan.active ? "Desativar" : "Ativar"}
+      </DropdownMenuItem>
+      <DropdownMenuItem destructive disabled={removePending} onClick={onRemove}>
+        Remover
+      </DropdownMenuItem>
+    </DropdownMenu>
   );
 }

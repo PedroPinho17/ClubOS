@@ -1,11 +1,15 @@
 "use client";
 
-import { UserPlus } from "lucide-react";
-import { TableBodySkeleton } from "@/components/page-skeletons";
+import { UserPlus, Users } from "lucide-react";
+import {
+  MobileCardsSkeleton,
+  TableBodySkeleton,
+} from "@/components/page-skeletons";
 import { QueryErrorCard } from "@/components/query-error-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import type { StaffRole, StaffUser } from "@/lib/types";
 import { ROLE_BADGE, ROLE_LABEL, SELECT_CLASS } from "./settings-shared";
@@ -50,32 +54,42 @@ export function SettingsStaffSection({
         </p>
 
         <form
-          className="flex flex-wrap items-end gap-3 border-b pb-4"
+          id="invite-staff-form"
+          className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:flex-wrap sm:items-end"
           onSubmit={(e) => {
             e.preventDefault();
             if (inviteName.trim() && inviteEmail.trim()) onInvite();
           }}
         >
-          <div className="min-w-[160px] flex-1 space-y-1">
-            <label className="text-sm font-medium">Nome</label>
+          <div className="min-w-0 flex-1 space-y-1 sm:min-w-[160px]">
+            <label htmlFor="invite-name" className="text-sm font-medium">
+              Nome
+            </label>
             <Input
+              id="invite-name"
               value={inviteName}
               onChange={(e) => setInviteName(e.target.value)}
               placeholder="Nome"
             />
           </div>
-          <div className="min-w-[180px] flex-1 space-y-1">
-            <label className="text-sm font-medium">Email</label>
+          <div className="min-w-0 flex-1 space-y-1 sm:min-w-[180px]">
+            <label htmlFor="invite-email" className="text-sm font-medium">
+              Email
+            </label>
             <Input
+              id="invite-email"
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="email@exemplo.pt"
             />
           </div>
-          <div className="w-44 space-y-1">
-            <label className="text-sm font-medium">Função</label>
+          <div className="w-full space-y-1 sm:w-44">
+            <label htmlFor="invite-role" className="text-sm font-medium">
+              Função
+            </label>
             <select
+              id="invite-role"
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as StaffRole)}
               className={SELECT_CLASS}
@@ -88,53 +102,91 @@ export function SettingsStaffSection({
           </div>
           <Button
             type="submit"
+            className="min-h-11 w-full sm:w-auto"
             disabled={
               invitePending || !inviteName.trim() || !inviteEmail.trim()
             }
           >
-            <UserPlus className="h-4 w-4" />
+            <UserPlus className="h-4 w-4" aria-hidden />
             {invitePending ? "A convidar..." : "Convidar"}
           </Button>
         </form>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="pb-2 font-medium">Nome</th>
-              <th className="pb-2 font-medium">Email</th>
-              <th className="pb-2 font-medium">Função</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staffError ? (
-              <tr>
-                <td colSpan={3} className="py-4">
-                  <QueryErrorCard onRetry={onRetryStaff} />
-                </td>
-              </tr>
-            ) : staffPending && !staff ? (
-              <TableBodySkeleton rows={3} cols={3} />
-            ) : staff && staff.length > 0 ? (
-              staff.map((u) => (
-                <tr key={u.id} className="border-b last:border-0">
-                  <td className="py-3 font-medium">{u.name}</td>
-                  <td className="py-3 text-muted-foreground">{u.email}</td>
-                  <td className="py-3">
-                    <Badge variant={ROLE_BADGE[u.role ?? ""] ?? "secondary"}>
-                      {ROLE_LABEL[u.role ?? ""] ?? u.role ?? "—"}
-                    </Badge>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={3} className="py-4 text-muted-foreground">
-                  Sem utilizadores na equipa.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {staffError ? (
+          <QueryErrorCard onRetry={onRetryStaff} />
+        ) : !staffPending && staff && staff.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="Sem utilizadores na equipa"
+            description="Convide o primeiro administrador ou tesoureiro para ajudar a gerir o clube."
+            actions={[
+              {
+                label: "Convidar membro",
+                onClick: () =>
+                  document
+                    .getElementById("invite-staff-form")
+                    ?.scrollIntoView({ behavior: "smooth" }),
+              },
+            ]}
+          />
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[480px] text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="pb-2 font-medium">Nome</th>
+                    <th className="pb-2 font-medium">Email</th>
+                    <th className="pb-2 font-medium">Função</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffPending && !staff ? (
+                    <TableBodySkeleton rows={3} cols={3} />
+                  ) : staff && staff.length > 0 ? (
+                    staff.map((u) => (
+                      <tr key={u.id} className="border-b last:border-0">
+                        <td className="py-3 font-medium">{u.name}</td>
+                        <td className="py-3 text-muted-foreground">
+                          {u.email}
+                        </td>
+                        <td className="py-3">
+                          <Badge
+                            variant={ROLE_BADGE[u.role ?? ""] ?? "secondary"}
+                          >
+                            {ROLE_LABEL[u.role ?? ""] ?? u.role ?? "—"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-3 sm:hidden">
+              {staffPending && !staff ? (
+                <MobileCardsSkeleton count={3} />
+              ) : staff && staff.length > 0 ? (
+                staff.map((u) => (
+                  <div key={u.id} className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold">{u.name}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {u.email}
+                        </p>
+                      </div>
+                      <Badge variant={ROLE_BADGE[u.role ?? ""] ?? "secondary"}>
+                        {ROLE_LABEL[u.role ?? ""] ?? u.role ?? "—"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              ) : null}
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
