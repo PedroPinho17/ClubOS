@@ -9,6 +9,7 @@ import { CardsPreviewPanel } from "@/components/cards/cards-preview-panel";
 import { CardsSettingsForm } from "@/components/cards/cards-settings-form";
 import { captureCardImage, CARD_MM } from "@/components/cards/cards-shared";
 import { RoleGate } from "@/components/role-gate";
+import { RoleGateSkeleton } from "@/components/page-skeletons";
 import { useCardsMutations } from "@/hooks/use-cards-mutations";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { useMembersPicker } from "@/hooks/use-members-picker";
@@ -26,11 +27,7 @@ const MemberCard = dynamic(
 export default function CardsPage() {
   return (
     <RoleGate roles={["imperador", "administrador"]}>
-      <Suspense
-        fallback={
-          <p className="text-sm text-muted-foreground">A carregar cartões...</p>
-        }
-      >
+      <Suspense fallback={<RoleGateSkeleton />}>
         <CardsPageContent />
       </Suspense>
     </RoleGate>

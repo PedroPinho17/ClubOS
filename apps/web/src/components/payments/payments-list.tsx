@@ -1,6 +1,10 @@
 "use client";
 
 import { CreditCard, FileText } from "lucide-react";
+import {
+  MobileCardsSkeleton,
+  TableBodySkeleton,
+} from "@/components/page-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,14 +54,7 @@ export function PaymentsList({ payments, isLoading }: PaymentsListProps) {
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="p-6 text-center text-muted-foreground"
-                      >
-                        A carregar...
-                      </td>
-                    </tr>
+                    <TableBodySkeleton rows={6} cols={7} />
                   ) : payments && payments.length > 0 ? (
                     payments.map((p) => (
                       <tr key={p.id} className="border-b last:border-0">
@@ -80,11 +77,13 @@ export function PaymentsList({ payments, isLoading }: PaymentsListProps) {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="min-h-11"
+                              aria-label={`Abrir comprovativo PDF de ${p.member.name}`}
                               onClick={() =>
                                 void safeOpenBlob(`/payments/${p.id}/receipt`)
                               }
                             >
-                              <FileText className="h-4 w-4" />
+                              <FileText className="h-4 w-4" aria-hidden />
                               PDF
                             </Button>
                           </div>
@@ -98,9 +97,7 @@ export function PaymentsList({ payments, isLoading }: PaymentsListProps) {
 
             <div className="space-y-3 p-4 sm:hidden">
               {isLoading ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  A carregar...
-                </p>
+                <MobileCardsSkeleton count={4} />
               ) : payments && payments.length > 0 ? (
                 payments.map((p) => (
                   <div key={p.id} className="rounded-lg border p-4">
@@ -117,6 +114,7 @@ export function PaymentsList({ payments, isLoading }: PaymentsListProps) {
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {METHOD_LABEL[p.method]}
+                          {p.quotaPlan?.name ? ` · ${p.quotaPlan.name}` : ""}
                         </p>
                       </div>
                       <Badge variant={STATUS_BADGE[p.status].variant}>
@@ -127,11 +125,12 @@ export function PaymentsList({ payments, isLoading }: PaymentsListProps) {
                       className="mt-3 w-full min-h-11"
                       variant="outline"
                       size="sm"
+                      aria-label={`Abrir comprovativo PDF de ${p.member.name}`}
                       onClick={() =>
                         void safeOpenBlob(`/payments/${p.id}/receipt`)
                       }
                     >
-                      <FileText className="h-4 w-4" />
+                      <FileText className="h-4 w-4" aria-hidden />
                       PDF
                     </Button>
                   </div>
