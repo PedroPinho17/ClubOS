@@ -247,6 +247,7 @@ function DashboardPageContent() {
                   icon={CreditCard}
                   title="Sem pagamentos registados"
                   description="Quando registar quotas, os últimos pagamentos aparecem aqui."
+                  compact
                   actions={[
                     {
                       label: "Registar pagamento",

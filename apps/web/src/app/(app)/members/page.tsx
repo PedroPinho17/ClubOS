@@ -161,36 +161,60 @@ function MembersPageContent() {
                   },
                 );
               }}
-              className="flex flex-wrap items-end gap-3"
+              className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
             >
-              <div className="flex-1 space-y-1">
-                <label className="text-sm font-medium">Nome</label>
+              <div className="min-w-0 flex-1 space-y-1">
+                <label
+                  htmlFor="create-member-name"
+                  className="text-sm font-medium"
+                >
+                  Nome
+                </label>
                 <Input
+                  id="create-member-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nome do sócio"
                 />
               </div>
-              <div className="flex-1 space-y-1">
-                <label className="text-sm font-medium">Email</label>
+              <div className="min-w-0 flex-1 space-y-1">
+                <label
+                  htmlFor="create-member-email"
+                  className="text-sm font-medium"
+                >
+                  Email
+                </label>
                 <Input
+                  id="create-member-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="email@exemplo.pt"
                 />
               </div>
-              <div className="w-44 space-y-1">
-                <label className="text-sm font-medium">Data de adesão</label>
+              <div className="w-full space-y-1 sm:w-44">
+                <label
+                  htmlFor="create-member-joined"
+                  className="text-sm font-medium"
+                >
+                  Data de adesão
+                </label>
                 <Input
+                  id="create-member-joined"
                   type="date"
                   value={joinedAt}
                   onChange={(e) => setJoinedAt(e.target.value)}
                   required
                 />
               </div>
-              <div className="w-44 space-y-1">
-                <label className="text-sm font-medium">Plano</label>
+              <div className="w-full space-y-1 sm:w-44">
+                <label
+                  htmlFor="create-member-plan"
+                  className="text-sm font-medium"
+                >
+                  Plano
+                </label>
                 <select
+                  id="create-member-plan"
                   value={quotaPlanId}
                   onChange={(e) => setQuotaPlanId(e.target.value)}
                   className={SELECT_CLASS}
@@ -207,9 +231,10 @@ function MembersPageContent() {
               </div>
               <Button
                 type="submit"
+                className="min-h-11 w-full sm:w-auto"
                 disabled={createMember.isPending || !name.trim()}
               >
-                <UserPlus className="h-4 w-4" />
+                <UserPlus className="h-4 w-4" aria-hidden />
                 {createMember.isPending ? "A criar..." : "Adicionar sócio"}
               </Button>
             </form>

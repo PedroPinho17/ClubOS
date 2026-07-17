@@ -131,7 +131,10 @@ function AuditPageContent() {
                 </div>
 
                 {/* Mobile: cards */}
-                <div className="space-y-3 p-4 sm:hidden">
+                <div
+                  className="space-y-3 p-4 sm:hidden"
+                  aria-busy={isPending && !data}
+                >
                   {isPending && !data ? (
                     <MobileCardsSkeleton count={5} />
                   ) : data && data.length > 0 ? (

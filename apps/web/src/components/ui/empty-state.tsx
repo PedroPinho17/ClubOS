@@ -15,6 +15,8 @@ interface EmptyStateProps {
   title: string;
   description?: string;
   actions?: EmptyStateAction[];
+  /** Menos padding — útil dentro de cartões (ex.: dashboard). */
+  compact?: boolean;
 }
 
 export function EmptyState({
@@ -22,23 +24,45 @@ export function EmptyState({
   title,
   description,
   actions,
+  compact = false,
 }: EmptyStateProps) {
   return (
     <div
       role="status"
-      className="flex flex-col items-center justify-center px-4 py-12 text-center"
+      className={cn(
+        "flex flex-col items-center justify-center px-4 text-center",
+        compact ? "py-6" : "py-12",
+      )}
     >
-      <div className="mb-4 rounded-full bg-muted p-3">
-        <Icon className="h-8 w-8 text-muted-foreground" aria-hidden />
+      <div
+        className={cn(
+          "mb-4 rounded-full bg-muted p-3",
+          compact && "mb-3 p-2.5",
+        )}
+      >
+        <Icon
+          className={cn(
+            "text-muted-foreground",
+            compact ? "h-6 w-6" : "h-8 w-8",
+          )}
+          aria-hidden
+        />
       </div>
-      <h3 className="text-lg font-semibold">{title}</h3>
+      <h3 className={cn("font-semibold", compact ? "text-base" : "text-lg")}>
+        {title}
+      </h3>
       {description && (
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
           {description}
         </p>
       )}
       {actions && actions.length > 0 && (
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-center gap-2",
+            compact ? "mt-4" : "mt-6",
+          )}
+        >
           {actions.map((action) => {
             if (action.href) {
               return (
