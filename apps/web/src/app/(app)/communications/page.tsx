@@ -33,6 +33,7 @@ function CommunicationsPageContent() {
   const [planId, setPlanId] = useState("");
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [whatsappLinks, setWhatsappLinks] = useState<WhatsappLink[]>([]);
+  const [whatsappGenerated, setWhatsappGenerated] = useState(false);
   const [emailPreviewHtml, setEmailPreviewHtml] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -86,6 +87,7 @@ function CommunicationsPageContent() {
     }, 300);
 
     setWhatsappLinks([]);
+    setWhatsappGenerated(false);
     setEmailPreviewHtml(null);
     return () => window.clearTimeout(timer);
   }, [audience, planId, channel]);
@@ -144,13 +146,19 @@ function CommunicationsPageContent() {
         onGenerateWhatsapp={() =>
           generateWhatsapp.mutate(
             { body, audience, planId },
-            { onSuccess: (res) => setWhatsappLinks(res.links) },
+            {
+              onSuccess: (res) => {
+                setWhatsappLinks(res.links);
+                setWhatsappGenerated(true);
+              },
+            },
           )
         }
         showPreview={showPreview}
         setShowPreview={setShowPreview}
         emailPreviewHtml={emailPreviewHtml}
         whatsappLinks={whatsappLinks}
+        whatsappGenerated={whatsappGenerated}
       />
 
       <CommunicationsHistoryList

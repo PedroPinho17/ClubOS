@@ -113,9 +113,10 @@ export function SettingsStaffSection({
         </form>
 
         {staffError ? (
-          <QueryErrorCard onRetry={onRetryStaff} />
+          <QueryErrorCard embedded onRetry={onRetryStaff} />
         ) : !staffPending && staff && staff.length === 0 ? (
           <EmptyState
+            compact
             icon={Users}
             title="Sem utilizadores na equipa"
             description="Convide o primeiro administrador ou tesoureiro para ajudar a gerir o clube."

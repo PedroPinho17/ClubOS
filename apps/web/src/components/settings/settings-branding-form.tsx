@@ -50,7 +50,7 @@ export function SettingsBrandingForm({
       <CardContent className="space-y-4 pt-6">
         <h2 className="font-semibold">Organização</h2>
         {orgError ? (
-          <QueryErrorCard onRetry={onRetryOrg} />
+          <QueryErrorCard embedded onRetry={onRetryOrg} />
         ) : !orgReady ? (
           <SettingsOrgSkeleton />
         ) : (

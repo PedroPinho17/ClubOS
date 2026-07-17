@@ -54,6 +54,7 @@ export function useCommunicationsMutations() {
       queryClient.invalidateQueries({ queryKey: ["communications"] });
       toast.success("Email enviado");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const generateWhatsapp = useMutation({

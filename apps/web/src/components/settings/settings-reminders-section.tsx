@@ -41,7 +41,7 @@ export function SettingsRemindersSection({
           <code className="text-xs">REMINDERS_ENABLED=true</code> no servidor.
         </p>
         {orgSettingsError ? (
-          <QueryErrorCard onRetry={onRetryOrgSettings} />
+          <QueryErrorCard embedded onRetry={onRetryOrgSettings} />
         ) : orgSettingsPending && !orgSettingsReady ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <Skeleton className="h-10" />

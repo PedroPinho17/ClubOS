@@ -387,6 +387,8 @@ Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
 | `REMINDERS_ENABLED`                      | Lembretes automaticos                              |
 | `RATE_LIMIT_AUTH_PER_MIN`                | Limite pedidos/min em `/api/auth` (default 15)     |
 | `RATE_LIMIT_VALIDATE_PER_MIN`            | Limite pedidos/min em `/api/validate` (default 60) |
+| `RATE_LIMIT_STORE`                       | `redis` (prod) ou `memory` (local/E2E)             |
+| `TRUST_PROXY`                            | Confiar no proxy para IP (`true` por omissão)      |
 
 ---
 

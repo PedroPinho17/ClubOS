@@ -186,6 +186,8 @@ Páginas com `RoleGate`:
 | `/api/auth/*`     | `RATE_LIMIT_AUTH_PER_MIN`     | 15      |
 | `/api/validate/*` | `RATE_LIMIT_VALIDATE_PER_MIN` | 60      |
 
+Em produção os contadores vivem no **Redis** (`RATE_LIMIT_STORE=redis`, chaves `clubos:rl:auth:` / `clubos:rl:validate:`), para limites correctos com várias réplicas. `RATE_LIMIT_STORE=memory` força store local (útil em E2E). Com proxy reverso, `TRUST_PROXY=true` (default) faz o Express usar o IP do cliente.
+
 ## Variáveis de ambiente
 
 | Variável              | Uso                                |
@@ -211,7 +213,11 @@ Páginas com `RoleGate`:
 - `test/e2e/rbac-isolation.e2e-spec.ts` — sócio vs staff, isolamento entre orgs, roles por org, imperador cross-org
 - `test/e2e/organization-context.e2e-spec.ts` — guard de tenant
 - `test/e2e/protected-routes.e2e-spec.ts` — rotas autenticadas
+- `test/e2e/auth-rate-limit.e2e-spec.ts` — HTTP 429 em `/api/auth`
 - `src/common/organization-context.service.spec.ts` — resolução de org (unit)
+- `src/common/rate-limit.spec.ts` — parsing env, trust proxy, mount dos limiters (unit)
+- `src/common/qr-signature.spec.ts` — HMAC dos QR públicos (unit)
+- `src/modules/qr-validation/validation.service.spec.ts` — validação pública (unit)
 - `src/core/users/users.service.spec.ts` — regras de convite (unit)
 - `apps/web/src/lib/nav.test.ts`, `permissions.test.ts`, `effective-role-client.test.ts` — frontend (unit)
 - `apps/web/e2e/rbac.spec.ts` — tesoureiro no UI

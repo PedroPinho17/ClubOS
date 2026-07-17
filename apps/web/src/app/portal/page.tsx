@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, UserX, WifiOff } from "lucide-react";
+import { FileText, Receipt, UserX, WifiOff } from "lucide-react";
 import { MemberCard } from "@/components/cards/member-card";
+import { QueryErrorCard } from "@/components/query-error-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { InlineAlert } from "@/components/ui/inline-alert";
 import { PortalPageSkeleton } from "@/components/page-skeletons";
 import { usePortalCardWidth } from "@/hooks/use-portal-card-width";
 import { api } from "@/lib/api";
@@ -49,7 +51,7 @@ export default function PortalPage() {
     setCached(enrichPortalMeCache(readPortalCache<PortalMe>()) ?? null);
   }, []);
 
-  const { data, isLoading, isError, isFetched } = useQuery<PortalMe>({
+  const { data, isLoading, isError, isFetched, refetch } = useQuery<PortalMe>({
     queryKey: [...PORTAL_ME_QUERY_KEY],
     queryFn: () => api.get<PortalMe>("/portal/me"),
     retry: 1,
@@ -72,10 +74,10 @@ export default function PortalPage() {
       return (
         <Card>
           <CardContent>
-            <EmptyState
-              icon={WifiOff}
-              title="Não foi possível carregar os dados"
-              description="Verifique a ligação à internet e tente novamente dentro de momentos."
+            <QueryErrorCard
+              embedded
+              message="Não foi possível carregar os dados. Verifique a ligação à internet e tente novamente."
+              onRetry={() => void refetch()}
             />
           </CardContent>
         </Card>
@@ -96,15 +98,15 @@ export default function PortalPage() {
   }
 
   const q = QUOTA_BADGE[display.quotaSituation.status];
+  const paymentsEmpty = display.payments.length === 0;
 
   return (
     <div className="space-y-5">
       {offline && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-          <WifiOff className="h-4 w-4 shrink-0" />
+        <InlineAlert variant="warning" icon={WifiOff} role="status">
           Sem ligação — a mostrar dados guardados. Ligue-se à internet para
           atualizar.
-        </div>
+        </InlineAlert>
       )}
 
       <Card>
@@ -164,116 +166,110 @@ export default function PortalPage() {
             Os meus pagamentos
           </h2>
 
-          {/* Desktop: tabela */}
-          <div className="hidden sm:block">
-            <table className="w-full text-sm">
-              <thead className="border-b bg-muted/50">
-                <tr className="text-left">
-                  <th className="p-3">Data</th>
-                  <th className="p-3">Valor</th>
-                  <th className="p-3">Método</th>
-                  <th className="p-3">Estado</th>
-                  <th className="p-3 text-right">Recibo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {display.payments.length > 0 ? (
-                  display.payments.map((p) => (
-                    <tr key={p.id} className="border-b last:border-0">
-                      <td className="p-3">
-                        {new Date(p.paidAt ?? p.createdAt).toLocaleDateString(
-                          "pt-PT",
-                        )}
-                      </td>
-                      <td className="p-3">{p.amount} €</td>
-                      <td className="p-3">
-                        {PAYMENT_METHOD_LABEL[p.method] ?? p.method}
-                      </td>
-                      <td className="p-3">
-                        {p.status === "PAID" ? "Pago" : p.status}
-                      </td>
-                      <td className="p-3 text-right">
-                        {p.status === "PAID" ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="min-h-11"
-                            disabled={offline}
-                            onClick={() =>
-                              void safeOpenBlob(
-                                `/portal/payments/${p.id}/receipt`,
-                              )
-                            }
-                          >
-                            <FileText className="h-4 w-4" />
-                            PDF
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </td>
+          {paymentsEmpty ? (
+            <EmptyState
+              compact
+              icon={Receipt}
+              title="Sem pagamentos registados"
+              description="Quando efectuar um pagamento no clube, o recibo aparecerá aqui."
+            />
+          ) : (
+            <>
+              {/* Desktop: tabela */}
+              <div className="hidden sm:block">
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-muted/50">
+                    <tr className="text-left">
+                      <th className="p-3">Data</th>
+                      <th className="p-3">Valor</th>
+                      <th className="p-3">Método</th>
+                      <th className="p-3">Estado</th>
+                      <th className="p-3 text-right">Recibo</th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="p-6 text-center text-muted-foreground"
-                    >
-                      Sem pagamentos registados.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {display.payments.map((p) => (
+                      <tr key={p.id} className="border-b last:border-0">
+                        <td className="p-3">
+                          {new Date(p.paidAt ?? p.createdAt).toLocaleDateString(
+                            "pt-PT",
+                          )}
+                        </td>
+                        <td className="p-3">{p.amount} €</td>
+                        <td className="p-3">
+                          {PAYMENT_METHOD_LABEL[p.method] ?? p.method}
+                        </td>
+                        <td className="p-3">
+                          {p.status === "PAID" ? "Pago" : p.status}
+                        </td>
+                        <td className="p-3 text-right">
+                          {p.status === "PAID" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="min-h-11"
+                              disabled={offline}
+                              onClick={() =>
+                                void safeOpenBlob(
+                                  `/portal/payments/${p.id}/receipt`,
+                                )
+                              }
+                            >
+                              <FileText className="h-4 w-4" />
+                              PDF
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-          {/* Mobile: cards */}
-          <div className="space-y-3 p-4 sm:hidden">
-            {display.payments.length > 0 ? (
-              display.payments.map((p) => (
-                <div key={p.id} className="rounded-lg border p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold">{p.amount} €</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(p.paidAt ?? p.createdAt).toLocaleDateString(
-                          "pt-PT",
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {PAYMENT_METHOD_LABEL[p.method] ?? p.method}
-                      </p>
+              {/* Mobile: cards */}
+              <div className="space-y-3 p-4 sm:hidden">
+                {display.payments.map((p) => (
+                  <div key={p.id} className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">{p.amount} €</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(p.paidAt ?? p.createdAt).toLocaleDateString(
+                            "pt-PT",
+                          )}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {PAYMENT_METHOD_LABEL[p.method] ?? p.method}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={p.status === "PAID" ? "success" : "secondary"}
+                      >
+                        {p.status === "PAID" ? "Pago" : p.status}
+                      </Badge>
                     </div>
-                    <Badge
-                      variant={p.status === "PAID" ? "success" : "secondary"}
-                    >
-                      {p.status === "PAID" ? "Pago" : p.status}
-                    </Badge>
+                    {p.status === "PAID" && (
+                      <Button
+                        className="mt-3 w-full min-h-11"
+                        variant="outline"
+                        disabled={offline}
+                        onClick={() =>
+                          void safeOpenBlob(`/portal/payments/${p.id}/receipt`)
+                        }
+                      >
+                        <FileText className="h-4 w-4" />
+                        Descarregar recibo
+                      </Button>
+                    )}
                   </div>
-                  {p.status === "PAID" && (
-                    <Button
-                      className="mt-3 w-full min-h-11"
-                      variant="outline"
-                      disabled={offline}
-                      onClick={() =>
-                        void safeOpenBlob(`/portal/payments/${p.id}/receipt`)
-                      }
-                    >
-                      <FileText className="h-4 w-4" />
-                      Descarregar recibo
-                    </Button>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-sm text-muted-foreground">
-                Sem pagamentos registados.
-              </p>
-            )}
-          </div>
+                ))}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

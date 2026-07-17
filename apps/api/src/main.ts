@@ -2,11 +2,14 @@ import "reflect-metadata";
 import "./env";
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import rateLimit from "express-rate-limit";
+import type { Redis } from "ioredis";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { SentryExceptionFilter } from "./common/filters/sentry-exception.filter";
+import { applyApiRateLimits, configureTrustProxy } from "./common/rate-limit";
+import { REDIS_CLIENT } from "./redis/redis.constants";
 import { initSentry } from "./sentry";
 
 async function bootstrap() {
@@ -15,30 +18,27 @@ async function bootstrap() {
   // bodyParser desativado: o Better Auth precisa do corpo cru; a lib
   // @thallesp/nestjs-better-auth volta a adicionar os parsers para as
   // restantes rotas.
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  });
 
+  configureTrustProxy(app);
   app.use(helmet());
 
-  const authLimiter = rateLimit({
-    windowMs: 60_000,
-    max: Number(process.env.RATE_LIMIT_AUTH_PER_MIN ?? 15),
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      message: "Demasiados pedidos de autenticacao. Tente novamente em breve.",
-    },
+  let redis: Redis | null = null;
+  try {
+    const client = app.get<Redis>(REDIS_CLIENT);
+    await client.ping();
+    redis = client;
+  } catch {
+    redis = null;
+  }
+
+  // Producao: Redis partilha contadores entre replicas. Fallback memoria se Redis falhar.
+  applyApiRateLimits(app, {
+    redis,
+    store: process.env.RATE_LIMIT_STORE === "memory" ? "memory" : "redis",
   });
-  const validateLimiter = rateLimit({
-    windowMs: 60_000,
-    max: Number(process.env.RATE_LIMIT_VALIDATE_PER_MIN ?? 60),
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      message: "Demasiados pedidos de validacao. Tente novamente em breve.",
-    },
-  });
-  app.use("/api/auth", authLimiter);
-  app.use("/api/validate", validateLimiter);
 
   app.enableCors({
     origin: (process.env.WEB_ORIGIN ?? "http://localhost:3000")

@@ -1,8 +1,9 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
@@ -39,6 +40,8 @@ type CommunicationsComposeFormProps = {
   setShowPreview: (v: boolean) => void;
   emailPreviewHtml: string | null;
   whatsappLinks: WhatsappLink[];
+  /** True após gerar links com sucesso (mesmo que a lista fique vazia). */
+  whatsappGenerated: boolean;
 };
 
 export function CommunicationsComposeForm({
@@ -64,6 +67,7 @@ export function CommunicationsComposeForm({
   setShowPreview,
   emailPreviewHtml,
   whatsappLinks,
+  whatsappGenerated,
 }: CommunicationsComposeFormProps) {
   return (
     <Card id="compose-communication-form" className="mb-6">
@@ -210,34 +214,45 @@ export function CommunicationsComposeForm({
           </div>
         )}
 
-        {whatsappLinks.length > 0 && (
-          <div className="space-y-2 border-t pt-4">
-            <p className="text-sm font-medium">
-              {whatsappLinks.length} link(s) — clique para abrir no WhatsApp
-            </p>
-            <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
-              {whatsappLinks.map((link) => (
-                <li
-                  key={`${link.phone}-${link.name}`}
-                  className="flex items-center justify-between gap-2 rounded border p-2"
-                >
-                  <span>
-                    {link.name}{" "}
-                    <span className="text-muted-foreground">
-                      ({link.phone})
-                    </span>
-                  </span>
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-green-700 hover:underline dark:text-green-400"
-                  >
-                    Abrir <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </li>
-              ))}
-            </ul>
+        {channel === "whatsapp" && whatsappGenerated && (
+          <div className="border-t pt-4">
+            {whatsappLinks.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">
+                  {whatsappLinks.length} link(s) — clique para abrir no WhatsApp
+                </p>
+                <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
+                  {whatsappLinks.map((link) => (
+                    <li
+                      key={`${link.phone}-${link.name}`}
+                      className="flex items-center justify-between gap-2 rounded border p-2"
+                    >
+                      <span>
+                        {link.name}{" "}
+                        <span className="text-muted-foreground">
+                          ({link.phone})
+                        </span>
+                      </span>
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-11 items-center gap-1 text-green-700 hover:underline dark:text-green-400"
+                      >
+                        Abrir <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <EmptyState
+                compact
+                icon={MessageCircle}
+                title="Sem links WhatsApp"
+                description="Nenhum sócio desta audiência tem telemóvel válido. Ajuste a audiência ou atualize os contactos."
+              />
+            )}
           </div>
         )}
       </CardContent>

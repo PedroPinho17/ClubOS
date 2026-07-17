@@ -30,7 +30,7 @@ export function CommunicationsHistoryList({
       <CardContent className="pt-6">
         <h2 className="mb-4 font-semibold">Histórico (email)</h2>
         {listError ? (
-          <QueryErrorCard onRetry={onRetryList} />
+          <QueryErrorCard embedded onRetry={onRetryList} />
         ) : listLoading ? (
           <>
             <div className="hidden overflow-x-auto sm:block">
@@ -132,6 +132,7 @@ export function CommunicationsHistoryList({
           </>
         ) : (
           <EmptyState
+            compact
             icon={Mail}
             title="Sem histórico de envios"
             description="Envie o primeiro email aos sócios usando o formulário acima."

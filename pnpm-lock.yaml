@@ -97,6 +97,9 @@ importers:
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
+      rate-limit-redis:
+        specifier: ^4.3.1
+        version: 4.3.1(express-rate-limit@8.5.2(express@5.2.1))
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -7350,6 +7353,15 @@ packages:
       }
     engines: { node: ">= 0.6" }
 
+  rate-limit-redis@4.3.1:
+    resolution:
+      {
+        integrity: sha512-+a1zU8+D7L8siDK9jb14refQXz60vq427VuiplgnaLk9B2LnvGe/APLTfhwb4uNIL7eWVknh8GnRp/unCj+lMA==,
+      }
+    engines: { node: ">= 16" }
+    peerDependencies:
+      express-rate-limit: ">= 6"
+
   raw-body@3.0.2:
     resolution:
       {
@@ -13489,6 +13501,10 @@ snapshots:
     optional: true
 
   range-parser@1.3.0: {}
+
+  rate-limit-redis@4.3.1(express-rate-limit@8.5.2(express@5.2.1)):
+    dependencies:
+      express-rate-limit: 8.5.2(express@5.2.1)
 
   raw-body@3.0.2:
     dependencies:

@@ -57,7 +57,7 @@ export function CardsSettingsForm({
       <Card>
         <CardContent className="space-y-4 pt-6">
           {settingsError ? (
-            <QueryErrorCard onRetry={onRetrySettings} />
+            <QueryErrorCard embedded onRetry={onRetrySettings} />
           ) : !settingsReady ? (
             <div className="space-y-4">
               <Skeleton className="h-5 w-32" />
