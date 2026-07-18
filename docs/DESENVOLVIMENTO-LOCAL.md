@@ -97,9 +97,11 @@ pnpm --filter @clubos/api seed:users
 pnpm db:backup
 # -> backups/clubos-YYYYMMDD-HHMMSS.dump
 
-# Restore (substitui dados da BD clubos)
-pnpm db:restore -- backups/clubos-20260708-120000.dump
+# Restore (substitui dados da BD alvo dos scripts — ver nota no runbook)
+pnpm db:restore -- backups/clubos-20260718-192554.dump
 ```
+
+Prova de restore (data + passos): [RUNBOOK-OPS §8](RUNBOOK-OPS.md#8-prova-de-restore-manutenção).
 
 ---
 

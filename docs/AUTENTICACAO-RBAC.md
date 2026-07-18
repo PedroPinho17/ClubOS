@@ -1,6 +1,6 @@
 # Autenticação e RBAC
 
-Decisões: [ADR 001 — Better Auth](adr/001-better-auth.md) · [ADR 002 — Papel efectivo](adr/002-effective-role-por-org.md)
+Decisões: [ADR 001 — Better Auth](adr/001-better-auth.md) · [ADR 002 — Papel efectivo](adr/002-effective-role-por-org.md) · [ADR 003 — Rate limit Redis](adr/003-rate-limit-redis.md)
 
 ## Better Auth
 
@@ -14,6 +14,18 @@ Configuração única: `apps/api/src/auth/auth.ts`
 | Roles (admin plugin)   | ✅                                            |
 | OAuth Google/GitHub    | Preparado (env vazio)                         |
 
+### Reset de password
+
+```
+1. Utilizador em /recuperar-password → authClient.requestPasswordReset()
+2. Better Auth gera token + URL → sendResetPassword
+3. MailService envia template password-reset (SMTP; sem SMTP_HOST = só log)
+4. Link abre /reset-password?token=… → nova password
+5. onPasswordReset limpa mustChangePassword no User
+```
+
+Requer `WEB_ORIGIN` correcto nos emails (links absolutos). Em produção: SMTP preenchido + `BETTER_AUTH_URL` público.
+
 ### Roles da plataforma
 
 | Role            | Acesso                                                                  |
@@ -23,8 +35,8 @@ Configuração única: `apps/api/src/auth/auth.ts`
 | `tesoureiro`    | Pagamentos, relatórios (sem settings sensíveis)                         |
 | `socio`         | Portal apenas                                                           |
 
-Constantes: `apps/api/src/common/roles.ts`  
-Staff no frontend: `apps/web/src/lib/staff-roles.ts` (`STAFF_ROLES`, `isStaffRole`)
+**Fonte única:** `@clubos/shared` (`STAFF_ROLES`, `ADMIN_ROLES`, `isStaffRole`, …).  
+Re-exports: `apps/api/src/common/roles.ts`, `apps/web/src/lib/staff-roles.ts` (não duplicar arrays).
 
 ## Fluxo de login (Web)
 
@@ -186,18 +198,24 @@ Páginas com `RoleGate`:
 | `/api/auth/*`     | `RATE_LIMIT_AUTH_PER_MIN`     | 15      |
 | `/api/validate/*` | `RATE_LIMIT_VALIDATE_PER_MIN` | 60      |
 
-Em produção os contadores vivem no **Redis** (`RATE_LIMIT_STORE=redis`, chaves `clubos:rl:auth:` / `clubos:rl:validate:`), para limites correctos com várias réplicas. `RATE_LIMIT_STORE=memory` força store local (útil em E2E). Com proxy reverso, `TRUST_PROXY=true` (default) faz o Express usar o IP do cliente.
+Em produção os contadores vivem no **Redis** (`RATE_LIMIT_STORE=redis`, chaves `clubos:rl:auth:` / `clubos:rl:validate:`), para limites correctos com várias réplicas. `RATE_LIMIT_STORE=memory` força store local (útil em E2E). Com proxy reverso, `TRUST_PROXY=true` (default) + `TRUST_PROXY_HOPS` (default `1`) faz o Express usar o IP do cliente — sem isto o limite conta o IP do proxy. Decisão: [ADR 003](adr/003-rate-limit-redis.md).
 
 ## Variáveis de ambiente
 
-| Variável              | Uso                                |
-| --------------------- | ---------------------------------- |
-| `BETTER_AUTH_SECRET`  | Assinatura de sessão               |
-| `BETTER_AUTH_URL`     | URL pública da API                 |
-| `WEB_ORIGIN`          | CORS + passkey origin              |
-| `PASSKEY_RP_ID`       | WebAuthn RP ID (ex.: `localhost`)  |
-| `NEXT_PUBLIC_API_URL` | URL da API no browser              |
-| `SEED_DEMO_PASSWORD`  | Password dos utilizadores demo/E2E |
+| Variável                      | Uso                                              |
+| ----------------------------- | ------------------------------------------------ |
+| `BETTER_AUTH_SECRET`          | Assinatura de sessão                             |
+| `BETTER_AUTH_URL`             | URL pública da API                               |
+| `WEB_ORIGIN`                  | CORS + passkey origin + links em emails          |
+| `PASSKEY_RP_ID`               | WebAuthn RP ID (ex.: `localhost`)                |
+| `NEXT_PUBLIC_API_URL`         | URL da API no browser                            |
+| `SMTP_*` / `MAIL_FROM`        | Email real (reset password, convites, lembretes) |
+| `RATE_LIMIT_STORE`            | `redis` (prod) ou `memory` (E2E)                 |
+| `RATE_LIMIT_AUTH_PER_MIN`     | Limite `/api/auth` (default 15)                  |
+| `RATE_LIMIT_VALIDATE_PER_MIN` | Limite `/api/validate` (default 60)              |
+| `TRUST_PROXY`                 | Confiar no proxy para IP (`true` por omissão)    |
+| `TRUST_PROXY_HOPS`            | Hops de proxy (default 1)                        |
+| `SEED_DEMO_PASSWORD`          | Password dos utilizadores demo/E2E (só local)    |
 
 ### Utilizadores demo (seed)
 

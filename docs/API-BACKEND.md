@@ -10,14 +10,16 @@ Base URL em desenvolvimento: `http://localhost:4000/api`
 ```
 apps/api/src/
 ├── auth/           # Instância Better Auth (fonte única)
-├── common/         # Guards, decorators, org context, roles
-├── core/           # Plataforma (orgs, users, audit, health, me)
+├── common/         # Guards, decorators, org context, roles, rate-limit
+├── core/           # Plataforma (orgs, users, audit, health, me, mail)
 ├── modules/        # Negócio activável (members, payments, …)
 ├── prisma/         # PrismaModule (inject PrismaService)
-├── redis/          # Cliente Redis
+├── redis/          # Cliente Redis (filas + rate limit)
 ├── storage/        # S3/MinIO
-└── main.ts         # Entry point
+└── main.ts         # Entry point (CORS, trust proxy, rate limit)
 ```
+
+Contratos partilhados com o web: pacote `@clubos/shared` (`packages/shared` — roles, `PaginatedResult`, tipos de domínio). A API re-exporta roles em `common/roles.ts`.
 
 ## Core
 
@@ -150,6 +152,31 @@ Rotas em `/api/auth/*` — não são controllers NestJS.
 
 Configuração: `apps/api/src/auth/auth.ts`
 
+| Fluxo             | Detalhe                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| Sign-in / sign-up | Email + password; cookie de sessão no domínio da API                                         |
+| Reset password    | `sendResetPassword` → `MailService` / SMTP; UI web `/recuperar-password` → `/reset-password` |
+| Passkey           | Plugin WebAuthn (`PASSKEY_RP_ID`)                                                            |
+
+Sem `SMTP_HOST`, o reset regista o email no log (modo dev) — em produção SMTP é obrigatório.
+
+## Rate limiting e trust proxy
+
+Montados em `main.ts` via `common/rate-limit.ts` (ADR: [003](adr/003-rate-limit-redis.md)).
+
+| Rota              | Env                           | Default | Store (prod)                |
+| ----------------- | ----------------------------- | ------- | --------------------------- |
+| `/api/auth/*`     | `RATE_LIMIT_AUTH_PER_MIN`     | 15      | Redis `clubos:rl:auth:`     |
+| `/api/validate/*` | `RATE_LIMIT_VALIDATE_PER_MIN` | 60      | Redis `clubos:rl:validate:` |
+
+| Env                | Uso                                                             |
+| ------------------ | --------------------------------------------------------------- |
+| `RATE_LIMIT_STORE` | `redis` (default prod) ou `memory` (E2E / single-process)       |
+| `TRUST_PROXY`      | `true` por omissão — Express confia no proxy para IP do cliente |
+| `TRUST_PROXY_HOPS` | Nº de hops a confiar (default `1`)                              |
+
+Sem Redis disponível e store preferido `redis`, a API faz fallback para memória e regista warn no log.
+
 ## Infra partilhada (`common/`)
 
 | Ficheiro                          | Função                                     |
@@ -160,7 +187,9 @@ Configuração: `apps/api/src/auth/auth.ts`
 | `decorators.ts`                   | `@OrgId`, `@CurrentUser`, `@RequireModule` |
 | `decorators/no-org-context.ts`    | `@NoOrgContext()`                          |
 | `decorators/roles-shortcuts.ts`   | `@StaffOnly`, `@AdminOnly`, …              |
-| `roles.ts`                        | Constantes `STAFF_ROLES`, `ADMIN_ROLES`, … |
+| `roles.ts`                        | Re-export de `@clubos/shared`              |
+| `rate-limit.ts`                   | Limiters + `configureTrustProxy`           |
+| `effective-role.ts`               | Resolução do papel efectivo por org        |
 
 ## Testes
 

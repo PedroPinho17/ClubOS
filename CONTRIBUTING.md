@@ -20,7 +20,7 @@ pnpm dev
 1. Cria um branch a partir de `main` (ou da branch base do PR).
 2. Faz alterações focadas — um problema / feature por PR quando possível.
 3. Migrations Prisma no **mesmo PR** que altera o schema (`pnpm db:migrate`, não `db:push` em PRs).
-4. Actualiza docs se mudares comportamento público (rotas, auth, env, ops).
+4. **PR que muda comportamento → actualiza doc ou ADR** (obrigatório na checklist abaixo).
 5. Se a mudança for uma decisão de arquitectura, acrescenta ou actualiza um [ADR](docs/adr/README.md).
 6. Regista alterações relevantes no [CHANGELOG.md](CHANGELOG.md) (secção `[Unreleased]`).
 
@@ -37,6 +37,7 @@ pnpm --filter @clubos/web test:e2e
 - [ ] Typecheck e testes a passar
 - [ ] Novos endpoints / módulos seguem [convenções](docs/CONVENCOES.md)
 - [ ] Guards correctos (`@StaffOnly` / `@RequireModule` / `@NoOrgContext` conforme o caso)
+- [ ] **PR que muda comportamento → actualiza doc ou ADR** (rotas, auth, env, ops, decisões)
 - [ ] CHANGELOG actualizado (se user-facing ou ops)
 - [ ] Descrição do PR explica o _porquê_ e como testar
 
@@ -54,3 +55,5 @@ pnpm --filter @clubos/web test:e2e
 | Auth / roles / org activa | [AUTENTICACAO-RBAC](docs/AUTENTICACAO-RBAC.md)                                   |
 | Endpoints                 | Swagger `/api/docs` + [API-BACKEND](docs/API-BACKEND.md)                         |
 | Deploy / incidente        | [RUNBOOK-OPS](docs/RUNBOOK-OPS.md), [GO-LIVE-CRC-VALE](docs/GO-LIVE-CRC-VALE.md) |
+| Demo sem VPS              | [DEMO-TUNNEL](docs/DEMO-TUNNEL.md)                                               |
+| Segurança                 | [SECURITY](SECURITY.md)                                                          |

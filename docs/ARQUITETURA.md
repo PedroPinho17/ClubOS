@@ -68,6 +68,8 @@ Sócios (`role: socio`) usam a org do registo `Member` ligado ao `User`.
 
 Comandos via root: `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm db:*`.
 
+Decisões: [ADR 004 — monorepo](adr/004-monorepo-pnpm-turbo.md) · [ADR 005 — Prisma/Postgres](adr/005-prisma-postgresql.md).
+
 ## Ficheiros de entrada
 
 | Ficheiro                                 | Papel                                               |

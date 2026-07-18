@@ -164,12 +164,27 @@ HEALTHCHECK_QUOTA_REMINDERS_URL=https://hc-ping.com/SEU-UUID
 
 ---
 
+## Rate limit e proxy (ops)
+
+Em produção o rate limit de `/api/auth` e `/api/validate` usa **Redis** partilhado entre réplicas. Se o ready check reportar Redis down, os limites podem cair para memória (warn no log da API) — limites deixam de ser partilhados.
+
+Checklist rápido pós-deploy:
+
+- [ ] `RATE_LIMIT_STORE=redis` e Redis healthy (`/api/ready`)
+- [ ] `TRUST_PROXY=true` atrás de Coolify/Traefik/Caddy (IP real nos 429)
+- [ ] Logs: `RATE_LIMIT: store Redis activo` no arranque da API
+
+Detalhe: [API Backend](API-BACKEND.md) · [ADR 003](adr/003-rate-limit-redis.md)
+
+---
+
 ## Relação com outras docs
 
-| Documento                               | Conteúdo                            |
-| --------------------------------------- | ----------------------------------- |
-| [Arquitetura](ARQUITETURA.md)           | Health `/api/health` e `/api/ready` |
-| [API Backend](API-BACKEND.md)           | Endpoints e workers                 |
-| [Go-live CRC Vale](GO-LIVE-CRC-VALE.md) | Deploy piloto, import, paralelo     |
-| [Runbook ops](RUNBOOK-OPS.md)           | API down → restart                  |
-| [README](../README.md)                  | Índice geral                        |
+| Documento                               | Conteúdo                             |
+| --------------------------------------- | ------------------------------------ |
+| [Arquitetura](ARQUITETURA.md)           | Health `/api/health` e `/api/ready`  |
+| [API Backend](API-BACKEND.md)           | Endpoints, rate limit, workers       |
+| [Go-live CRC Vale](GO-LIVE-CRC-VALE.md) | Deploy piloto, import, paralelo      |
+| [Runbook ops](RUNBOOK-OPS.md)           | API down → restart; prova de restore |
+| [SECURITY](../SECURITY.md)              | Reportar vulnerabilidades            |
+| [README](../README.md)                  | Índice geral                         |

@@ -12,16 +12,18 @@ Guia para desenvolvedores — equivalente ao **Javadoc** neste stack TypeScript/
 | [Frontend Web](FRONTEND.md)                        | Rotas Next.js, layouts, auth client, navegação         |
 | [Base de dados](BASE-DE-DADOS.md)                  | Modelos Prisma, relações, isolamento por tenant        |
 | [Autenticação e RBAC](AUTENTICACAO-RBAC.md)        | Better Auth, roles, org activa, decorators             |
-| [ADRs / decisões](adr/README.md)                   | Porque Better Auth, papel efectivo por org, …          |
+| [ADRs / decisões](adr/README.md)                   | 001–005: auth, RBAC, rate limit, monorepo, Prisma      |
 | [Convenções](CONVENCOES.md)                        | Como adicionar módulos, testes, TSDoc                  |
 | [Contribuir](../CONTRIBUTING.md)                   | Setup, PRs, checklist — aponta para convenções         |
 | [Changelog](../CHANGELOG.md)                       | Notas de release (Keep a Changelog)                    |
+| [Segurança](../SECURITY.md)                        | Reportar vulnerabilidades; o que não fazer em prod     |
 | [Observabilidade](OBSERVABILIDADE.md)              | Alertas Sentry, uptime externo, go-live                |
 | [Go-live CRC Vale](GO-LIVE-CRC-VALE.md)            | Deploy piloto, import, paralelo com gestao_socios      |
+| [Demo Tunnel](DEMO-TUNNEL.md)                      | Cloudflare Tunnel sem VPS (demo)                       |
 | [Como adicionar um clube](COMO-ADICIONAR-CLUBE.md) | Onboarding Imperador: org → branding → planos → sócios |
 | [Import Excel — erros](IMPORT-EXCEL-ERROS.md)      | Dry-run, colunas, mensagens frequentes                 |
 | [FAQ staff CRC Vale](FAQ-CRC-VALE.md)              | Papéis, quotas, cartões, portal — piloto               |
-| [Runbook ops](RUNBOOK-OPS.md)                      | API down, SMTP, backup — 1 página                      |
+| [Runbook ops](RUNBOOK-OPS.md)                      | API down, SMTP, backup + prova de restore              |
 | [Desenvolvimento local](DESENVOLVIMENTO-LOCAL.md)  | Arranque, credenciais demo, testes, backups            |
 
 ## Início rápido
