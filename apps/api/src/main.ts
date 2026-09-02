@@ -7,6 +7,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import type { Redis } from "ioredis";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { corsOriginDelegate } from "./common/host-origins";
 import { SentryExceptionFilter } from "./common/filters/sentry-exception.filter";
 import { applyApiRateLimits, configureTrustProxy } from "./common/rate-limit";
 import { REDIS_CLIENT } from "./redis/redis.constants";
@@ -41,9 +42,7 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: (process.env.WEB_ORIGIN ?? "http://localhost:3000")
-      .split(",")
-      .map((o) => o.trim()),
+    origin: corsOriginDelegate(),
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-organization-id"],
   });

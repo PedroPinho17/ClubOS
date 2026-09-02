@@ -10,9 +10,11 @@ import { NAV_ITEMS, filterNavItems } from "@/lib/nav";
 import type { Organization } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { HelpGuideButton } from "@/components/help-guide-button";
+import { HostOrgMismatch } from "@/components/host-org-mismatch";
 import { OrgBrandHeader } from "@/components/org-brand-header";
 import { OrgDocumentBranding } from "@/components/org-document-branding";
 import { RoleContextError } from "@/components/role-context-error";
+import { useHostOrg } from "@/hooks/use-host-org";
 import { UserMenu } from "@/components/user-menu";
 import { Badge } from "@/components/ui/badge";
 import { AppShellSkeleton } from "@/components/app-shell-skeleton";
@@ -43,8 +45,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   });
 
   const activeOrgId = useActiveOrgId();
-  const { isBootstrapping, orgsError, refetchOrgs } =
+  const { isBootstrapping, orgsError, refetchOrgs, hostMismatch } =
     useBootstrapActiveOrganization(!!session);
+  const { data: hostOrg } = useHostOrg();
   const {
     effectiveRole,
     isLoading: roleLoading,
@@ -66,7 +69,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     enabled: !!session && !!activeOrgId,
   });
 
-  if (isLoading || !session || isBootstrapping || roleLoading) {
+  if (isLoading || !session || isBootstrapping) {
+    return <AppShellSkeleton />;
+  }
+
+  if (hostMismatch) {
+    return (
+      <HostOrgMismatch
+        clubName={hostOrg?.kind === "org" ? hostOrg.name : null}
+      />
+    );
+  }
+
+  if (roleLoading) {
     return <AppShellSkeleton />;
   }
 

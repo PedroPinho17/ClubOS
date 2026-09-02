@@ -1,15 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { OrganizationStatus, PaymentStatus, QuotaReminderKind } from '@clubos/database';
-import { pingQuotaRemindersHealthcheck } from '../../common/healthcheck';
-import { MailService } from '../../core/mail/mail.service';
-import { quotaDueSoonEmail } from '../../core/mail/templates/quota-due-soon';
-import { quotaOverdueEmail } from '../../core/mail/templates/quota-overdue';
-import { PrismaService } from '../../prisma/prisma.service';
-import { computeQuotaSituation } from '../members/quota.util';
+import { Injectable, Logger } from "@nestjs/common";
+import {
+  OrganizationStatus,
+  PaymentStatus,
+  QuotaReminderKind,
+} from "@clubos/database";
+import { pingQuotaRemindersHealthcheck } from "../../common/healthcheck";
+import { MailService } from "../../core/mail/mail.service";
+import { quotaDueSoonEmail } from "../../core/mail/templates/quota-due-soon";
+import { quotaOverdueEmail } from "../../core/mail/templates/quota-overdue";
+import { PrismaService } from "../../prisma/prisma.service";
+import { computeQuotaSituation } from "../members/quota.util";
+import { publicOriginForOrg } from "../../common/public-origin";
 import {
   loadOrgReminderSettings,
   periodReferenceFromDueDate,
-} from './org-reminder-settings';
+} from "./org-reminder-settings";
 
 export interface ReminderRunResult {
   organizationId: string;
@@ -31,7 +36,9 @@ export class RemindersService {
 
   async runForAllOrganizations(): Promise<ReminderRunResult[]> {
     const orgs = await this.prisma.organization.findMany({
-      where: { status: { in: [OrganizationStatus.ACTIVE, OrganizationStatus.TRIAL] } },
+      where: {
+        status: { in: [OrganizationStatus.ACTIVE, OrganizationStatus.TRIAL] },
+      },
       select: { id: true, name: true },
     });
 
@@ -47,10 +54,10 @@ export class RemindersService {
   async runForOrganization(organizationId: string): Promise<ReminderRunResult> {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { id: true, name: true, primaryColor: true },
+      select: { id: true, name: true, primaryColor: true, domain: true },
     });
     if (!org) {
-      return emptyResult(organizationId, '—', ['Organizacao nao encontrada.']);
+      return emptyResult(organizationId, "—", ["Organizacao nao encontrada."]);
     }
 
     const settings = await loadOrgReminderSettings(this.prisma, organizationId);
@@ -64,7 +71,7 @@ export class RemindersService {
     const members = await this.prisma.member.findMany({
       where: {
         organizationId,
-        status: 'ACTIVE',
+        status: "ACTIVE",
         email: { not: null },
         quotaPlanId: { not: null },
       },
@@ -72,13 +79,13 @@ export class RemindersService {
         quotaPlan: true,
         payments: {
           where: { status: PaymentStatus.PAID },
-          orderBy: { paidAt: 'desc' },
+          orderBy: { paidAt: "desc" },
           take: 1,
         },
       },
     });
 
-    const origin = (process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(',')[0].trim();
+    const origin = publicOriginForOrg(org);
 
     for (const member of members) {
       const situation = computeQuotaSituation({
@@ -89,16 +96,23 @@ export class RemindersService {
         dueSoonDays: settings.diasAvisoQuota,
       });
 
-      if (situation.status !== 'due_soon' && situation.status !== 'overdue') continue;
+      if (situation.status !== "due_soon" && situation.status !== "overdue")
+        continue;
       if (!situation.nextDueDate) continue;
 
       const kind =
-        situation.status === 'due_soon' ? QuotaReminderKind.DUE_SOON : QuotaReminderKind.OVERDUE;
+        situation.status === "due_soon"
+          ? QuotaReminderKind.DUE_SOON
+          : QuotaReminderKind.OVERDUE;
       const periodReference = periodReferenceFromDueDate(situation.nextDueDate);
 
       const already = await this.prisma.quotaReminderSent.findUnique({
         where: {
-          memberId_periodReference_kind: { memberId: member.id, periodReference, kind },
+          memberId_periodReference_kind: {
+            memberId: member.id,
+            periodReference,
+            kind,
+          },
         },
       });
       if (already) {
@@ -107,7 +121,9 @@ export class RemindersService {
       }
 
       const email = member.email!;
-      const dueLabel = new Date(situation.nextDueDate).toLocaleDateString('pt-PT');
+      const dueLabel = new Date(situation.nextDueDate).toLocaleDateString(
+        "pt-PT",
+      );
 
       const subject =
         kind === QuotaReminderKind.DUE_SOON

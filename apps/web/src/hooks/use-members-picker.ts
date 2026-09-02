@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Member, PaginatedResult } from "@/lib/types";
@@ -11,6 +11,9 @@ const PICKER_LIMIT = 50;
 type UseMembersPickerOptions = {
   /** Carrega logo ao montar (ex.: cartões com auto-seleção). Default: lazy no focus do select. */
   immediate?: boolean;
+  status?: "" | "ACTIVE" | "INACTIVE";
+  quotaPlanId?: "" | "none" | string;
+  quotaStatus?: string;
 };
 
 /**
@@ -21,12 +24,23 @@ export function useMembersPicker(opts: UseMembersPickerOptions = {}) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
+  const status = opts.status ?? "";
+  const quotaPlanId = opts.quotaPlanId ?? "";
+  const quotaStatus = opts.quotaStatus ?? "";
+
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(searchInput.trim()), 300);
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  const membersKey = useTenantQueryKey(["members", "picker", search]);
+  const membersKey = useTenantQueryKey([
+    "members",
+    "picker",
+    search,
+    status,
+    quotaPlanId,
+    quotaStatus,
+  ]);
 
   const query = useQuery<PaginatedResult<Member>>({
     queryKey: membersKey,
@@ -36,17 +50,23 @@ export function useMembersPicker(opts: UseMembersPickerOptions = {}) {
         page: "1",
       });
       if (search) params.set("search", search);
+      if (status) params.set("status", status);
+      if (quotaPlanId) params.set("quotaPlanId", quotaPlanId);
+      if (quotaStatus) params.set("quotaStatus", quotaStatus);
       return api.get<PaginatedResult<Member>>(`/members?${params}`);
     },
     enabled: activated,
     staleTime: 60_000,
   });
 
-  const activate = () => {
-    if (!activated) setActivated(true);
-  };
+  const activate = useCallback(() => {
+    setActivated(true);
+  }, []);
 
   const total = query.data?.total ?? 0;
+  const hasServerFilters = Boolean(
+    search || status || quotaPlanId || quotaStatus,
+  );
 
   return {
     members: query.data?.items ?? [],
@@ -54,7 +74,7 @@ export function useMembersPicker(opts: UseMembersPickerOptions = {}) {
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     activate,
-    hasMore: !search && total > PICKER_LIMIT,
+    hasMore: !hasServerFilters && total > PICKER_LIMIT,
     searchInput,
     setSearchInput,
   };

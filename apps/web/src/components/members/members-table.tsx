@@ -30,6 +30,7 @@ type MembersTableProps = {
   editingId: string | null;
   canManage: boolean;
   canAccessCards: boolean;
+  canRecordPayment: boolean;
   canManagePhotos: boolean;
   deletePending: boolean;
   grantPortalPending: boolean;
@@ -56,6 +57,7 @@ export function MembersTable({
   editingId,
   canManage,
   canAccessCards,
+  canRecordPayment,
   canManagePhotos,
   deletePending,
   grantPortalPending,
@@ -71,7 +73,7 @@ export function MembersTable({
   onCreateClick,
   onClearFilters,
 }: MembersTableProps) {
-  const showActionsColumn = canManage || canAccessCards;
+  const showActionsColumn = canManage || canAccessCards || canRecordPayment;
   const colSpan = showActionsColumn ? 8 : 7;
   return (
     <>
@@ -208,6 +210,7 @@ export function MembersTable({
                                 member={m}
                                 canManage={canManage}
                                 canAccessCards={canAccessCards}
+                                canRecordPayment={canRecordPayment}
                                 deletePending={deletePending}
                                 grantPortalPending={grantPortalPending}
                                 isGdprErased={isGdprErased(m)}
@@ -313,6 +316,7 @@ export function MembersTable({
                             member={m}
                             canManage={canManage}
                             canAccessCards={canAccessCards}
+                            canRecordPayment={canRecordPayment}
                             deletePending={deletePending}
                             grantPortalPending={grantPortalPending}
                             isGdprErased={isGdprErased(m)}

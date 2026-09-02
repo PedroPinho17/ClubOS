@@ -1,4 +1,11 @@
-import { Allow, IsArray, IsHexColor, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  Allow,
+  IsArray,
+  IsHexColor,
+  IsOptional,
+  IsString,
+  MinLength,
+} from "class-validator";
 
 export class CreateOrganizationDto {
   @IsString()
@@ -35,6 +42,11 @@ export class UpdateOrganizationDto {
   @IsOptional()
   @IsString()
   logoKey?: string;
+
+  /** Hostname do clube (ex.: www.crcvale.pt). Vazio remove. So Imperador. */
+  @IsOptional()
+  @IsString()
+  domain?: string | null;
 }
 
 export class SetSettingDto {

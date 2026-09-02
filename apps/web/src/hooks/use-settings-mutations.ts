@@ -10,6 +10,7 @@ type SaveOrgInput = {
   primaryColor: string;
   locale: string;
   timezone: string;
+  domain?: string | null;
 };
 
 type SaveRemindersInput = {
@@ -33,6 +34,7 @@ export function useSettingsMutations() {
         primaryColor: input.primaryColor,
         locale: input.locale,
         timezone: input.timezone,
+        ...(input.domain !== undefined ? { domain: input.domain } : {}),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organization"] });

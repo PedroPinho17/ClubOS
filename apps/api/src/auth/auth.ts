@@ -7,9 +7,28 @@ import { passkey } from "@better-auth/passkey";
 import { prisma } from "@clubos/database";
 import { MailService } from "../core/mail/mail.service";
 import { passwordResetEmail } from "../core/mail/templates/password-reset";
+import { getTrustedOrigins } from "../common/host-origins";
+import { publicOriginForOrg, replaceUrlOrigin } from "../common/public-origin";
 
 const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 const mail = new MailService();
+
+async function publicOriginForUser(userId: string): Promise<string> {
+  const member = await prisma.member.findFirst({
+    where: { userId },
+    select: { organization: { select: { domain: true } } },
+  });
+  if (member?.organization) {
+    return publicOriginForOrg(member.organization);
+  }
+
+  const membership = await prisma.organizationMember.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: { organization: { select: { domain: true } } },
+  });
+  return publicOriginForOrg(membership?.organization ?? {});
+}
 
 // Access control: roles da plataforma (PDF V1).
 // imperador = super admin; administrador = admin do clube; tesoureiro = pagamentos; socio = base.
@@ -32,7 +51,7 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:4000",
   basePath: "/api/auth",
   secret: process.env.BETTER_AUTH_SECRET ?? "dev-secret-change-me",
-  trustedOrigins: webOrigin.split(",").map((o) => o.trim()),
+  trustedOrigins: async () => getTrustedOrigins(),
 
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
@@ -41,9 +60,11 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
+      const origin = await publicOriginForUser(user.id);
+      const resetUrl = replaceUrlOrigin(url, origin);
       const rendered = passwordResetEmail({
         userName: user.name || user.email,
-        resetUrl: url,
+        resetUrl,
       });
       await mail.send({
         to: user.email,

@@ -8,6 +8,8 @@ import { ForbiddenException, Injectable } from "@nestjs/common";
 import type { Request } from "express";
 import { PrismaService } from "../prisma/prisma.service";
 import { resolveEffectiveRole } from "./effective-role";
+import { HOST_ORG_MISMATCH_MESSAGE } from "./host-hostname";
+import { HostOrganizationService } from "./host-organization.service";
 import { readOrgHeader } from "./org-context";
 import type { AuthUser } from "./types";
 
@@ -25,7 +27,10 @@ function parseCookies(header: string | undefined): Record<string, string> {
 
 @Injectable()
 export class OrganizationContextService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly hostOrgs: HostOrganizationService,
+  ) {}
 
   /**
    * Lista IDs de organizacoes onde o utilizador tem membership (staff).
@@ -45,8 +50,9 @@ export class OrganizationContextService {
   /**
    * Resolve a organizacao activa para o pedido actual.
    *
-   * Prioridade: header `x-organization-id` → cookie → sessao → primeira membership.
+   * Prioridade: header `x-organization-id` → cookie → sessao → host-org → primeira membership.
    * Socios (`role: socio`) usam o `Member` ligado ao user.
+   * Host custom (Organization.domain): trava o tenant; so o Imperador pode trocar.
    *
    * @param request - Pedido Express com `user` autenticado
    * @returns ID da organizacao activa validada
@@ -58,6 +64,8 @@ export class OrganizationContextService {
       throw new ForbiddenException("Autenticacao em falta.");
     }
 
+    const hostOrg = await this.hostOrgs.resolveFromRequest(request);
+
     if (user.role === "socio") {
       const member = await this.prisma.member.findFirst({
         where: { userId: user.id },
@@ -67,6 +75,9 @@ export class OrganizationContextService {
         throw new ForbiddenException(
           "Conta de socio sem organizacao associada.",
         );
+      }
+      if (hostOrg && hostOrg.organizationId !== member.organizationId) {
+        throw new ForbiddenException(HOST_ORG_MISMATCH_MESSAGE);
       }
       return member.organizationId;
     }
@@ -79,7 +90,11 @@ export class OrganizationContextService {
 
     if (user.role === "imperador") {
       const candidate =
-        headerOrgId ?? cookieOrgId ?? sessionOrgId ?? membershipIds[0];
+        headerOrgId ??
+        cookieOrgId ??
+        sessionOrgId ??
+        hostOrg?.organizationId ??
+        membershipIds[0];
       if (!candidate) {
         throw new ForbiddenException("Sem organizacoes disponiveis.");
       }
@@ -93,6 +108,13 @@ export class OrganizationContextService {
         );
       }
       return candidate;
+    }
+
+    if (hostOrg) {
+      if (!membershipIds.includes(hostOrg.organizationId)) {
+        throw new ForbiddenException(HOST_ORG_MISMATCH_MESSAGE);
+      }
+      return hostOrg.organizationId;
     }
 
     if (membershipIds.length === 0) {

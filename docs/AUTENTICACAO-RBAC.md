@@ -54,23 +54,28 @@ Re-exports: `apps/api/src/common/roles.ts`, `apps/web/src/lib/staff-roles.ts` (n
 ```
 Web                          API
 ────                         ───
+Host / X-Forwarded-Host →    Organization.domain (trava o tenant)
 localStorage org id    →     x-organization-id header
 cookie clubos_active_org →   resolveActiveOrganizationId()
 POST /api/me/active-organization → Session.activeOrganizationId
-GET  /api/me/context           → { organizationId, effectiveRole } (validação)
+GET  /api/me/context           → { organizationId, effectiveRole, hostLocked }
 GET  /api/me/organizations     → lista com orgRole por membership
+GET  /api/public/host-org      → branding do hostname (publico)
 ```
 
 Serviço: `OrganizationContextService`  
 Guard: `OrganizationContextGuard`
 
+Num domínio de clube (`Organization.domain`), só o **Imperador** pode trocar de org. Hosts em `PLATFORM_HOSTS` (demo) não travam.
+
 ### Bootstrap da org activa
 
 `useBootstrapActiveOrganization()` corre no layout **antes** do shell renderizar:
 
-1. Carrega `/me/organizations`
-2. Define org válida no `localStorage` + `POST /me/active-organization`
-3. Layout só renderiza quando `activeOrgId` está definido
+1. Carrega `/me/organizations` e `/public/host-org`
+2. Se o host estiver locked, força essa org (ou mostra «conta sem acesso»)
+3. Define org válida no `localStorage` + `POST /me/active-organization`
+4. Layout só renderiza quando `activeOrgId` está definido (ou mismatch)
 
 Evita deadlock em browsers limpos (E2E) onde o switcher ainda não montou.
 
@@ -206,9 +211,10 @@ Em produção os contadores vivem no **Redis** (`RATE_LIMIT_STORE=redis`, chaves
 | ----------------------------- | ------------------------------------------------ |
 | `BETTER_AUTH_SECRET`          | Assinatura de sessão                             |
 | `BETTER_AUTH_URL`             | URL pública da API                               |
-| `WEB_ORIGIN`                  | CORS + passkey origin + links em emails          |
+| `WEB_ORIGIN`                  | CORS + passkey origin + fallback de emails       |
+| `PLATFORM_HOSTS`              | Hostnames da demo (não travam o tenant)          |
 | `PASSKEY_RP_ID`               | WebAuthn RP ID (ex.: `localhost`)                |
-| `NEXT_PUBLIC_API_URL`         | URL da API no browser                            |
+| `NEXT_PUBLIC_API_URL`         | URL da API no browser (`same-origin` em prod)    |
 | `SMTP_*` / `MAIL_FROM`        | Email real (reset password, convites, lembretes) |
 | `RATE_LIMIT_STORE`            | `redis` (prod) ou `memory` (E2E)                 |
 | `RATE_LIMIT_AUTH_PER_MIN`     | Limite `/api/auth` (default 15)                  |

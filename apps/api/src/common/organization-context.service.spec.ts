@@ -22,11 +22,19 @@ describe("OrganizationContextService", () => {
     session: { findUnique: vi.fn(), updateMany: vi.fn() },
   };
 
+  const hostOrgs = {
+    resolveFromRequest: vi.fn().mockResolvedValue(null),
+  };
+
   let service: OrganizationContextService;
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new OrganizationContextService(prisma as never);
+    hostOrgs.resolveFromRequest.mockResolvedValue(null);
+    service = new OrganizationContextService(
+      prisma as never,
+      hostOrgs as never,
+    );
   });
 
   it("socio usa organizacao do Member (ignora header)", async () => {
@@ -121,5 +129,93 @@ describe("OrganizationContextService", () => {
         }),
       ),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("staff em dominio custom ignora header e usa a org do host", async () => {
+    hostOrgs.resolveFromRequest.mockResolvedValue({
+      organizationId: "org-vale",
+      domain: "www.crcvale.pt",
+    });
+    prisma.organizationMember.findMany.mockResolvedValue([
+      { organizationId: "org-vale" },
+      { organizationId: "org-fit" },
+    ]);
+
+    const orgId = await service.resolveActiveOrganizationId(
+      mockRequest(
+        { id: "u1", role: "administrador", email: "a@test", name: "A" },
+        { "x-organization-id": "org-fit" },
+      ),
+    );
+
+    expect(orgId).toBe("org-vale");
+  });
+
+  it("staff de outro clube no dominio custom e rejeitado", async () => {
+    hostOrgs.resolveFromRequest.mockResolvedValue({
+      organizationId: "org-vale",
+      domain: "www.crcvale.pt",
+    });
+    prisma.organizationMember.findMany.mockResolvedValue([
+      { organizationId: "org-fit" },
+    ]);
+
+    await expect(
+      service.resolveActiveOrganizationId(
+        mockRequest({
+          id: "u1",
+          role: "tesoureiro",
+          email: "t@test",
+          name: "T",
+        }),
+      ),
+    ).rejects.toThrow(/nao pertence a este clube/);
+  });
+
+  it("socio no dominio de outro clube e rejeitado", async () => {
+    hostOrgs.resolveFromRequest.mockResolvedValue({
+      organizationId: "org-vale",
+      domain: "www.crcvale.pt",
+    });
+    prisma.member.findFirst.mockResolvedValue({ organizationId: "org-fit" });
+
+    await expect(
+      service.resolveActiveOrganizationId(
+        mockRequest({ id: "u1", role: "socio", email: "s@test", name: "S" }),
+      ),
+    ).rejects.toThrow(/nao pertence a este clube/);
+  });
+
+  it("imperador pode trocar de org num dominio custom", async () => {
+    hostOrgs.resolveFromRequest.mockResolvedValue({
+      organizationId: "org-vale",
+      domain: "www.crcvale.pt",
+    });
+    prisma.organizationMember.findMany.mockResolvedValue([]);
+    prisma.organization.findUnique.mockResolvedValue({ id: "org-fit" });
+
+    const orgId = await service.resolveActiveOrganizationId(
+      mockRequest(
+        { id: "u1", role: "imperador", email: "i@test", name: "I" },
+        { "x-organization-id": "org-fit" },
+      ),
+    );
+
+    expect(orgId).toBe("org-fit");
+  });
+
+  it("imperador sem header usa a org do host", async () => {
+    hostOrgs.resolveFromRequest.mockResolvedValue({
+      organizationId: "org-vale",
+      domain: "www.crcvale.pt",
+    });
+    prisma.organizationMember.findMany.mockResolvedValue([]);
+    prisma.organization.findUnique.mockResolvedValue({ id: "org-vale" });
+
+    const orgId = await service.resolveActiveOrganizationId(
+      mockRequest({ id: "u1", role: "imperador", email: "i@test", name: "I" }),
+    );
+
+    expect(orgId).toBe("org-vale");
   });
 });

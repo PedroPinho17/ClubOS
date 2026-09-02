@@ -8,6 +8,7 @@ import { auth } from "../../auth/auth";
 import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { publicOriginForOrg } from "../../common/public-origin";
 import type { InvitableRole } from "./dto";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -138,9 +139,7 @@ export class UsersService {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
     });
-    const origin = (process.env.WEB_ORIGIN ?? "http://localhost:3000")
-      .split(",")[0]
-      .trim();
+    const origin = publicOriginForOrg(org ?? {});
     const roleLabel = ROLE_LABEL[dto.role] ?? dto.role;
 
     await this.mail.send({

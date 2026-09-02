@@ -83,7 +83,7 @@ Cliente HTTP para a API NestJS.
 Cliente Better Auth (`createAuthClient`).
 
 - `signIn`, `signOut`, `useSession`, `passkey`, `changePassword`
-- Base URL: `NEXT_PUBLIC_API_URL/api/auth`
+- Base URL: `{apiBaseUrl()}/api/auth` — em produção `same-origin` (o hostname actual faz proxy de `/api`)
 
 ### `auth-redirect.ts`
 

@@ -9,6 +9,7 @@ e o projecto tenta aderir a [Semantic Versioning](https://semver.org/lang/pt-BR/
 
 ### Added
 
+- Domínios custom por clube: `Organization.domain` resolve o tenant pelo `Host`, login com branding, lock excepto Imperador; CORS/trustedOrigins dinâmicos; `NEXT_PUBLIC_API_URL=same-origin` em produção
 - Documentação: ADRs 001–005 (Better Auth, papel efectivo, rate limit Redis, monorepo, Prisma/Postgres), `SECURITY.md`, `DEMO-TUNNEL.md`
 - Análise UML: actores/casos de uso, diagramas de actividade e sequência (`docs/analise/`)
 - Diagramas UML clássicos em PNG (PlantUML): casos de uso, sequência, actividade
@@ -75,7 +76,7 @@ Primeira linha de base estável para corrida em paralelo com `gestao_socios`.
 
 - Plugins de modalidade (football, padel, …): só no catálogo seed — sem UI
 - OAuth Google/GitHub: variáveis preparadas, não activas por defeito
-- Domínios custom / billing SaaS: fora do scope deste MVP
+- Billing SaaS: fora do scope deste MVP
 
 [Unreleased]: https://github.com/PedroPinho17/ClubOS/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/PedroPinho17/ClubOS/releases/tag/v0.1.0

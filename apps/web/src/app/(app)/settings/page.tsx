@@ -31,6 +31,7 @@ function SettingsPageContent() {
   const [primaryColor, setPrimaryColor] = useState("#16a34a");
   const [locale, setLocale] = useState("pt-PT");
   const [timezone, setTimezone] = useState("Europe/Lisbon");
+  const [domain, setDomain] = useState("");
 
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -85,6 +86,7 @@ function SettingsPageContent() {
       setPrimaryColor(org.primaryColor);
       setLocale(org.locale ?? "pt-PT");
       setTimezone(org.timezone ?? "Europe/Lisbon");
+      setDomain(org.domain ?? "");
     }
   }, [org]);
 
@@ -120,10 +122,21 @@ function SettingsPageContent() {
         setLocale={setLocale}
         timezone={timezone}
         setTimezone={setTimezone}
+        domain={domain}
+        setDomain={setDomain}
+        canEditDomain={canInviteAdminRole}
         uploadLogoPending={uploadLogo.isPending}
         onUploadLogo={(file) => uploadLogo.mutate(file)}
         savePending={saveOrg.isPending}
-        onSave={() => saveOrg.mutate({ name, primaryColor, locale, timezone })}
+        onSave={() =>
+          saveOrg.mutate({
+            name,
+            primaryColor,
+            locale,
+            timezone,
+            ...(canInviteAdminRole ? { domain: domain.trim() } : {}),
+          })
+        }
       />
 
       <SettingsRemindersSection

@@ -38,6 +38,19 @@ Em **Definições** (`/settings`):
 
 - Logótipo e cor primária (portal e cartões)
 - Convidar **administrador** / **tesoureiro** (membership por org)
+- **Domínio do clube** (só Imperador): hostname próprio, ex. `www.crcvale.pt`
+
+### Domínio custom (opcional)
+
+Uma única instância ClubOS serve todos os clubes. O endereço da plataforma (demo) mantém o selector de organização; um domínio do clube abre **só** esse tenant (excepto o Imperador).
+
+1. DNS: registo A ou CNAME do hostname do clube → mesmo VPS / Coolify da app
+2. No Coolify/Traefik/Caddy: **adicionar o hostname à mesma aplicação** (HTTPS Let's Encrypt). Não cries um compose por clube.
+3. Em **Definições**, campo **Domínio do clube**: `www.crcvale.pt` (sem `https://`)
+4. Confirma `PLATFORM_HOSTS` no `.env` com o hostname da demo (ex. `app.clubos.cloud`) para esse endereço **não** ficar preso a um clube
+5. Em produção o web deve usar `NEXT_PUBLIC_API_URL=same-origin` (cada domínio faz proxy de `/` → Next e `/api` → Nest). Não é preciso rebuild só para um domínio novo.
+
+Sessões **não** são partilhadas entre o demo e o domínio do clube (cookie por hostname). Passkeys só no hostname de `PASSKEY_RP_ID`.
 
 Só o staff convidado vê dados desta org (isolamento multi-tenant).
 
@@ -65,15 +78,16 @@ Ver [Import Excel — erros comuns](IMPORT-EXCEL-ERROS.md).
 
 ## Checklist rápida
 
-| Passo                            | Onde                 | Feito |
-| -------------------------------- | -------------------- | ----- |
-| Org criada e activa              | Módulos → Novo clube | ☐     |
-| Logo / cor                       | Definições           | ☐     |
-| Admin / tesoureiro               | Definições           | ☐     |
-| ≥ 1 plano de quota               | Planos               | ☐     |
-| Sócios importados / criados      | Membros              | ☐     |
-| 1.º pagamento de teste           | Pagamentos           | ☐     |
-| Cartões / portal (se necessário) | Cartões / Membros    | ☐     |
+| Passo                            | Onde                   | Feito |
+| -------------------------------- | ---------------------- | ----- |
+| Org criada e activa              | Módulos → Novo clube   | ☐     |
+| Logo / cor                       | Definições             | ☐     |
+| Domínio custom (DNS + Coolify)   | Definições (Imperador) | ☐     |
+| Admin / tesoureiro               | Definições             | ☐     |
+| ≥ 1 plano de quota               | Planos                 | ☐     |
+| Sócios importados / criados      | Membros                | ☐     |
+| 1.º pagamento de teste           | Pagamentos             | ☐     |
+| Cartões / portal (se necessário) | Cartões / Membros      | ☐     |
 
 ## Notas
 

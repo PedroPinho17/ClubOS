@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Banknote,
   FileDown,
   FileText,
   IdCard,
@@ -25,6 +26,7 @@ interface MemberRowActionsProps {
   member: Member;
   canManage: boolean;
   canAccessCards: boolean;
+  canRecordPayment: boolean;
   deletePending: boolean;
   grantPortalPending: boolean;
   isGdprErased: boolean;
@@ -39,6 +41,7 @@ export function MemberRowActions({
   member,
   canManage,
   canAccessCards,
+  canRecordPayment,
   deletePending,
   grantPortalPending,
   isGdprErased,
@@ -48,7 +51,7 @@ export function MemberRowActions({
   onExportGdpr,
   onGdprErase,
 }: MemberRowActionsProps) {
-  const hasActions = canManage || canAccessCards;
+  const hasActions = canManage || canAccessCards || canRecordPayment;
 
   if (!hasActions) {
     return <span className="text-muted-foreground">—</span>;
@@ -61,6 +64,7 @@ export function MemberRowActions({
           member={member}
           canManage={canManage}
           canAccessCards={canAccessCards}
+          canRecordPayment={canRecordPayment}
           deletePending={deletePending}
           grantPortalPending={grantPortalPending}
           isGdprErased={isGdprErased}
@@ -83,6 +87,7 @@ export function MemberRowActions({
           member={member}
           canManage={canManage}
           canAccessCards={canAccessCards}
+          canRecordPayment={canRecordPayment}
           deletePending={deletePending}
           grantPortalPending={grantPortalPending}
           isGdprErased={isGdprErased}
@@ -111,6 +116,7 @@ export function MemberRowActions({
       member={member}
       canManage={canManage}
       canAccessCards={canAccessCards}
+      canRecordPayment={canRecordPayment}
       deletePending={deletePending}
       grantPortalPending={grantPortalPending}
       isGdprErased={isGdprErased}
@@ -128,6 +134,7 @@ function RowActionsMenu({
   member,
   canManage,
   canAccessCards,
+  canRecordPayment,
   deletePending,
   grantPortalPending,
   isGdprErased,
@@ -153,6 +160,12 @@ function RowActionsMenu({
     >
       <DropdownMenuLabel>{member.name}</DropdownMenuLabel>
       <DropdownMenuSeparator />
+      {canRecordPayment && !isGdprErased && (
+        <DropdownMenuItem href={`/payments?memberId=${member.id}`}>
+          <Banknote className="h-4 w-4" />
+          Registar pagamento
+        </DropdownMenuItem>
+      )}
       {canManage && (
         <DropdownMenuItem onClick={onEdit}>
           <Pencil className="h-4 w-4" />

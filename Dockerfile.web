@@ -2,7 +2,7 @@ FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 WORKDIR /app
 
-ARG NEXT_PUBLIC_API_URL=http://localhost:4000
+ARG NEXT_PUBLIC_API_URL=same-origin
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 FROM base AS deps

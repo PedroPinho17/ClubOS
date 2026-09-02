@@ -1,8 +1,8 @@
+import { apiBaseUrl } from "./api-base-url";
 import { getActiveOrganizationId } from "./org-context";
 
 const DEFAULT_TITLE = "ClubOS";
 const DEFAULT_FAVICON = "/clubos-icon.svg";
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 const FAVICON_LINK_ID = "clubos-org-favicon";
 
 let faviconBlobUrl: string | null = null;
@@ -55,7 +55,7 @@ async function applyFavicon(
   if (orgId && !opts.logoApiPath) headers["x-organization-id"] = orgId;
 
   try {
-    const res = await fetch(`${API_URL}/api${logoPath}`, {
+    const res = await fetch(`${apiBaseUrl()}/api${logoPath}`, {
       credentials: "include",
       headers,
     });

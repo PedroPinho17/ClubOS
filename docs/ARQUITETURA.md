@@ -35,17 +35,19 @@ ClubOS é uma plataforma **SaaS multi-tenant** para gestão de clubes e associa�
 - **Isolamento por linha**: tabelas de negócio têm `organizationId`.
 - **Nunca** confiar só no `organizationId` vindo do cliente — o `OrganizationContextGuard` valida membership.
 - **Módulos**: `OrganizationModule.enabled` controla o que cada org pode usar.
+- **Domínio custom**: se o `Host` corresponder a `Organization.domain`, o tenant fica preso a essa org (excepto Imperador). Hosts em `PLATFORM_HOSTS` (demo) não travam.
 
 ## Multi-organização (staff)
 
 Um utilizador pode ter várias memberships (`OrganizationMember`). A **org activa** resolve-se por:
 
-1. Header `x-organization-id` (enviado pelo web)
-2. Cookie `clubos_active_org`
-3. `Session.activeOrganizationId` (Better Auth)
-4. Primeira membership (fallback)
+1. Host → `Organization.domain` (trava o tenant; Imperador pode trocar)
+2. Header `x-organization-id` (enviado pelo web)
+3. Cookie `clubos_active_org`
+4. `Session.activeOrganizationId` (Better Auth)
+5. Primeira membership (fallback)
 
-Sócios (`role: socio`) usam a org do registo `Member` ligado ao `User`.
+Sócios (`role: socio`) usam a org do registo `Member` ligado ao `User` (403 se o host for de outro clube).
 
 ## Fluxo de um pedido API autenticado
 

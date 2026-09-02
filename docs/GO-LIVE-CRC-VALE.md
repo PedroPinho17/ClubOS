@@ -20,6 +20,8 @@
 **Domínio sugerido:** `socios.crcvale.pt`  
 **DNS:** registo A → IP do VPS (configurar **48 h antes** da reunião/demo)
 
+O proxy deve servir o **mesmo** stack em cada hostname (`/` → web, `/api` → API). Domínios extra do clube: adicionar no Coolify + gravar em Definições (`Organization.domain`). Ver [Como adicionar um clube](COMO-ADICIONAR-CLUBE.md).
+
 ---
 
 ## Contactos de alerta
@@ -63,7 +65,8 @@ DATABASE_URL=postgresql://...
 BETTER_AUTH_SECRET=<32+ caracteres aleatórios>
 BETTER_AUTH_URL=https://socios.crcvale.pt
 WEB_ORIGIN=https://socios.crcvale.pt
-NEXT_PUBLIC_API_URL=https://socios.crcvale.pt
+PLATFORM_HOSTS=app.clubos.cloud
+NEXT_PUBLIC_API_URL=same-origin
 PASSKEY_RP_ID=socios.crcvale.pt
 
 # SMTP real (obrigatório para lembretes e comunicações)

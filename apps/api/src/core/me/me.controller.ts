@@ -36,6 +36,7 @@ export class MeController {
       user,
       dto.organizationId,
       session?.token,
+      req,
     );
 
     const maxAge = 365 * 24 * 60 * 60;

@@ -6,6 +6,8 @@ import {
 import type { Request } from "express";
 import { PrismaService } from "../../prisma/prisma.service";
 import { StorageService } from "../../storage/storage.service";
+import { HOST_ORG_MISMATCH_MESSAGE } from "../../common/host-hostname";
+import { HostOrganizationService } from "../../common/host-organization.service";
 import { OrganizationContextService } from "../../common/organization-context.service";
 import type { AuthUser } from "../../common/types";
 
@@ -15,17 +17,24 @@ export class MeService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly orgContext: OrganizationContextService,
+    private readonly hostOrgs: HostOrganizationService,
   ) {}
 
   /** Contexto activo: org resolvida + papel efectivo (para o frontend). */
   async getActiveContext(user: AuthUser, request: Request) {
+    const hostOrg = await this.hostOrgs.resolveFromRequest(request);
     const organizationId =
       await this.orgContext.resolveActiveOrganizationId(request);
     const effectiveRole = await this.orgContext.resolveEffectiveRole(
       user,
       organizationId,
     );
-    return { organizationId, effectiveRole };
+    return {
+      organizationId,
+      effectiveRole,
+      hostLocked: !!hostOrg,
+      hostOrganizationId: hostOrg?.organizationId ?? null,
+    };
   }
 
   async listOrganizations(user: AuthUser) {
@@ -74,7 +83,19 @@ export class MeService {
     user: AuthUser,
     organizationId: string,
     sessionToken?: string,
+    request?: Request,
   ) {
+    if (request) {
+      const hostOrg = await this.hostOrgs.resolveFromRequest(request);
+      if (
+        hostOrg &&
+        user.role !== "imperador" &&
+        organizationId !== hostOrg.organizationId
+      ) {
+        throw new ForbiddenException(HOST_ORG_MISMATCH_MESSAGE);
+      }
+    }
+
     if (user.role === "socio") {
       const member = await this.prisma.member.findFirst({
         where: { userId: user.id },

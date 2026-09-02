@@ -171,6 +171,7 @@ export interface Organization extends OrganizationSummary {
   logoUrl?: string | null;
   locale?: string | null;
   timezone?: string | null;
+  domain?: string | null;
 }
 
 export interface MyOrganization extends OrganizationSummary {
@@ -181,6 +182,8 @@ export interface MyOrganization extends OrganizationSummary {
 export interface ActiveContext {
   organizationId: string;
   effectiveRole: string;
+  hostLocked?: boolean;
+  hostOrganizationId?: string | null;
 }
 
 export interface WhatsappLink {

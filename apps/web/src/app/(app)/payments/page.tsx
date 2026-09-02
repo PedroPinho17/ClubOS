@@ -1,11 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { PaymentsCreateForm } from "@/components/payments/payments-create-form";
 import { PaymentsList } from "@/components/payments/payments-list";
+import type {
+  PickerPlanFilter,
+  PickerQuotaFilter,
+  PickerStatusFilter,
+} from "@/components/payments/payments-member-picker";
 import { QueryErrorCard } from "@/components/query-error-card";
 import { RoleGate } from "@/components/role-gate";
+import { RoleGateSkeleton } from "@/components/page-skeletons";
 import { useMembersPicker } from "@/hooks/use-members-picker";
 import { usePaymentsMutations } from "@/hooks/use-payments-mutations";
 import { useTenantQueryKey } from "@/hooks/use-tenant-query-key";
@@ -13,6 +20,7 @@ import { api } from "@/lib/api";
 import { todayDateInput } from "@/lib/date-input";
 import { STAFF_ROLES } from "@/lib/staff-roles";
 import type {
+  Member,
   MembershipPlan,
   PaginatedResult,
   Payment,
@@ -22,16 +30,24 @@ import type {
 export default function PaymentsPage() {
   return (
     <RoleGate roles={[...STAFF_ROLES]}>
-      <PaymentsPageContent />
+      <Suspense fallback={<RoleGateSkeleton />}>
+        <PaymentsPageContent />
+      </Suspense>
     </RoleGate>
   );
 }
 
 function PaymentsPageContent() {
-  const [memberId, setMemberId] = useState("");
+  const searchParams = useSearchParams();
+  const prefillMemberId = searchParams.get("memberId") ?? "";
+
+  const [memberId, setMemberId] = useState(prefillMemberId);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [paidAt, setPaidAt] = useState(todayDateInput);
+  const [quotaFilter, setQuotaFilter] = useState<PickerQuotaFilter>("");
+  const [statusFilter, setStatusFilter] = useState<PickerStatusFilter>("");
+  const [planFilter, setPlanFilter] = useState<PickerPlanFilter>("");
 
   const paymentsKey = useTenantQueryKey(["payments"]);
   const plansKey = useTenantQueryKey(["membership-plans"]);
@@ -54,17 +70,43 @@ function PaymentsPageContent() {
     hasMore: membersHasMore,
     searchInput: memberSearchInput,
     setSearchInput: setMemberSearchInput,
-  } = useMembersPicker();
+  } = useMembersPicker({
+    immediate: Boolean(prefillMemberId),
+    status: statusFilter,
+    quotaPlanId: planFilter,
+    quotaStatus: quotaFilter,
+  });
 
   const { data: plans } = useQuery<MembershipPlan[]>({
     queryKey: plansKey,
     queryFn: () => api.get<MembershipPlan[]>("/membership-plans"),
   });
 
-  const selectedMember = useMemo(
-    () => members.find((m) => m.id === memberId),
-    [members, memberId],
-  );
+  const prefillKey = useTenantQueryKey(["members", "prefill", prefillMemberId]);
+  const { data: prefillMember } = useQuery<Member>({
+    queryKey: prefillKey,
+    queryFn: () => api.get<Member>(`/members/${prefillMemberId}`),
+    enabled: Boolean(prefillMemberId),
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!prefillMemberId) return;
+    setMemberId(prefillMemberId);
+    activateMembersPicker();
+    requestAnimationFrame(() => {
+      document
+        .getElementById("register-payment-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [prefillMemberId, activateMembersPicker]);
+
+  const selectedMember = useMemo(() => {
+    const fromList = members.find((m) => m.id === memberId);
+    if (fromList) return fromList;
+    if (prefillMember?.id === memberId) return prefillMember;
+    return undefined;
+  }, [members, memberId, prefillMember]);
 
   const suggestedAmount = useMemo(() => {
     if (!selectedMember?.quotaPlan) return "";
@@ -103,6 +145,13 @@ function PaymentsPageContent() {
         setMemberSearchInput={setMemberSearchInput}
         activateMembersPicker={activateMembersPicker}
         selectedMember={selectedMember}
+        plans={plans}
+        quotaFilter={quotaFilter}
+        setQuotaFilter={setQuotaFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        planFilter={planFilter}
+        setPlanFilter={setPlanFilter}
         suggestedAmount={suggestedAmount}
         isPending={createPayment.isPending}
         onSubmit={() => {

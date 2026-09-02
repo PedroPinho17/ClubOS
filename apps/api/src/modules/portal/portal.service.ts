@@ -14,6 +14,7 @@ import { StorageService } from "../../storage/storage.service";
 import { CardsService } from "../cards/cards.service";
 import { PaymentsService } from "../payments/payments.service";
 import { computeQuotaSituation } from "../members/quota.util";
+import { publicOriginForOrg } from "../../common/public-origin";
 import { loadOrgReminderSettings } from "../reminders/org-reminder-settings";
 
 @Injectable()
@@ -185,7 +186,7 @@ export class PortalService {
 
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { name: true, primaryColor: true },
+      select: { name: true, primaryColor: true, domain: true },
     });
     if (!org) throw new NotFoundException("Organizacao nao encontrada.");
 
@@ -220,9 +221,7 @@ export class PortalService {
       });
     }
 
-    const origin = (process.env.WEB_ORIGIN ?? "http://localhost:3000")
-      .split(",")[0]
-      .trim();
+    const origin = publicOriginForOrg(org);
     const rendered = portalAccessEmail({
       branding: { name: org.name, primaryColor: org.primaryColor },
       memberName: member.name,

@@ -7,6 +7,12 @@
 #   3. pnpm db:deploy (primeiro arranque; NÃO correr db:seed em produção)
 
 services:
+  postgres:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clubos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clubos}
+      POSTGRES_DB: ${POSTGRES_DB:-clubos}
+
   api:
     build:
       context: .
@@ -30,7 +36,7 @@ services:
       context: .
       dockerfile: Dockerfile.web
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-same-origin}
     container_name: clubos-web
     restart: unless-stopped
     environment:

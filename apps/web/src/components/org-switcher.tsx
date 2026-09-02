@@ -4,10 +4,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useActiveOrgId } from "@/hooks/use-active-org";
+import { useEffectiveRole } from "@/hooks/use-effective-role";
 import { useMyOrganizations } from "@/hooks/use-my-organizations";
 import { api } from "@/lib/api";
 import { invalidateTenantQueries } from "@/lib/invalidate-tenant-queries";
 import { setActiveOrganizationId } from "@/lib/org-context";
+import { isImperador } from "@/lib/permissions";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -20,9 +22,10 @@ export function OrgSwitcher({ compact = false }: OrgSwitcherProps) {
   const queryClient = useQueryClient();
   const activeOrgId = useActiveOrgId();
   const { data: orgs } = useMyOrganizations();
+  const { effectiveRole } = useEffectiveRole();
   const [switching, setSwitching] = useState(false);
 
-  if (!orgs || orgs.length <= 1) return null;
+  if (!isImperador(effectiveRole) || !orgs || orgs.length <= 1) return null;
 
   const selectValue = activeOrgId ?? orgs[0].id;
 

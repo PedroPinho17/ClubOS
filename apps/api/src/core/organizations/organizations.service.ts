@@ -2,27 +2,38 @@
  * @module OrganizationsService
  * Perfil, branding e settings da organizacao activa; listagem/criacao (imperador).
  */
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { OrganizationPlan, OrganizationStatus } from '@clubos/database';
-import { PrismaService } from '../../prisma/prisma.service';
-import { StorageService } from '../../storage/storage.service';
-import { CreateOrganizationDto, UpdateOrganizationDto } from './dto';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { OrganizationPlan, OrganizationStatus } from "@clubos/database";
+import { PrismaService } from "../../prisma/prisma.service";
+import { StorageService } from "../../storage/storage.service";
+import {
+  isPlatformHost,
+  isValidClubHostname,
+  normalizeHostname,
+} from "../../common/host-hostname";
+import { invalidateOrgOriginsCache } from "../../common/host-origins";
+import { CreateOrganizationDto, UpdateOrganizationDto } from "./dto";
 
 function slugify(name: string): string {
   return name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
     .slice(0, 48);
 }
 
 const IMAGE_EXT: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-  'image/svg+xml': 'svg',
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
 };
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -38,15 +49,17 @@ export class OrganizationsService {
       where: { id: organizationId },
     });
     if (!org) {
-      throw new NotFoundException('Organizacao nao encontrada.');
+      throw new NotFoundException("Organizacao nao encontrada.");
     }
     return { ...org, logoUrl: await this.storage.getUrl(org.logoKey) };
   }
 
   async getLogoBuffer(organizationId: string) {
-    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
     if (!org?.logoKey) {
-      throw new NotFoundException('Logotipo nao definido.');
+      throw new NotFoundException("Logotipo nao definido.");
     }
     return this.storage.getObject(org.logoKey);
   }
@@ -54,8 +67,15 @@ export class OrganizationsService {
   /** Lista todas as organizacoes (Imperador). @deprecated Preferir GET /api/me/organizations */
   listAll() {
     return this.prisma.organization.findMany({
-      select: { id: true, name: true, slug: true, plan: true, status: true, primaryColor: true },
-      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        plan: true,
+        status: true,
+        primaryColor: true,
+      },
+      orderBy: { name: "asc" },
     });
   }
 
@@ -63,7 +83,7 @@ export class OrganizationsService {
   async create(dto: CreateOrganizationDto, creatorUserId: string) {
     const baseSlug = dto.slug?.trim() || slugify(dto.name);
     if (!baseSlug) {
-      throw new BadRequestException('Slug invalido.');
+      throw new BadRequestException("Slug invalido.");
     }
 
     let slug = baseSlug;
@@ -73,7 +93,12 @@ export class OrganizationsService {
       slug = `${baseSlug}-${suffix}`;
     }
 
-    const basicModules = new Set(['dashboard', 'members', 'membership-plans', 'payments']);
+    const basicModules = new Set([
+      "dashboard",
+      "members",
+      "membership-plans",
+      "payments",
+    ]);
     const allModules = await this.prisma.module.findMany();
 
     const org = await this.prisma.$transaction(async (tx) => {
@@ -93,13 +118,16 @@ export class OrganizationsService {
         });
       }
 
-      const memberIds = new Set<string>([creatorUserId, ...(dto.imperadorUserIds ?? [])]);
+      const memberIds = new Set<string>([
+        creatorUserId,
+        ...(dto.imperadorUserIds ?? []),
+      ]);
       for (const userId of memberIds) {
         await tx.organizationMember.create({
           data: {
             userId,
             organizationId: created.id,
-            orgRole: 'imperador',
+            orgRole: "imperador",
           },
         });
       }
@@ -116,26 +144,73 @@ export class OrganizationsService {
     file: { buffer: Buffer; mimetype: string; size: number } | undefined,
   ) {
     if (!file) {
-      throw new BadRequestException('Ficheiro em falta.');
+      throw new BadRequestException("Ficheiro em falta.");
     }
     const ext = IMAGE_EXT[file.mimetype];
     if (!ext) {
-      throw new BadRequestException('Formato invalido (usa PNG, JPG, WEBP ou SVG).');
+      throw new BadRequestException(
+        "Formato invalido (usa PNG, JPG, WEBP ou SVG).",
+      );
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      throw new BadRequestException('Imagem demasiado grande (max 5MB).');
+      throw new BadRequestException("Imagem demasiado grande (max 5MB).");
     }
     const key = `${organizationId}/branding/logo-${Date.now()}.${ext}`;
     await this.storage.upload(key, file.buffer, file.mimetype);
-    await this.prisma.organization.update({ where: { id: organizationId }, data: { logoKey: key } });
+    await this.prisma.organization.update({
+      where: { id: organizationId },
+      data: { logoKey: key },
+    });
     return this.findById(organizationId);
   }
 
-  update(organizationId: string, dto: UpdateOrganizationDto) {
-    return this.prisma.organization.update({
+  async update(
+    organizationId: string,
+    dto: UpdateOrganizationDto,
+    canEditDomain = false,
+  ) {
+    const { domain, ...rest } = dto;
+    const data: Record<string, unknown> = { ...rest };
+
+    if (domain !== undefined) {
+      if (!canEditDomain) {
+        throw new ForbiddenException(
+          "Apenas o Imperador pode alterar o dominio do clube.",
+        );
+      }
+      const trimmed = domain?.trim() ?? "";
+      if (!trimmed) {
+        data.domain = null;
+      } else {
+        const host = normalizeHostname(trimmed);
+        if (!isValidClubHostname(host)) {
+          throw new BadRequestException(
+            isPlatformHost(host)
+              ? "Este hostname e da plataforma e nao pode ser atribuido a um clube."
+              : "Dominio invalido. Usa um hostname (ex.: www.crcvale.pt).",
+          );
+        }
+        const taken = await this.prisma.organization.findUnique({
+          where: { domain: host },
+          select: { id: true },
+        });
+        if (taken && taken.id !== organizationId) {
+          throw new BadRequestException(
+            "Este dominio ja esta associado a outro clube.",
+          );
+        }
+        data.domain = host;
+      }
+    }
+
+    await this.prisma.organization.update({
       where: { id: organizationId },
-      data: dto,
-    }).then(() => this.findById(organizationId));
+      data: data as never,
+    });
+    if (domain !== undefined) {
+      invalidateOrgOriginsCache();
+    }
+    return this.findById(organizationId);
   }
 
   async getSettings(organizationId: string) {

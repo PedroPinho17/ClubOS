@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { apiBaseUrl } from "@/lib/api-base-url";
 
 /** null = a verificar; true/false = resultado do ping a /api/health */
 export function useApiHealth() {
@@ -13,7 +12,7 @@ export function useApiHealth() {
 
     async function check() {
       try {
-        const res = await fetch(`${API_URL}/api/health`, {
+        const res = await fetch(`${apiBaseUrl()}/api/health`, {
           cache: "no-store",
           signal: AbortSignal.timeout(4_000),
         });

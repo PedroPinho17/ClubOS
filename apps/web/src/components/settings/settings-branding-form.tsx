@@ -20,6 +20,9 @@ type SettingsBrandingFormProps = {
   setLocale: (v: string) => void;
   timezone: string;
   setTimezone: (v: string) => void;
+  domain?: string;
+  setDomain?: (v: string) => void;
+  canEditDomain?: boolean;
   uploadLogoPending: boolean;
   onUploadLogo: (file: File) => void;
   savePending: boolean;
@@ -38,6 +41,9 @@ export function SettingsBrandingForm({
   setLocale,
   timezone,
   setTimezone,
+  domain,
+  setDomain,
+  canEditDomain = false,
   uploadLogoPending,
   onUploadLogo,
   savePending,
@@ -135,6 +141,31 @@ export function SettingsBrandingForm({
                   placeholder="Europe/Lisbon"
                 />
               </div>
+              {canEditDomain && setDomain ? (
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-sm font-medium">
+                    Domínio do clube
+                  </label>
+                  <Input
+                    value={domain ?? ""}
+                    onChange={(e) => setDomain(e.target.value)}
+                    placeholder="www.crcvale.pt"
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Hostname próprio (sem https://). Aponta o DNS e adiciona o
+                    mesmo domínio no Coolify/proxy para esta instância. Vazio =
+                    só o endereço da plataforma.
+                  </p>
+                </div>
+              ) : org.domain ? (
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-sm font-medium">
+                    Domínio do clube
+                  </label>
+                  <Input value={org.domain} disabled className="bg-muted" />
+                </div>
+              ) : null}
               <div className="sm:col-span-2">
                 <Button type="submit" disabled={savePending || !name.trim()}>
                   <Save className="h-4 w-4" />

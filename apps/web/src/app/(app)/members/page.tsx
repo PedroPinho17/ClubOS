@@ -32,6 +32,7 @@ import {
   canExportReports as hasReportExport,
   canManageMembers,
 } from "@/lib/permissions";
+import { isStaffRole } from "@/lib/staff-roles";
 import type { Member } from "@/lib/types";
 
 export default function MembersPage() {
@@ -47,6 +48,7 @@ function MembersPageContent() {
   const canManage = !roleLoading && canManageMembers(effectiveRole);
   const canExportReports = !roleLoading && hasReportExport(effectiveRole);
   const canAccessCards = !roleLoading && hasCardAccess(effectiveRole);
+  const canRecordPayment = !roleLoading && isStaffRole(effectiveRole);
 
   const list = useMembersList();
   const importFlow = useMemberImport();
@@ -280,6 +282,7 @@ function MembersPageContent() {
         editingId={editingId}
         canManage={canManage}
         canAccessCards={canAccessCards}
+        canRecordPayment={canRecordPayment}
         canManagePhotos={canManage}
         deletePending={deleteMember.isPending}
         grantPortalPending={grantPortal.isPending}

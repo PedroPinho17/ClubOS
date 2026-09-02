@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { apiBaseUrl } from "@/lib/api-base-url";
 
 /** Carrega logotipo via API autenticada (cookies) — necessário no portal cross-origin. */
 export function useOrgLogoBlob(logoApiPath?: string | null) {
@@ -19,7 +18,7 @@ export function useOrgLogoBlob(logoApiPath?: string | null) {
 
     void (async () => {
       try {
-        const res = await fetch(`${API_URL}/api${logoApiPath}`, {
+        const res = await fetch(`${apiBaseUrl()}/api${logoApiPath}`, {
           credentials: "include",
         });
         if (!res.ok) throw new Error("logo unavailable");

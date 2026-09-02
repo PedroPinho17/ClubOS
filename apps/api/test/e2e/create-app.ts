@@ -5,6 +5,7 @@ import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import helmet from "helmet";
 import { AppModule } from "../../src/app.module";
+import { corsOriginDelegate } from "../../src/common/host-origins";
 import {
   applyApiRateLimits,
   configureTrustProxy,
@@ -42,9 +43,7 @@ export async function createTestApp(
   });
 
   app.enableCors({
-    origin: (process.env.WEB_ORIGIN ?? "http://localhost:3000")
-      .split(",")
-      .map((o) => o.trim()),
+    origin: corsOriginDelegate(),
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-organization-id"],
   });

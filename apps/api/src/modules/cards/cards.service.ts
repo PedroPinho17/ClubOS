@@ -1,16 +1,21 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { buildSignedValidationUrl } from '../../common/qr-signature';
-import { PrismaService } from '../../prisma/prisma.service';
-import { StorageService } from '../../storage/storage.service';
-import { computeQuotaSituation } from '../members/quota.util';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { buildSignedValidationUrl } from "../../common/qr-signature";
+import { publicOriginForOrg } from "../../common/public-origin";
+import { PrismaService } from "../../prisma/prisma.service";
+import { StorageService } from "../../storage/storage.service";
+import { computeQuotaSituation } from "../members/quota.util";
 import {
   CARD_CATALOG,
   type CardLayout,
   resolveCardLayout,
-} from './card-layout';
-import { UpdateCardSettingsDto } from './dto';
+} from "./card-layout";
+import { UpdateCardSettingsDto } from "./dto";
 
-const CARD_LAYOUT_KEY = 'card.layout';
+const CARD_LAYOUT_KEY = "card.layout";
 
 @Injectable()
 export class CardsService {
@@ -20,8 +25,10 @@ export class CardsService {
   ) {}
 
   private async getOrg(organizationId: string) {
-    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
-    if (!org) throw new NotFoundException('Organizacao nao encontrada.');
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    if (!org) throw new NotFoundException("Organizacao nao encontrada.");
     return org;
   }
 
@@ -30,7 +37,10 @@ export class CardsService {
     const setting = await this.prisma.organizationSetting.findUnique({
       where: { organizationId_key: { organizationId, key: CARD_LAYOUT_KEY } },
     });
-    return resolveCardLayout(org, (setting?.value as Partial<CardLayout>) ?? null);
+    return resolveCardLayout(
+      org,
+      (setting?.value as Partial<CardLayout>) ?? null,
+    );
   }
 
   async getSettings(organizationId: string) {
@@ -47,10 +57,12 @@ export class CardsService {
     const current = await this.getLayout(organizationId);
 
     const patch = { ...dto };
-    if (actorRole !== 'imperador') {
+    if (actorRole !== "imperador") {
       delete patch.crcValeEnabled;
-      if (patch.template === 'crc_vale') {
-        throw new ForbiddenException('Apenas o Imperador pode ativar o layout CRC Vale.');
+      if (patch.template === "crc_vale") {
+        throw new ForbiddenException(
+          "Apenas o Imperador pode ativar o layout CRC Vale.",
+        );
       }
     }
 
@@ -73,13 +85,13 @@ export class CardsService {
       include: {
         quotaPlan: true,
         payments: {
-          where: { status: 'PAID' },
-          orderBy: { paidAt: 'desc' },
+          where: { status: "PAID" },
+          orderBy: { paidAt: "desc" },
           take: 1,
         },
       },
     });
-    if (!member) throw new NotFoundException('Socio nao encontrado.');
+    if (!member) throw new NotFoundException("Socio nao encontrado.");
 
     const lastPaidAt = member.payments[0]?.paidAt ?? null;
     const quota = computeQuotaSituation({
@@ -92,20 +104,23 @@ export class CardsService {
     // Texto de validade (templates base).
     let validityText: string | null = null;
     if (member.cardValidUntil) {
-      validityText = `Válido até ${member.cardValidUntil.toLocaleDateString('pt-PT')}`;
+      validityText = `Válido até ${member.cardValidUntil.toLocaleDateString("pt-PT")}`;
     } else if (quota.nextDueDate) {
-      validityText = `Próximo vencimento: ${new Date(quota.nextDueDate).toLocaleDateString('pt-PT')}`;
+      validityText = `Próximo vencimento: ${new Date(quota.nextDueDate).toLocaleDateString("pt-PT")}`;
     }
 
     // Periodo (template CRC Vale): ano/ano+1.
-    const refDate = member.cardValidUntil ?? (quota.nextDueDate ? new Date(quota.nextDueDate) : new Date());
+    const refDate =
+      member.cardValidUntil ??
+      (quota.nextDueDate ? new Date(quota.nextDueDate) : new Date());
     const year = refDate.getFullYear();
     const validadePeriodo = `${year}/${year + 1}`;
 
-    const numeroFormatado = `${layout.numeroPrefix ?? ''}${member.number}`;
+    const numeroFormatado = `${layout.numeroPrefix ?? ""}${member.number}`;
 
     const qrExpiresAt =
-      member.cardValidUntil ?? (quota.nextDueDate ? new Date(quota.nextDueDate) : null);
+      member.cardValidUntil ??
+      (quota.nextDueDate ? new Date(quota.nextDueDate) : null);
 
     const qrPayload = this.buildQrPayload(layout.qrContent, {
       organizationName: org.name,
@@ -113,6 +128,7 @@ export class CardsService {
       numeroFormatado,
       name: member.name,
       qrExpiresAt,
+      origin: publicOriginForOrg(org),
     });
 
     return {
@@ -139,29 +155,38 @@ export class CardsService {
       validityText,
       validadePeriodo,
       quotaStatus: quota.status,
-      active: member.status === 'ACTIVE',
+      active: member.status === "ACTIVE",
       qrPayload,
     };
   }
 
   private buildQrPayload(
-    qrContent: CardLayout['qrContent'],
+    qrContent: CardLayout["qrContent"],
     ctx: {
       organizationName: string;
       memberId: string;
       numeroFormatado: string;
       name: string;
       qrExpiresAt: Date | null;
+      origin: string;
     },
   ): string {
     switch (qrContent) {
-      case 'numero':
+      case "numero":
         return ctx.numeroFormatado;
-      case 'dados':
-        return JSON.stringify({ clube: ctx.organizationName, numero: ctx.numeroFormatado, nome: ctx.name });
-      case 'validacao':
+      case "dados":
+        return JSON.stringify({
+          clube: ctx.organizationName,
+          numero: ctx.numeroFormatado,
+          nome: ctx.name,
+        });
+      case "validacao":
       default:
-        return buildSignedValidationUrl(ctx.memberId, ctx.qrExpiresAt);
+        return buildSignedValidationUrl(
+          ctx.memberId,
+          ctx.qrExpiresAt,
+          ctx.origin,
+        );
     }
   }
 }

@@ -123,7 +123,8 @@ Endpoints:
 | **Testes e2e Web**             | ✅ Playwright — login, membros, import, public, **portal**, **pagamentos**             |
 | **Migracao CRC Vale**          | Aguardar 1–2 meses; manter `gestao_socios` em producao                                 |
 | **PWA offline**                | V1 so cache estatico; paginas e API precisam de rede                                   |
-| **Domínios custom / billing**  | Fora do scope MVP (ex.: `app.clubos.pt`, Stripe)                                       |
+| **Billing SaaS**               | Fora do scope MVP (Stripe)                                                             |
+| **Domínios custom**            | ✅ Hostname por clube (`Organization.domain`); demo em `PLATFORM_HOSTS`                |
 
 ### Proximos passos (ordem sugerida)
 
@@ -378,8 +379,9 @@ Copiar `.env.example` → `.env`. **Nunca commitar** `.env` com segredos reais.
 | ---------------------------------------- | -------------------------------------------------- |
 | `DATABASE_URL`                           | PostgreSQL                                         |
 | `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` | Sessoes e auth                                     |
-| `WEB_ORIGIN`                             | CORS + links em emails                             |
-| `NEXT_PUBLIC_API_URL`                    | Frontend → API                                     |
+| `WEB_ORIGIN`                             | CORS + fallback de links em emails                 |
+| `PLATFORM_HOSTS`                         | Hostnames da demo (nao travam o tenant)            |
+| `NEXT_PUBLIC_API_URL`                    | Frontend → API (`same-origin` em producao)         |
 | `REDIS_*`                                | Filas, lembretes, dedupe                           |
 | `S3_*` / MinIO                           | Logotipos, fotos, recibos                          |
 | `SMTP_*`                                 | Emails (portal, lembretes, comunicacoes)           |

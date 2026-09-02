@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,6 +16,11 @@ import { Input } from "@/components/ui/input";
 import { postLoginPath } from "@/lib/auth-redirect";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { useApiHealth } from "@/hooks/use-api-health";
+import { useHostOrg } from "@/hooks/use-host-org";
+import {
+  applyOrgDocumentBranding,
+  resetOrgDocumentBranding,
+} from "@/lib/org-document";
 
 const API_OFFLINE_MSG_DEV =
   "A API não está acessível (porta 4000). Corre `pnpm dev` na raiz do projeto e aguarda a mensagem «ClubOS API a correr».";
@@ -44,6 +49,18 @@ export function LoginForm() {
   const router = useRouter();
   const { refetch } = useSession();
   const apiReachable = useApiHealth();
+  const { data: hostOrg } = useHostOrg();
+  const clubName = hostOrg?.kind === "org" ? hostOrg.name : null;
+  const clubLogo = hostOrg?.kind === "org" ? hostOrg.logoUrl : null;
+  const showPasskey = hostOrg?.passkeysEnabled !== false;
+
+  useEffect(() => {
+    if (hostOrg?.kind === "org") {
+      applyOrgDocumentBranding(hostOrg.name, hostOrg.logoUrl, hostOrg.id);
+      return () => resetOrgDocumentBranding();
+    }
+    resetOrgDocumentBranding();
+  }, [hostOrg]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -99,12 +116,24 @@ export function LoginForm() {
     <>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <div className="mb-2 text-center text-2xl font-bold text-primary">
-            ClubOS
+          <div className="mb-2 flex flex-col items-center gap-2 text-center">
+            {clubLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={clubLogo}
+                alt={clubName ?? "Clube"}
+                className="h-14 w-14 rounded-lg object-contain"
+              />
+            ) : null}
+            <div className="text-2xl font-bold text-primary">
+              {clubName ?? "ClubOS"}
+            </div>
           </div>
           <CardTitle>Entrar</CardTitle>
           <CardDescription>
-            Acede ao backoffice ou portal do sócio.
+            {clubName
+              ? `Acede ao backoffice ou portal de ${clubName}.`
+              : "Acede ao backoffice ou portal do sócio."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -160,22 +189,26 @@ export function LoginForm() {
             </Button>
           </form>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            ou
-            <div className="h-px flex-1 bg-border" />
-          </div>
+          {showPasskey ? (
+            <>
+              <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="h-px flex-1 bg-border" />
+                ou
+                <div className="h-px flex-1 bg-border" />
+              </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-11 w-full text-base"
-            onClick={onPasskey}
-            disabled={loading}
-          >
-            <KeyRound className="h-4 w-4" />
-            Entrar com passkey
-          </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 w-full text-base"
+                onClick={onPasskey}
+                disabled={loading}
+              >
+                <KeyRound className="h-4 w-4" />
+                Entrar com passkey
+              </Button>
+            </>
+          ) : null}
 
           <div className="mt-5 border-t pt-4">
             <button

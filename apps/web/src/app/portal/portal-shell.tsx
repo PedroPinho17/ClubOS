@@ -15,6 +15,9 @@ import {
 } from "@/lib/portal-branding";
 import { readPortalCache } from "@/lib/portal-cache";
 import type { PortalMe } from "@/lib/types";
+import { HostOrgMismatch } from "@/components/host-org-mismatch";
+import { useHostOrg } from "@/hooks/use-host-org";
+import { isHostOrgMismatch } from "@/lib/host-org";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
@@ -25,15 +28,29 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     () => enrichPortalMeCache(readPortalCache<PortalMe>()) ?? null,
   );
 
-  const { data: portalMe } = useQuery<PortalMe>({
+  const { data: hostOrg } = useHostOrg();
+  const {
+    data: portalMe,
+    isError: portalError,
+    error: portalErr,
+  } = useQuery<PortalMe>({
     queryKey: [...PORTAL_ME_QUERY_KEY],
     queryFn: () => api.get<PortalMe>("/portal/me"),
     enabled: !!session,
     staleTime: 60_000,
     placeholderData: cachedMe ?? undefined,
+    retry: 1,
   });
 
   const branding = resolvePortalBranding(portalMe);
+
+  if (portalError && isHostOrgMismatch(portalErr)) {
+    return (
+      <HostOrgMismatch
+        clubName={hostOrg?.kind === "org" ? hostOrg.name : null}
+      />
+    );
+  }
 
   if (isLoading || !session) {
     return (

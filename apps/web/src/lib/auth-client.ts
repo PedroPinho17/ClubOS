@@ -6,11 +6,10 @@
 import { createAuthClient } from "better-auth/react";
 import { adminClient, inferAdditionalFields } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { apiBaseUrl } from "./api-base-url";
 
 export const authClient = createAuthClient({
-  baseURL: `${API_URL}/api/auth`,
+  baseURL: `${apiBaseUrl()}/api/auth`,
   plugins: [
     passkeyClient(),
     adminClient(),

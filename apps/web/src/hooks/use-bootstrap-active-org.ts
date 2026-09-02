@@ -2,8 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { useActiveOrgId } from "@/hooks/use-active-org";
+import { useHostOrg } from "@/hooks/use-host-org";
 import { useMyOrganizations } from "@/hooks/use-my-organizations";
 import { api } from "@/lib/api";
+import { useSession } from "@/lib/auth-client";
 import {
   getActiveOrganizationId,
   setActiveOrganizationId,
@@ -11,11 +13,15 @@ import {
 
 /**
  * Garante org activa no localStorage/sessao antes do shell renderizar.
- * Corre no layout (mesmo durante skeleton) — o OrgSwitcher so aparece depois.
+ * Em dominio custom, forca a org do host (excepto Imperador, que pode trocar).
  */
 export function useBootstrapActiveOrganization(enabled: boolean) {
   const activeOrgId = useActiveOrgId();
   const bootstrapped = useRef(false);
+  const { data: session } = useSession();
+  const globalRole = (session?.user as { role?: string | null } | undefined)
+    ?.role;
+  const { data: hostOrg, isLoading: hostLoading } = useHostOrg();
 
   const {
     data: orgs,
@@ -30,10 +36,40 @@ export function useBootstrapActiveOrganization(enabled: boolean) {
     }
   }, [enabled]);
 
-  useEffect(() => {
-    if (!enabled || !orgs?.length || bootstrapped.current) return;
-    bootstrapped.current = true;
+  const hostMismatch =
+    enabled &&
+    !orgsLoading &&
+    !hostLoading &&
+    hostOrg?.kind === "org" &&
+    !!orgs &&
+    globalRole !== "imperador" &&
+    !orgs.some((o) => o.id === hostOrg.id);
 
+  useEffect(() => {
+    if (!enabled || bootstrapped.current) return;
+    if (orgsLoading || hostLoading || !orgs) return;
+
+    if (hostOrg?.kind === "org") {
+      const allowed =
+        globalRole === "imperador" || orgs.some((o) => o.id === hostOrg.id);
+      if (!allowed) {
+        bootstrapped.current = true;
+        return;
+      }
+
+      bootstrapped.current = true;
+      if (getActiveOrganizationId() !== hostOrg.id) {
+        setActiveOrganizationId(hostOrg.id);
+      }
+      void api
+        .post("/me/active-organization", { organizationId: hostOrg.id })
+        .catch(() => undefined);
+      return;
+    }
+
+    if (!orgs.length) return;
+
+    bootstrapped.current = true;
     const stored = getActiveOrganizationId();
     const valid =
       stored && orgs.some((o) => o.id === stored) ? stored : orgs[0].id;
@@ -47,10 +83,14 @@ export function useBootstrapActiveOrganization(enabled: boolean) {
       .catch(() => {
         // sessao ainda a carregar — o switcher manual corrige depois
       });
-  }, [enabled, orgs]);
+  }, [enabled, orgs, orgsLoading, hostOrg, hostLoading, globalRole]);
 
   const isBootstrapping =
-    enabled && (orgsLoading || (!!orgs?.length && !activeOrgId));
+    enabled &&
+    !hostMismatch &&
+    (orgsLoading ||
+      hostLoading ||
+      (!!orgs?.length && !activeOrgId && hostOrg?.kind !== "org"));
 
-  return { orgs, isBootstrapping, orgsError, refetchOrgs };
+  return { orgs, isBootstrapping, orgsError, refetchOrgs, hostMismatch };
 }
