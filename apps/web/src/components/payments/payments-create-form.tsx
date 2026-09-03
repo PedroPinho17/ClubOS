@@ -121,8 +121,11 @@ export function PaymentsCreateForm({
               </p>
             </div>
             <div className="w-40 space-y-1">
-              <label className="text-sm font-medium">Método</label>
+              <label className="text-sm font-medium" htmlFor="payment-method">
+                Método
+              </label>
               <select
+                id="payment-method"
                 value={method}
                 onChange={(e) => setMethod(e.target.value as PaymentMethod)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

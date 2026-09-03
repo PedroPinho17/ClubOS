@@ -5,6 +5,7 @@ import { Building2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useActiveOrgId } from "@/hooks/use-active-org";
 import { useEffectiveRole } from "@/hooks/use-effective-role";
+import { useHostOrg } from "@/hooks/use-host-org";
 import { useMyOrganizations } from "@/hooks/use-my-organizations";
 import { api } from "@/lib/api";
 import { invalidateTenantQueries } from "@/lib/invalidate-tenant-queries";
@@ -23,9 +24,13 @@ export function OrgSwitcher({ compact = false }: OrgSwitcherProps) {
   const activeOrgId = useActiveOrgId();
   const { data: orgs } = useMyOrganizations();
   const { effectiveRole } = useEffectiveRole();
+  const { data: hostOrg } = useHostOrg();
   const [switching, setSwitching] = useState(false);
 
-  if (!isImperador(effectiveRole) || !orgs || orgs.length <= 1) return null;
+  const hostLocked = hostOrg?.kind === "org";
+  const canSwitch = hostLocked ? isImperador(effectiveRole) : true;
+
+  if (!canSwitch || !orgs || orgs.length <= 1) return null;
 
   const selectValue = activeOrgId ?? orgs[0].id;
 

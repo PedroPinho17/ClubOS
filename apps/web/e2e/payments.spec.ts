@@ -18,7 +18,7 @@ test.describe("Pagamentos", () => {
     await selectMemberInPaymentsForm(page);
 
     await page.getByRole("spinbutton").fill("12.50");
-    await page.locator("select").nth(1).selectOption("TRANSFER");
+    await page.locator("#payment-method").selectOption("TRANSFER");
 
     await page.getByRole("button", { name: "Registar pagamento" }).click();
     await expect(

@@ -23,6 +23,9 @@ export function useRequireAuth(options: UseRequireAuthOptions = {}) {
   const { data: session, isPending, isRefetching } = useSession();
   const awaitingSession = isPending || (isRefetching && !session);
   const enforcePasswordChange = options.enforcePasswordChange !== false;
+  const roleRedirect = session
+    ? (options.redirectIf?.(session.user.role ?? "") ?? null)
+    : null;
 
   useEffect(() => {
     if (awaitingSession) return;
@@ -41,19 +44,18 @@ export function useRequireAuth(options: UseRequireAuthOptions = {}) {
       return;
     }
 
-    const redirect = options.redirectIf?.(session.user.role ?? "");
-    if (redirect) router.replace(redirect);
+    if (roleRedirect) router.replace(roleRedirect);
   }, [
     awaitingSession,
     session,
     router,
     pathname,
-    options.redirectIf,
+    roleRedirect,
     enforcePasswordChange,
   ]);
 
   return {
     session,
-    isLoading: awaitingSession && !session,
+    isLoading: (awaitingSession && !session) || !!roleRedirect,
   };
 }

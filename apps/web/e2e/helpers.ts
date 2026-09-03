@@ -92,21 +92,24 @@ export function navLink(page: Page, name: string) {
   return page.getByRole("navigation").getByRole("link", { name });
 }
 
-/** Select de sócio com carregamento lazy (pagamentos). */
+/** Picker de sócio com pesquisa/lista (pagamentos). */
 export async function selectMemberInPaymentsForm(
   page: Page,
   options?: { memberName?: string; index?: number },
 ) {
-  const memberSelect = page.locator("#register-payment-form select").first();
-  await memberSelect.click();
+  const search = page.locator("#payment-member-search");
+  await expect(search).toBeVisible({ timeout: 20_000 });
+  await search.click();
 
-  await expect(memberSelect.locator("option").nth(1)).toHaveText(/.+ - .+/, {
-    timeout: 20_000,
-  });
+  const list = page.getByRole("listbox", { name: "Lista de sócios" });
+  const option = options?.memberName
+    ? list.getByRole("option", { name: new RegExp(options.memberName, "i") })
+    : list.getByRole("option").nth(options?.index ?? 0);
 
-  if (options?.memberName) {
-    await memberSelect.selectOption({ label: options.memberName });
-  } else {
-    await memberSelect.selectOption({ index: options?.index ?? 1 });
-  }
+  await expect(option).toBeVisible({ timeout: 20_000 });
+  await option.click();
+
+  await expect(
+    page.getByRole("button", { name: "Limpar sócio seleccionado" }),
+  ).toBeVisible({ timeout: 10_000 });
 }
