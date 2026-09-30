@@ -62,6 +62,18 @@ export class PortalController {
     res.end(buffer);
   }
 
+  @Get("communications")
+  @PortalOnly()
+  communications(@CurrentUser() user: AuthUser) {
+    return this.portal.listCommunications(user.id);
+  }
+
+  @Post("communications/:id/read")
+  @PortalOnly()
+  markRead(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.portal.markCommunicationRead(user.id, id);
+  }
+
   @Post("access/:memberId")
   @AdminOnly()
   grant(

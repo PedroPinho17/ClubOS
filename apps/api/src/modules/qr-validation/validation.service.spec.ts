@@ -13,7 +13,12 @@ describe("ValidationService", () => {
     organizationModule: { findFirst: vi.fn() },
   };
 
-  const service = new ValidationService(prisma as never);
+  const service = new ValidationService(
+    prisma as never,
+    {
+      log: vi.fn(),
+    } as never,
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();

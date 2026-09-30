@@ -10,6 +10,7 @@ import { quotaDueSoonEmail } from "../../core/mail/templates/quota-due-soon";
 import { quotaOverdueEmail } from "../../core/mail/templates/quota-overdue";
 import { PrismaService } from "../../prisma/prisma.service";
 import { computeQuotaSituation } from "../members/quota.util";
+import { PushService } from "../notifications/push.service";
 import { publicOriginForOrg } from "../../common/public-origin";
 import {
   loadOrgReminderSettings,
@@ -32,6 +33,7 @@ export class RemindersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
+    private readonly push: PushService,
   ) {}
 
   async runForAllOrganizations(): Promise<ReminderRunResult[]> {
@@ -174,6 +176,20 @@ export class RemindersService {
             kind,
           },
         });
+
+        if (member.userId) {
+          await this.push.notifyUser(
+            member.userId,
+            "quotas",
+            kind === QuotaReminderKind.DUE_SOON
+              ? "Quota a vencer"
+              : "Quota em atraso",
+            kind === QuotaReminderKind.DUE_SOON
+              ? "Tem uma quota por pagar em breve."
+              : "Tem uma quota por pagar.",
+            { type: "quota", kind },
+          );
+        }
 
         if (kind === QuotaReminderKind.DUE_SOON) result.dueSoonSent++;
         else result.overdueSent++;

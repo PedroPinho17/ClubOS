@@ -34,7 +34,11 @@ export async function getTrustedOrigins(): Promise<string[]> {
       // mantem cache anterior se a BD falhar
     }
   }
-  return [...new Set([...staticWebOrigins(), ...cache])];
+  const origins = [...staticWebOrigins(), ...cache, "clubos://"];
+  if (process.env.NODE_ENV !== "production") {
+    origins.push("exp://");
+  }
+  return [...new Set(origins)];
 }
 
 export async function isTrustedOrigin(origin: string): Promise<boolean> {

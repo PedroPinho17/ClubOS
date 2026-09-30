@@ -47,6 +47,8 @@ model User {
   accounts  Account[]
   passkeys  Passkey[]
   auditLogs AuditLog[]
+  deviceTokens DeviceToken[]
+  accountDeletionRequests AccountDeletionRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -165,6 +167,8 @@ model Organization {
   communications Communication[]
   auditLogs      AuditLog[]
   quotaRemindersSent QuotaReminderSent[]
+  deviceTokens DeviceToken[]
+  accountDeletionRequests AccountDeletionRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -310,6 +314,7 @@ model Member {
 
   payments           Payment[]
   quotaRemindersSent QuotaReminderSent[]
+  communicationRecipients CommunicationRecipient[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -437,8 +442,72 @@ model Communication {
   status          CommunicationStatus   @default(SENDING)
   createdById     String?
 
+  recipients CommunicationRecipient[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
+}
+
+model CommunicationRecipient {
+  id              String        @id @default(cuid())
+  communicationId String
+  communication   Communication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  readAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([communicationId, memberId])
+  @@index([memberId])
+  @@index([communicationId])
+}
+
+// ===========================================================================
+// APP MOBILE: PUSH + ELIMINACAO DE CONTA
+// ===========================================================================
+
+model DeviceToken {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  token          String    @unique
+  platform       String
+  appVersion     String?
+  /// Preferencias JSON: { quotas, communications, payments }
+  preferences    Json?
+  lastSeenAt     DateTime  @default(now())
+  disabledAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+}
+
+enum AccountDeletionStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
+
+model AccountDeletionRequest {
+  id             String                @id @default(cuid())
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  reason         String?
+  status         AccountDeletionStatus @default(PENDING)
+  processedAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([status])
 }

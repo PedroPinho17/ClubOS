@@ -1,19 +1,29 @@
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { Worker, type Job } from 'bullmq';
-import { redisConnectionOptions } from '../../redis/redis.module';
-import { KEY_PREFIX, RECEIPT_QUEUE } from '../../redis/redis.constants';
-import { MailService } from '../../core/mail/mail.service';
-import { receiptPaymentEmail } from '../../core/mail/templates/receipt-payment';
-import { PaymentsService } from './payments.service';
-import type { ReceiptJobData } from './receipt.queue';
+import {
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from "@nestjs/common";
+import { Worker, type Job } from "bullmq";
+import { redisConnectionOptions } from "../../redis/redis.module";
+import { KEY_PREFIX, RECEIPT_QUEUE } from "../../redis/redis.constants";
+import { MailService } from "../../core/mail/mail.service";
+import { receiptPaymentEmail } from "../../core/mail/templates/receipt-payment";
+import { PushService } from "../notifications/push.service";
+import { PaymentsService } from "./payments.service";
+import type { ReceiptJobData } from "./receipt.queue";
 
 export interface ReceiptWorkerDeps {
-  payments: Pick<PaymentsService, 'generateReceipt' | 'cacheReceipt' | 'findOne'>;
-  mail: Pick<MailService, 'send'>;
-  logger?: Pick<Logger, 'warn'>;
+  payments: Pick<
+    PaymentsService,
+    "generateReceipt" | "cacheReceipt" | "findOne"
+  >;
+  mail: Pick<MailService, "send">;
+  push?: Pick<PushService, "notifyUser">;
+  logger?: Pick<Logger, "warn">;
 }
 
-type PaymentWithOrg = Awaited<ReturnType<PaymentsService['findOne']>>;
+type PaymentWithOrg = Awaited<ReturnType<PaymentsService["findOne"]>>;
 
 /** Logica de processamento do job de recibo (testavel sem BullMQ). */
 export async function processReceiptJob(
@@ -23,10 +33,14 @@ export async function processReceiptJob(
 ): Promise<void> {
   const { organizationId, paymentId } = data;
 
-  const { filename, buffer } = await deps.payments.generateReceipt(organizationId, paymentId);
+  const { filename, buffer } = await deps.payments.generateReceipt(
+    organizationId,
+    paymentId,
+  );
   await deps.payments.cacheReceipt(paymentId, buffer);
 
-  const payment = paymentOverride ?? (await deps.payments.findOne(organizationId, paymentId));
+  const payment =
+    paymentOverride ?? (await deps.payments.findOne(organizationId, paymentId));
   if (payment.member.email) {
     const rendered = receiptPaymentEmail({
       branding: {
@@ -41,10 +55,25 @@ export async function processReceiptJob(
       subject: `Comprovativo de pagamento - ${Number(payment.amount).toFixed(2)} EUR`,
       text: rendered.text,
       html: rendered.html,
-      attachments: [{ filename, content: buffer, contentType: 'application/pdf' }],
+      attachments: [
+        { filename, content: buffer, contentType: "application/pdf" },
+      ],
     });
   } else {
-    deps.logger?.warn?.(`Socio ${payment.member.name} sem email; recibo apenas em cache.`);
+    deps.logger?.warn?.(
+      `Socio ${payment.member.name} sem email; recibo apenas em cache.`,
+    );
+  }
+
+  const userId = (payment.member as { userId?: string | null }).userId;
+  if (userId && deps.push) {
+    await deps.push.notifyUser(
+      userId,
+      "payments",
+      "Recibo disponivel",
+      "O comprovativo de pagamento esta pronto.",
+      { type: "receipt", paymentId },
+    );
   }
 }
 
@@ -60,6 +89,7 @@ export class ReceiptWorker implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly payments: PaymentsService,
     private readonly mail: MailService,
+    private readonly push: PushService,
   ) {}
 
   onModuleInit(): void {
@@ -73,17 +103,24 @@ export class ReceiptWorker implements OnModuleInit, OnModuleDestroy {
       },
     );
 
-    this.worker.on('completed', (job) =>
+    this.worker.on("completed", (job) =>
       this.logger.log(`Recibo processado (payment=${job.data.paymentId})`),
     );
-    this.worker.on('failed', (job, err) =>
-      this.logger.error(`Falha no recibo (payment=${job?.data.paymentId}): ${err.message}`),
+    this.worker.on("failed", (job, err) =>
+      this.logger.error(
+        `Falha no recibo (payment=${job?.data.paymentId}): ${err.message}`,
+      ),
     );
   }
 
   private async process(job: Job<ReceiptJobData>): Promise<void> {
     await processReceiptJob(
-      { payments: this.payments, mail: this.mail, logger: this.logger },
+      {
+        payments: this.payments,
+        mail: this.mail,
+        push: this.push,
+        logger: this.logger,
+      },
       job.data,
     );
   }

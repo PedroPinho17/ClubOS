@@ -271,4 +271,65 @@ export class PortalService {
 
     return this.payments.getReceipt(member.organizationId, paymentId);
   }
+
+  async listCommunications(userId: string) {
+    const member = await this.prisma.member.findFirst({ where: { userId } });
+    if (!member) {
+      throw new NotFoundException(
+        "A sua conta ainda nao esta associada a um socio.",
+      );
+    }
+
+    const rows = await this.prisma.communicationRecipient.findMany({
+      where: { memberId: member.id },
+      include: {
+        communication: {
+          select: {
+            id: true,
+            subject: true,
+            body: true,
+            createdAt: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    return rows.map((r) => ({
+      id: r.communication.id,
+      subject: r.communication.subject,
+      body: r.communication.body,
+      createdAt: r.communication.createdAt.toISOString(),
+      readAt: r.readAt?.toISOString() ?? null,
+    }));
+  }
+
+  async markCommunicationRead(userId: string, communicationId: string) {
+    const member = await this.prisma.member.findFirst({ where: { userId } });
+    if (!member) {
+      throw new NotFoundException(
+        "A sua conta ainda nao esta associada a um socio.",
+      );
+    }
+
+    const row = await this.prisma.communicationRecipient.findUnique({
+      where: {
+        communicationId_memberId: {
+          communicationId,
+          memberId: member.id,
+        },
+      },
+    });
+    if (!row) throw new NotFoundException("Aviso nao encontrado.");
+
+    if (!row.readAt) {
+      await this.prisma.communicationRecipient.update({
+        where: { id: row.id },
+        data: { readAt: new Date() },
+      });
+    }
+    return { ok: true, readAt: new Date().toISOString() };
+  }
 }

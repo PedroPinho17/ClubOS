@@ -1,3 +1,4 @@
+import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
@@ -45,6 +46,7 @@ const roles = {
  * - Email + password (+ reset por email via SMTP)
  * - Passkey / WebAuthn
  * - Admin plugin (roles: imperador | administrador | tesoureiro | socio)
+ * - Expo plugin (app nativa clubos://)
  */
 export const auth = betterAuth({
   appName: "ClubOS",
@@ -93,6 +95,7 @@ export const auth = betterAuth({
   },
 
   plugins: [
+    expo(),
     passkey({
       rpID: process.env.PASSKEY_RP_ID ?? "localhost",
       rpName: "ClubOS",

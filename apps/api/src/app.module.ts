@@ -26,6 +26,7 @@ import { ReportsModule } from "./modules/reports/reports.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { MembersModule } from "./modules/members/members.module";
 import { MembershipPlansModule } from "./modules/membership-plans/membership-plans.module";
+import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { ValidationModule } from "./modules/qr-validation/validation.module";
 import { HealthModule } from "./core/health/health.module";
@@ -48,6 +49,7 @@ import { StorageModule } from "./storage/storage.module";
     StorageModule,
     MailModule,
     AuditModule,
+    NotificationsModule,
     // Core
     OrganizationsModule,
     MeModule,

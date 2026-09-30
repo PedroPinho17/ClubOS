@@ -43,7 +43,11 @@ describe("RemindersService", () => {
       },
     };
 
-    const service = new RemindersService(prisma as never, { send } as never);
+    const service = new RemindersService(
+      prisma as never,
+      { send } as never,
+      { notifyUser: vi.fn() } as never,
+    );
     const result = await service.runForOrganization("org-1");
 
     expect(result.skipped).toBe(1);
@@ -92,7 +96,11 @@ describe("RemindersService", () => {
       },
     };
 
-    const service = new RemindersService(prisma as never, { send } as never);
+    const service = new RemindersService(
+      prisma as never,
+      { send } as never,
+      { notifyUser: vi.fn() } as never,
+    );
     const result = await service.runForOrganization("org-1");
 
     expect(send).toHaveBeenCalledWith(

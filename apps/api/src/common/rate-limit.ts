@@ -12,6 +12,10 @@ export type RateLimitMountOptions = {
   authMax?: number;
   /** Max pedidos/min em `/api/validate` (default env ou 60). */
   validateMax?: number;
+  /** Max pedidos/min em `/api/me/devices` (default 30). */
+  devicesMax?: number;
+  /** Max pedidos/min em `/api/validation/scan` (default 30). */
+  scanMax?: number;
   /**
    * Cliente Redis para store partilhado entre instancias.
    * Se omitido ou `store: "memory"`, usa memoria (OK em single-instance / E2E).
@@ -125,6 +129,40 @@ export function applyApiRateLimits(
         max: validateMax,
         message: "Demasiados pedidos de validacao. Tente novamente em breve.",
         store: validateStore,
+      }),
+    ),
+  );
+
+  const devicesMax =
+    opts.devicesMax ??
+    parseRateLimitMax(process.env.RATE_LIMIT_DEVICES_PER_MIN, 30);
+  const scanMax =
+    opts.scanMax ?? parseRateLimitMax(process.env.RATE_LIMIT_SCAN_PER_MIN, 30);
+  const devicesStore = useRedis
+    ? createRedisStore(opts.redis!, `${KEY_PREFIX}:rl:devices:`)
+    : undefined;
+  const scanStore = useRedis
+    ? createRedisStore(opts.redis!, `${KEY_PREFIX}:rl:scan:`)
+    : undefined;
+
+  app.use(
+    "/api/me/devices",
+    rateLimit(
+      buildLimiterOptions({
+        max: devicesMax,
+        message:
+          "Demasiados pedidos de dispositivos. Tente novamente em breve.",
+        store: devicesStore,
+      }),
+    ),
+  );
+  app.use(
+    "/api/validation/scan",
+    rateLimit(
+      buildLimiterOptions({
+        max: scanMax,
+        message: "Demasiados pedidos de leitura QR. Tente novamente em breve.",
+        store: scanStore,
       }),
     ),
   );

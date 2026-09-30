@@ -50,9 +50,11 @@ describe("applyApiRateLimits", () => {
     });
 
     expect(result).toEqual({ authMax: 3, validateMax: 9, store: "memory" });
-    expect(use).toHaveBeenCalledTimes(2);
+    expect(use).toHaveBeenCalledTimes(4);
     expect(use.mock.calls[0][0]).toBe("/api/auth");
     expect(use.mock.calls[1][0]).toBe("/api/validate");
+    expect(use.mock.calls[2][0]).toBe("/api/me/devices");
+    expect(use.mock.calls[3][0]).toBe("/api/validation/scan");
     expect(typeof use.mock.calls[0][1]).toBe("function");
     expect(typeof use.mock.calls[1][1]).toBe("function");
   });
@@ -69,7 +71,7 @@ describe("applyApiRateLimits", () => {
     });
 
     expect(result.store).toBe("memory");
-    expect(use).toHaveBeenCalledTimes(2);
+    expect(use).toHaveBeenCalledTimes(4);
   });
 
   it("faz fallback para memory quando redis nao esta ready", () => {

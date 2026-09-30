@@ -1,7 +1,13 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from "class-validator";
 
 export class SetActiveOrganizationDto {
   @IsString()
-  @MinLength(1)
   organizationId!: string;
+}
+
+export class AccountDeletionDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
 }

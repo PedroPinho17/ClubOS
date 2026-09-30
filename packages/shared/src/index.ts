@@ -4,6 +4,7 @@
  */
 
 export * from "./domain";
+export * from "./schemas";
 
 /** Staff do backoffice (exclui socio do portal). */
 export const STAFF_ROLES = [

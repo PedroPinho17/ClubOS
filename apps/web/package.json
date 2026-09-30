@@ -14,12 +14,13 @@
     "pretest:e2e": "playwright install chromium && pnpm exec tsx ../../scripts/generate-e2e-import-fixture.ts"
   },
   "dependencies": {
-    "@better-auth/passkey": "^1.6.23",
+    "@better-auth/expo": "1.7.6",
+    "@better-auth/passkey": "^1.7.6",
     "@clubos/shared": "workspace:*",
     "@radix-ui/react-alert-dialog": "^1.1.19",
     "@sentry/nextjs": "^10.64.0",
     "@tanstack/react-query": "^5.62.7",
-    "better-auth": "^1.6.23",
+    "better-auth": "^1.7.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "html-to-image": "^1.11.13",

@@ -44,7 +44,13 @@ async function bootstrap() {
   app.enableCors({
     origin: corsOriginDelegate(),
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "x-organization-id"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-organization-id",
+      "x-app-version",
+      "Cookie",
+    ],
   });
   app.useGlobalPipes(
     new ValidationPipe({

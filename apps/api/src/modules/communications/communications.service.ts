@@ -1,12 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CommunicationAudience, PaymentStatus } from '@clubos/database';
-import { PrismaService } from '../../prisma/prisma.service';
-import { computeQuotaSituation } from '../members/quota.util';
-import { loadOrgReminderSettings } from '../reminders/org-reminder-settings';
-import { CommunicationsQueue } from './communications.queue';
-import { CreateCommunicationDto, WhatsappLinksDto } from './dto';
-import { buildWhatsappUrl, normalizeWhatsappPhone } from './whatsapp.util';
-import { communicationEmail } from '../../core/mail/templates/communication';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { CommunicationAudience, PaymentStatus } from "@clubos/database";
+import { PrismaService } from "../../prisma/prisma.service";
+import { computeQuotaSituation } from "../members/quota.util";
+import { PushService } from "../notifications/push.service";
+import { loadOrgReminderSettings } from "../reminders/org-reminder-settings";
+import { CommunicationsQueue } from "./communications.queue";
+import { CreateCommunicationDto, WhatsappLinksDto } from "./dto";
+import { buildWhatsappUrl, normalizeWhatsappPhone } from "./whatsapp.util";
+import { communicationEmail } from "../../core/mail/templates/communication";
 
 export interface WhatsappLink {
   name: string;
@@ -19,28 +24,47 @@ export class CommunicationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queue: CommunicationsQueue,
+    private readonly push: PushService,
   ) {}
 
   list(organizationId: string) {
     return this.prisma.communication.findMany({
       where: { organizationId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
   async findOne(organizationId: string, id: string) {
-    const comm = await this.prisma.communication.findFirst({ where: { id, organizationId } });
-    if (!comm) throw new NotFoundException('Comunicacao nao encontrada.');
+    const comm = await this.prisma.communication.findFirst({
+      where: { id, organizationId },
+    });
+    if (!comm) throw new NotFoundException("Comunicacao nao encontrada.");
     return comm;
   }
 
-  async previewCount(organizationId: string, audience: CommunicationAudience, planId?: string) {
-    const email = await this.resolveRecipients(organizationId, audience, planId);
+  async previewCount(
+    organizationId: string,
+    audience: CommunicationAudience,
+    planId?: string,
+  ) {
+    const email = await this.resolveRecipients(
+      organizationId,
+      audience,
+      planId,
+    );
     return { count: email.length };
   }
 
-  async previewWhatsappCount(organizationId: string, audience: CommunicationAudience, planId?: string) {
-    const links = await this.resolveWhatsappRecipients(organizationId, audience, planId);
+  async previewWhatsappCount(
+    organizationId: string,
+    audience: CommunicationAudience,
+    planId?: string,
+  ) {
+    const links = await this.resolveWhatsappRecipients(
+      organizationId,
+      audience,
+      planId,
+    );
     return { count: links.length };
   }
 
@@ -51,9 +75,16 @@ export class CommunicationsService {
     if (dto.audience === CommunicationAudience.PLAN && !dto.planId) {
       throw new BadRequestException('Indica o plano para a audiencia "PLAN".');
     }
-    const links = await this.resolveWhatsappRecipients(organizationId, dto.audience, dto.planId, dto.body);
+    const links = await this.resolveWhatsappRecipients(
+      organizationId,
+      dto.audience,
+      dto.planId,
+      dto.body,
+    );
     if (links.length === 0) {
-      throw new BadRequestException('Nenhum destinatario com telemovel valido para esta audiencia.');
+      throw new BadRequestException(
+        "Nenhum destinatario com telemovel valido para esta audiencia.",
+      );
     }
     return { links };
   }
@@ -64,8 +95,12 @@ export class CommunicationsService {
     planId?: string,
     messageBody?: string,
   ): Promise<WhatsappLink[]> {
-    const members = await this.fetchMembersForAudience(organizationId, audience, planId);
-    const plainBody = (messageBody ?? '').trim();
+    const members = await this.fetchMembersForAudience(
+      organizationId,
+      audience,
+      planId,
+    );
+    const plainBody = (messageBody ?? "").trim();
     const links: WhatsappLink[] = [];
 
     for (const m of members) {
@@ -86,16 +121,27 @@ export class CommunicationsService {
     audience: CommunicationAudience,
     planId?: string,
   ) {
-    const { diasAvisoQuota } = await loadOrgReminderSettings(this.prisma, organizationId);
+    const { diasAvisoQuota } = await loadOrgReminderSettings(
+      this.prisma,
+      organizationId,
+    );
     const members = await this.prisma.member.findMany({
       where: {
         organizationId,
-        ...(audience === CommunicationAudience.ACTIVE ? { status: 'ACTIVE' } : {}),
-        ...(audience === CommunicationAudience.PLAN && planId ? { quotaPlanId: planId } : {}),
+        ...(audience === CommunicationAudience.ACTIVE
+          ? { status: "ACTIVE" }
+          : {}),
+        ...(audience === CommunicationAudience.PLAN && planId
+          ? { quotaPlanId: planId }
+          : {}),
       },
       include: {
         quotaPlan: true,
-        payments: { where: { status: PaymentStatus.PAID }, orderBy: { paidAt: 'desc' }, take: 1 },
+        payments: {
+          where: { status: PaymentStatus.PAID },
+          orderBy: { paidAt: "desc" },
+          take: 1,
+        },
       },
     });
 
@@ -109,7 +155,7 @@ export class CommunicationsService {
           lastPaidAt: m.payments[0]?.paidAt ?? null,
           cardValidUntil: m.cardValidUntil,
           dueSoonDays: diasAvisoQuota,
-        }).status === 'overdue',
+        }).status === "overdue",
     );
   }
 
@@ -118,7 +164,11 @@ export class CommunicationsService {
     audience: CommunicationAudience,
     planId?: string,
   ): Promise<{ name: string; email: string }[]> {
-    const members = await this.fetchMembersForAudience(organizationId, audience, planId);
+    const members = await this.fetchMembersForAudience(
+      organizationId,
+      audience,
+      planId,
+    );
 
     return members
       .filter((m) => m.email)
@@ -134,21 +184,44 @@ export class CommunicationsService {
       select: { name: true, primaryColor: true },
     });
     const rendered = communicationEmail({
-      branding: { name: org?.name ?? 'ClubOS', primaryColor: org?.primaryColor },
-      memberName: input.sampleName?.trim() || 'João Exemplo',
+      branding: {
+        name: org?.name ?? "ClubOS",
+        primaryColor: org?.primaryColor,
+      },
+      memberName: input.sampleName?.trim() || "João Exemplo",
       subject: input.subject,
       body: input.body,
     });
-    return { html: rendered.html, text: rendered.text, sampleName: input.sampleName?.trim() || 'João Exemplo' };
+    return {
+      html: rendered.html,
+      text: rendered.text,
+      sampleName: input.sampleName?.trim() || "João Exemplo",
+    };
   }
 
-  async create(organizationId: string, userId: string, dto: CreateCommunicationDto) {
+  async create(
+    organizationId: string,
+    userId: string,
+    dto: CreateCommunicationDto,
+  ) {
     if (dto.audience === CommunicationAudience.PLAN && !dto.planId) {
       throw new BadRequestException('Indica o plano para a audiencia "PLAN".');
     }
-    const recipients = await this.resolveRecipients(organizationId, dto.audience, dto.planId);
-    if (recipients.length === 0) {
-      throw new BadRequestException('Nenhum destinatario com email para esta audiencia.');
+    const members = await this.fetchMembersForAudience(
+      organizationId,
+      dto.audience,
+      dto.planId,
+    );
+    const emailRecipients = members
+      .filter((m) => m.email)
+      .map((m) => ({ name: m.name, email: m.email! }));
+    if (emailRecipients.length === 0 && members.length === 0) {
+      throw new BadRequestException("Nenhum destinatario para esta audiencia.");
+    }
+    if (emailRecipients.length === 0) {
+      throw new BadRequestException(
+        "Nenhum destinatario com email para esta audiencia.",
+      );
     }
 
     const comm = await this.prisma.communication.create({
@@ -158,13 +231,16 @@ export class CommunicationsService {
         body: dto.body,
         audience: dto.audience,
         planId: dto.planId,
-        totalRecipients: recipients.length,
+        totalRecipients: emailRecipients.length,
         createdById: userId,
+        recipients: {
+          create: members.map((m) => ({ memberId: m.id })),
+        },
       },
     });
 
     await this.queue.enqueueMany(
-      recipients.map((r) => ({
+      emailRecipients.map((r) => ({
         communicationId: comm.id,
         organizationId,
         memberName: r.name,
@@ -173,6 +249,20 @@ export class CommunicationsService {
         body: dto.body,
       })),
     );
+
+    const pushUserIds = members
+      .map((m) => m.userId)
+      .filter((id): id is string => !!id);
+    if (pushUserIds.length > 0) {
+      await this.push.notifyMembers(
+        pushUserIds,
+        "communications",
+        "Nova comunicacao",
+        "Tem uma nova mensagem da associacao.",
+        { type: "communication", id: comm.id },
+      );
+    }
+
     return comm;
   }
 }

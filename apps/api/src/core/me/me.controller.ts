@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import { CurrentUser, NoOrgContext } from "../../common/decorators";
 import { ACTIVE_ORG_COOKIE } from "../../common/organization-context.service";
 import type { AuthUser } from "../../common/types";
-import { SetActiveOrganizationDto } from "./dto";
+import { AccountDeletionDto, SetActiveOrganizationDto } from "./dto";
 import { MeService } from "./me.service";
 
 @Controller("api/me")
@@ -54,5 +54,14 @@ export class MeController {
   @Post("complete-password-change")
   completePasswordChange(@CurrentUser() user: AuthUser) {
     return this.me.completePasswordChange(user.id);
+  }
+
+  /** Pedido de eliminacao de conta (requisito App Store / Play). */
+  @Post("account-deletion")
+  accountDeletion(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: AccountDeletionDto,
+  ) {
+    return this.me.requestAccountDeletion(user.id, dto.reason);
   }
 }

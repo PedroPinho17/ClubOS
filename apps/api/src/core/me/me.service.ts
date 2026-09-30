@@ -148,4 +148,46 @@ export class MeService {
     });
     return { mustChangePassword: false };
   }
+
+  /**
+   * Pedido de eliminacao de conta (App Store / Play).
+   * Cria registo PENDING; a anonimizacao fica a cargo do admin (MemberGdprService).
+   */
+  async requestAccountDeletion(userId: string, reason?: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException("Utilizador nao encontrado.");
+
+    const member = await this.prisma.member.findFirst({
+      where: { userId },
+      select: { organizationId: true },
+    });
+
+    const existing = await this.prisma.accountDeletionRequest.findFirst({
+      where: { userId, status: "PENDING" },
+    });
+    if (existing) {
+      return {
+        id: existing.id,
+        status: existing.status,
+        createdAt: existing.createdAt.toISOString(),
+        message: "Ja existe um pedido pendente.",
+      };
+    }
+
+    const req = await this.prisma.accountDeletionRequest.create({
+      data: {
+        userId,
+        organizationId: member?.organizationId,
+        reason: reason?.trim() || null,
+      },
+    });
+
+    return {
+      id: req.id,
+      status: req.status,
+      createdAt: req.createdAt.toISOString(),
+      message:
+        "Pedido registado. A associacao ira processar a eliminacao dos seus dados.",
+    };
+  }
 }
