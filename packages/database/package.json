@@ -10,7 +10,10 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "prisma"],
+  "files": [
+    "dist",
+    "prisma"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -30,6 +33,7 @@
   "devDependencies": {
     "prisma": "^6.2.1",
     "tsx": "^4.19.2",
+    "typescript": "~5.9.2",
     "@types/node": "^22.10.2"
   }
 }
