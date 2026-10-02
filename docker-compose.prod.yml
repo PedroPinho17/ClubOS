@@ -39,8 +39,11 @@ services:
     environment:
       NODE_ENV: production
       API_PORT: 4000
+      # Hosts internos Docker (sobrepoe localhost do .env de desenvolvimento)
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-clubos}?schema=public
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}
+      S3_ENDPOINT: http://minio:9000
     # Sem ports publicados — proxy na rede Docker
     expose:
       - "4000"

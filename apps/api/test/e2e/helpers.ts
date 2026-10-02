@@ -3,7 +3,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { prisma } from "@clubos/database";
 import type TestAgent from "supertest/lib/agent";
 import request from "supertest";
-import { auth } from "../../src/auth/auth";
+import { createCredentialUser } from "../../src/auth/create-credential-user";
 import { TEMPLATE_HEADERS } from "../../src/modules/members/import/member-import-column-map";
 import { buildSpreadsheetBuffer } from "../../src/modules/members/import/member-spreadsheet";
 
@@ -29,12 +29,16 @@ export async function createStaffUser(opts: {
   const email = `e2e-staff-${randomUUID()}@test.clubos.local`;
   const password = E2E_PASSWORD;
 
-  await auth.api.signUpEmail({
-    body: { email, password, name: "E2E Staff" },
+  const created = await createCredentialUser({
+    email,
+    password,
+    name: "E2E Staff",
+    role: opts.role,
+    emailVerified: true,
   });
 
   const user = await prisma.user.update({
-    where: { email },
+    where: { id: created.id },
     data: { role: opts.role, emailVerified: true },
   });
 
@@ -117,12 +121,16 @@ export async function createSocioPortalUser(
 ) {
   const password = E2E_PASSWORD;
 
-  await auth.api.signUpEmail({
-    body: { email, password, name },
+  const created = await createCredentialUser({
+    email,
+    password,
+    name,
+    role: "socio",
+    emailVerified: true,
   });
 
   const user = await prisma.user.update({
-    where: { email },
+    where: { id: created.id },
     data: { role: "socio", emailVerified: true },
   });
 

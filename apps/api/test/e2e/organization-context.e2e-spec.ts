@@ -3,7 +3,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { prisma } from "@clubos/database";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { auth } from "../../src/auth/auth";
+import { createCredentialUser } from "../../src/auth/create-credential-user";
 import { createTestApp } from "./create-app";
 import { isDatabaseAvailable } from "./db-available";
 import {
@@ -85,12 +85,12 @@ describe.skipIf(!dbReady)("Organization context guard (E2E)", () => {
 
   it("staff sem membership nao acede a rotas tenant-aware", async () => {
     const orphanEmail = `e2e-orphan-${randomUUID()}@test.clubos.local`;
-    await auth.api.signUpEmail({
-      body: {
-        email: orphanEmail,
-        password: E2E_PASSWORD,
-        name: "Orphan Staff",
-      },
+    await createCredentialUser({
+      email: orphanEmail,
+      password: E2E_PASSWORD,
+      name: "Orphan Staff",
+      role: "administrador",
+      emailVerified: true,
     });
     await prisma.user.update({
       where: { email: orphanEmail },

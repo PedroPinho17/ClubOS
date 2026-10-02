@@ -1,11 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { resolveQrSigningSecret } from "../env";
 
 function signingSecret(): string {
-  return (
-    process.env.QR_SIGNING_SECRET ??
-    process.env.BETTER_AUTH_SECRET ??
-    "dev-secret-change-me"
-  );
+  return resolveQrSigningSecret();
 }
 
 /** Assinatura HMAC-SHA256 (base64url) sobre memberId + expiração Unix. */

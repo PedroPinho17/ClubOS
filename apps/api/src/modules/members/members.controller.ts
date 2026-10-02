@@ -82,12 +82,26 @@ export class MembersController {
   async importSpreadsheet(
     @OrgId() organizationId: string,
     @CurrentUser() user: AuthUser,
-    @UploadedFile() file: { buffer: Buffer; size: number } | undefined,
+    @UploadedFile()
+    file:
+      | {
+          buffer: Buffer;
+          size: number;
+          originalname?: string;
+          mimetype?: string;
+        }
+      | undefined,
     @Body("updateExisting") updateExisting?: string,
     @Body("dryRun") dryRun?: string,
   ) {
     if (!file?.buffer?.length) {
       throw new BadRequestException("Ficheiro em falta.");
+    }
+    const name = (file.originalname ?? "").toLowerCase();
+    if (!name.endsWith(".xlsx")) {
+      throw new BadRequestException(
+        "Formato nao suportado. Use apenas ficheiros .xlsx (Excel).",
+      );
     }
     const result = await this.memberImport.importFromBuffer(
       organizationId,

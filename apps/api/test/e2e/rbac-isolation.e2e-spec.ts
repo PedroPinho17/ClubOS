@@ -3,7 +3,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { prisma } from "@clubos/database";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { auth } from "../../src/auth/auth";
+import { createCredentialUser } from "../../src/auth/create-credential-user";
 import { createTestApp } from "./create-app";
 import { isDatabaseAvailable } from "./db-available";
 import {
@@ -160,8 +160,12 @@ describe.skipIf(!dbReady)("RBAC and tenant isolation (E2E)", () => {
     const email = `rbac-multi-${suffix}@test.clubos.local`;
     const password = E2E_PASSWORD;
 
-    await auth.api.signUpEmail({
-      body: { email, password, name: "Multi Org Staff" },
+    await createCredentialUser({
+      email,
+      password,
+      name: "Multi Org Staff",
+      role: "administrador",
+      emailVerified: true,
     });
 
     const user = await prisma.user.update({
@@ -239,8 +243,12 @@ describe.skipIf(!dbReady)("RBAC and tenant isolation (E2E)", () => {
 
   it("imperador acede a org sem membership explicita", async () => {
     const email = `rbac-imperador-${suffix}@test.clubos.local`;
-    await auth.api.signUpEmail({
-      body: { email, password: E2E_PASSWORD, name: "Imperador RBAC" },
+    await createCredentialUser({
+      email,
+      password: E2E_PASSWORD,
+      name: "Imperador RBAC",
+      role: "imperador",
+      emailVerified: true,
     });
     const user = await prisma.user.update({
       where: { email },

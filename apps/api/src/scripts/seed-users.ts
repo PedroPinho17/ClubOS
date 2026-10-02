@@ -2,7 +2,7 @@ import "../env";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@clubos/database";
 import { hashPassword } from "better-auth/crypto";
-import { auth } from "../auth/auth";
+import { createCredentialUser } from "../auth/create-credential-user";
 
 function requireSeedPassword(): string {
   const password = process.env.SEED_DEMO_PASSWORD?.trim();
@@ -54,7 +54,7 @@ async function syncCredentialPassword(
 }
 
 /**
- * Cria os utilizadores iniciais via Better Auth (hashing/contas corretos).
+ * Cria os utilizadores iniciais (hashing Better Auth, sem endpoint publico).
  * Requer que o seed do catalogo/organizacao ja tenha corrido.
  */
 async function ensureUser(opts: {
@@ -64,14 +64,13 @@ async function ensureUser(opts: {
   role: string;
   memberships?: { organizationId: string; orgRole: string }[];
 }) {
-  const existing = await prisma.user.findUnique({
-    where: { email: opts.email },
+  await createCredentialUser({
+    email: opts.email,
+    password: opts.password,
+    name: opts.name,
+    role: opts.role,
+    emailVerified: true,
   });
-  if (!existing) {
-    await auth.api.signUpEmail({
-      body: { email: opts.email, password: opts.password, name: opts.name },
-    });
-  }
 
   await prisma.user.update({
     where: { email: opts.email },

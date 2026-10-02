@@ -28,7 +28,7 @@
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://socios.crcvale.pt"
+        "EXPO_PUBLIC_API_URL": "https://REPLACE_AFTER_DNS_IS_LIVE.example"
       }
     }
   },

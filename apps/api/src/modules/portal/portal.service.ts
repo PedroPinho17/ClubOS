@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { PaymentStatus } from "@clubos/database";
 import { hashPassword } from "better-auth/crypto";
-import { auth } from "../../auth/auth";
+import { createCredentialUser } from "../../auth/create-credential-user";
 import { MailService } from "../../core/mail/mail.service";
 import { portalAccessEmail } from "../../core/mail/templates/portal-access";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -196,11 +196,13 @@ export class PortalService {
       where: { email: member.email },
     });
     if (!user) {
-      await auth.api.signUpEmail({
-        body: { email: member.email, password, name: member.name },
-      });
-      user = await this.prisma.user.findUnique({
-        where: { email: member.email },
+      user = await createCredentialUser({
+        email: member.email,
+        password,
+        name: member.name,
+        role: "socio",
+        emailVerified: true,
+        mustChangePassword: true,
       });
     } else {
       await this.syncCredentialPassword(user.id, member.email, password);

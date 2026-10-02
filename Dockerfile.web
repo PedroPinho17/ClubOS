@@ -1,29 +1,37 @@
 FROM node:22-alpine AS base
+RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 WORKDIR /app
 
 ARG NEXT_PUBLIC_API_URL=same-origin
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV HUSKY=0
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_STANDALONE=true
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json .npmrc ./
+# Stub de todos os workspace packages para o lockfile frozen fechar no monorepo.
+COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
+COPY apps/mobile/package.json ./apps/mobile/
+COPY packages/database/package.json ./packages/database/
 COPY packages/shared/package.json ./packages/shared/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --filter @clubos/web...
 
 FROM deps AS build
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_STANDALONE=true
 RUN pnpm --filter @clubos/shared build
 RUN pnpm --filter @clubos/web build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
+RUN apk add --no-cache libc6-compat
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 COPY --from=build /app/apps/web/.next/standalone ./
 COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
@@ -31,6 +39,4 @@ COPY --from=build /app/apps/web/public ./apps/web/public
 
 WORKDIR /app/apps/web
 EXPOSE 3000
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
 CMD ["node", "server.js"]

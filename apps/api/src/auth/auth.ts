@@ -10,6 +10,7 @@ import { MailService } from "../core/mail/mail.service";
 import { passwordResetEmail } from "../core/mail/templates/password-reset";
 import { getTrustedOrigins } from "../common/host-origins";
 import { publicOriginForOrg, replaceUrlOrigin } from "../common/public-origin";
+import { resolveAuthSecret } from "../env";
 
 const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 const mail = new MailService();
@@ -49,18 +50,20 @@ const roles = {
  * - Passkey / WebAuthn
  * - Admin plugin (roles: imperador | administrador | tesoureiro | socio)
  * - Expo plugin (app nativa clubos://)
+ * - Registo publico desactivado (contas via convite / portal / seed interno)
  */
 export const auth = betterAuth({
   appName: "ClubOS",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:4000",
   basePath: "/api/auth",
-  secret: process.env.BETTER_AUTH_SECRET ?? "dev-secret-change-me",
+  secret: resolveAuthSecret(),
   trustedOrigins: async () => getTrustedOrigins(),
 
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
   emailAndPassword: {
     enabled: true,
+    disableSignUp: true,
     minPasswordLength: 8,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {

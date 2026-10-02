@@ -1,10 +1,10 @@
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { auth } from "../../auth/auth";
+import { createCredentialUser } from "../../auth/create-credential-user";
 import { UsersService } from "./users.service";
 
-vi.mock("../../auth/auth", () => ({
-  auth: { api: { signUpEmail: vi.fn() } },
+vi.mock("../../auth/create-credential-user", () => ({
+  createCredentialUser: vi.fn(),
 }));
 
 describe("UsersService.invite", () => {
@@ -70,7 +70,10 @@ describe("UsersService.invite", () => {
     });
     prisma.organizationMember.upsert.mockResolvedValue({});
     prisma.user.update.mockResolvedValue({});
-    vi.mocked(auth.api.signUpEmail).mockResolvedValue(undefined as never);
+    vi.mocked(createCredentialUser).mockResolvedValue({
+      id: "user-new",
+      email: dto.email,
+    } as never);
     mail.send.mockResolvedValue(undefined);
     audit.log.mockResolvedValue(undefined);
 

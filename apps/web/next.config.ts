@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Standalone gera symlinks em `.next/standalone` (necessario para Docker).
@@ -10,9 +12,16 @@ const useStandalone =
   process.env.NEXT_STANDALONE === "true" ||
   (process.env.NEXT_STANDALONE !== "false" && process.platform !== "win32");
 
+const monorepoRoot = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@clubos/shared"],
+  // Necessario no monorepo para o output standalone incluir deps correctamente (Docker).
+  outputFileTracingRoot: monorepoRoot,
   experimental: {
     optimizePackageImports: ["lucide-react", "@radix-ui/react-alert-dialog"],
     // Cache em disco entre restarts do `next dev` — 2.ª visita muito mais rápida.

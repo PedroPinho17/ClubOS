@@ -9,7 +9,7 @@ Guia para staff ao importar sócios em **Membros** → Importar Excel.
 3. Corrigir a lista de erros linha a linha
 4. Só depois confirmar o import real
 
-Máximo do ficheiro: **10 MB**. Formatos: `.xlsx` / `.xls` (conforme UI).
+Máximo do ficheiro: **10 MB**. Formato: **`.xlsx`** apenas.
 
 ## Colunas reconhecidas
 

@@ -120,7 +120,7 @@ function MembersPageContent() {
       <input
         ref={importFlow.importInputRef}
         type="file"
-        accept=".xlsx,.xls,.csv"
+        accept=".xlsx"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];

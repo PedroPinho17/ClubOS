@@ -1,15 +1,11 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PaymentStatus } from "@clubos/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { auth } from "../../auth/auth";
+import { createCredentialUser } from "../../auth/create-credential-user";
 import { PortalService } from "./portal.service";
 
-vi.mock("../../auth/auth", () => ({
-  auth: {
-    api: {
-      signUpEmail: vi.fn(),
-    },
-  },
+vi.mock("../../auth/create-credential-user", () => ({
+  createCredentialUser: vi.fn(),
 }));
 
 const memberBase = {
@@ -283,10 +279,11 @@ describe("PortalService", () => {
         primaryColor: "#1d4ed8",
         logoUrl: null,
       });
-      prisma.user.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: "user-new", email: "joao@clube.pt" });
-      vi.mocked(auth.api.signUpEmail).mockResolvedValue(undefined as never);
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+      vi.mocked(createCredentialUser).mockResolvedValue({
+        id: "user-new",
+        email: "joao@clube.pt",
+      } as never);
 
       const result = await service.grantAccess("org-1", "mem-2", "MinhaPass8!");
 

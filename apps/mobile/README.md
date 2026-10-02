@@ -39,7 +39,7 @@ npx eas-cli@latest init
 ```
 
 Isto substitui `REPLACE_WITH_EAS_PROJECT_ID` em `app.json` (projectId + updates.url).
-O perfil `production` em `eas.json` aponta a API para `https://socios.crcvale.pt` — ajusta se o domínio final for outro.
+So define `EXPO_PUBLIC_API_URL` no perfil `production` de `eas.json` depois do DNS/HTTPS do clube estarem live.
 
 2. Gerar APK (cloud Expo):
 

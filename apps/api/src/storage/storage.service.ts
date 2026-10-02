@@ -16,13 +16,23 @@ export class StorageService implements OnModuleInit {
 
   constructor() {
     this.bucket = process.env.S3_BUCKET ?? "clubos";
+    const accessKey = process.env.S3_ACCESS_KEY?.trim();
+    const secretKey = process.env.S3_SECRET_KEY?.trim();
+    const isProd = process.env.NODE_ENV === "production";
+
+    if (isProd && (!accessKey || !secretKey)) {
+      throw new Error(
+        "S3_ACCESS_KEY e S3_SECRET_KEY sao obrigatorios em producao.",
+      );
+    }
+
     this.client = new S3Client({
       endpoint: process.env.S3_ENDPOINT ?? "http://localhost:9000",
       region: process.env.S3_REGION ?? "eu-west-1",
       forcePathStyle: (process.env.S3_FORCE_PATH_STYLE ?? "true") === "true",
       credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY ?? "clubos",
-        secretAccessKey: process.env.S3_SECRET_KEY ?? "change-me-minio-secret",
+        accessKeyId: accessKey || "clubos",
+        secretAccessKey: secretKey || "dev-only-minio-secret-change-me",
       },
     });
   }

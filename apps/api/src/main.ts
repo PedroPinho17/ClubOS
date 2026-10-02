@@ -64,21 +64,31 @@ async function bootstrap() {
     app.useGlobalFilters(new SentryExceptionFilter());
   }
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle("ClubOS API")
-    .setDescription("API REST do ClubOS — gestao multi-tenant de organizacoes.")
-    .setVersion("1.0")
-    .addCookieAuth("better-auth.session_token")
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup("api/docs", app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  const swaggerEnabled =
+    process.env.SWAGGER_ENABLED === "true" ||
+    process.env.NODE_ENV !== "production";
+
+  if (swaggerEnabled) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle("ClubOS API")
+      .setDescription(
+        "API REST do ClubOS — gestao multi-tenant de organizacoes.",
+      )
+      .setVersion("1.0")
+      .addCookieAuth("better-auth.session_token")
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup("api/docs", app, document, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
 
   const port = Number(process.env.API_PORT ?? 4000);
   await app.listen(port);
   console.log(`ClubOS API a correr em http://localhost:${port}`);
-  console.log(`Documentacao OpenAPI: http://localhost:${port}/api/docs`);
+  if (swaggerEnabled) {
+    console.log(`Documentacao OpenAPI: http://localhost:${port}/api/docs`);
+  }
 }
 
 void bootstrap();

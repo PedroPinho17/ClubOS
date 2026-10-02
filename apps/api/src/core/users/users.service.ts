@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   Injectable,
 } from "@nestjs/common";
-import { auth } from "../../auth/auth";
+import { createCredentialUser } from "../../auth/create-credential-user";
 import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -108,8 +108,11 @@ export class UsersService {
     const tempPassword = `Cv${randomBytes(6).toString("base64url")}!9`;
 
     if (!existing) {
-      await auth.api.signUpEmail({
-        body: { email, password: tempPassword, name: dto.name },
+      await createCredentialUser({
+        email,
+        password: tempPassword,
+        name: dto.name,
+        emailVerified: true,
       });
     }
 

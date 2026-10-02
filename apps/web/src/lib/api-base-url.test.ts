@@ -26,4 +26,10 @@ describe("api-base-url", () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:4000/");
     expect(resolveConfiguredApiUrl()).toBe("http://localhost:4000");
   });
+
+  it("same-origin no SSR nao devolve URL vazio (Better Auth)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "same-origin");
+    const { apiBaseUrl } = await import("./api-base-url");
+    expect(apiBaseUrl()).toMatch(/^https?:\/\//);
+  });
 });
