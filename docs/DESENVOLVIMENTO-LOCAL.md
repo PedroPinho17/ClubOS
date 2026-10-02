@@ -23,9 +23,10 @@ cd C:\Projetos_WEB\ClubOS
 
 pnpm install
 Copy-Item .env.example .env
-# Editar .env: DATABASE_URL, BETTER_AUTH_SECRET, SEED_DEMO_PASSWORD, SMTP se necessário
+# Editar .env: POSTGRES_PASSWORD, REDIS_PASSWORD, S3_SECRET_KEY, DATABASE_URL,
+# BETTER_AUTH_SECRET, SEED_DEMO_PASSWORD (alinhados — docker-compose exige passwords)
 
-pnpm docker:up          # Postgres + Redis + MinIO
+pnpm docker:up          # Postgres + Redis + MinIO (portas só em 127.0.0.1)
 pnpm db:generate
 pnpm db:migrate         # aplicar migrations (caminho canónico)
 pnpm db:seed            # catálogo + orgs + pnpm --filter @clubos/api seed:users
@@ -50,18 +51,19 @@ pnpm docker:up
 pnpm dev
 ```
 
-Reinicia `pnpm dev` depois de instalar novas dependências na API (ex.: `xlsx`, `@nestjs/schedule`).
+Reinicia `pnpm dev` depois de instalar novas dependências na API (ex.: `exceljs`, `@nestjs/schedule`).
 
 ---
 
 ## Credenciais demo
 
 Defina **`SEED_DEMO_PASSWORD`** no `.env` local **antes** de `pnpm db:seed`.  
-Todas as contas abaixo usam essa mesma password (ver `apps/api/src/scripts/seed-users.ts`).
+Todas as contas abaixo usam essa mesma password (ver `apps/api/src/scripts/seed-users.ts`).  
+Não uses passwords conhecidas (ex. `Admin123!`). Em `NODE_ENV=production` o seed aborta.
 
 | Role                  | Email                      |
 | --------------------- | -------------------------- |
-| Imperador             | `pedropinho364@gmail.com`  |
+| Imperador             | `pedro@clubos.pt`          |
 | Imperador (2.ª conta) | `joao.imperador@clubos.pt` |
 | Administrador         | `admin@crcvale.pt`         |
 | Tesoureiro            | `tesoureiro@crcvale.pt`    |

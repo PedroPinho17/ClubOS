@@ -28,12 +28,12 @@ Requer `WEB_ORIGIN` correcto nos emails (links absolutos). Em produção: SMTP p
 
 ### Roles da plataforma
 
-| Role            | Acesso                                                                  |
-| --------------- | ----------------------------------------------------------------------- |
-| `imperador`     | Super-admin; qualquer org (sem membership obrigatória); activar módulos |
-| `administrador` | Admin do clube                                                          |
-| `tesoureiro`    | Pagamentos, relatórios (sem settings sensíveis)                         |
-| `socio`         | Portal apenas                                                           |
+| Role            | Acesso                                                                                                                             |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `imperador`     | Super-admin; qualquer org (sem membership obrigatória); activar módulos; único com Better Auth admin (`list-users`, `set-role`, …) |
+| `administrador` | Admin do clube (via NestJS / org); **sem** permissões do plugin admin Better Auth (não pode promover-se nem listar users globais)  |
+| `tesoureiro`    | Pagamentos, relatórios (sem settings sensíveis)                                                                                    |
+| `socio`         | Portal apenas                                                                                                                      |
 
 **Fonte única:** `@clubos/shared` (`STAFF_ROLES`, `ADMIN_ROLES`, `isStaffRole`, …).  
 Re-exports: `apps/api/src/common/roles.ts`, `apps/web/src/lib/staff-roles.ts` (não duplicar arrays).

@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { buildMemberExportRows } from './member-export-rows';
-import { buildSpreadsheetBuffer } from './member-spreadsheet';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../../../prisma/prisma.service";
+import { buildMemberExportRows } from "./member-export-rows";
+import { buildSpreadsheetBuffer } from "./member-spreadsheet";
 
 @Injectable()
 export class MemberExportService {
@@ -12,12 +12,14 @@ export class MemberExportService {
       where: { organizationId },
       include: {
         quotaPlan: true,
-        payments: { orderBy: [{ paidAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }] },
+        payments: {
+          orderBy: [{ paidAt: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+        },
       },
     });
 
     const rows = buildMemberExportRows(members);
-    return buildSpreadsheetBuffer(rows);
+    return await buildSpreadsheetBuffer(rows);
   }
 
   exportFilename(): string {

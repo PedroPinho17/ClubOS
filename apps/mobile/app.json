@@ -63,7 +63,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "clubos-mobile-placeholder"
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
       },
       "apiUrl": "http://localhost:4000"
     },
@@ -71,7 +71,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/clubos-mobile-placeholder"
+      "url": "https://u.expo.dev/REPLACE_WITH_EAS_PROJECT_ID"
     }
   }
 }

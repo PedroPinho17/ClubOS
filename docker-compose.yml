@@ -1,18 +1,22 @@
+# Infra local (Postgres, Redis, MinIO).
+# Portas só em 127.0.0.1 — não expor à rede/LAN.
+# Passwords: definir no .env (ver .env.example). Defaults abaixo são só para dev local.
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: clubos-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: clubos
-      POSTGRES_PASSWORD: clubos
-      POSTGRES_DB: clubos
+      POSTGRES_USER: ${POSTGRES_USER:-clubos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-clubos}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - clubos-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U clubos"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clubos}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,8 +25,14 @@ services:
     image: redis:7-alpine
     container_name: clubos-redis
     restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--requirepass",
+        "${REDIS_PASSWORD:?Defina REDIS_PASSWORD no .env}",
+      ]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - clubos-redis:/data
 
@@ -33,11 +43,11 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: clubos
-      MINIO_ROOT_PASSWORD: clubos-secret
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?Defina S3_ACCESS_KEY no .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Defina S3_SECRET_KEY no .env}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - clubos-minio:/data
 

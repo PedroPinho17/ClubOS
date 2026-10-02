@@ -121,6 +121,27 @@ describe.skipIf(!dbReady)("RBAC and tenant isolation (E2E)", () => {
     );
   });
 
+  it("administrador nao promove-se a imperador nem lista users via Better Auth admin", async () => {
+    const agent = await loginWithOrg(
+      app,
+      staffEmail,
+      E2E_PASSWORD,
+      crcValeOrgId,
+    );
+
+    const listUsers = await agent.get("/api/auth/admin/list-users");
+    expect(listUsers.status).toBeGreaterThanOrEqual(400);
+
+    const setRole = await agent.post("/api/auth/admin/set-role").send({
+      userId: staffUserId,
+      role: "imperador",
+    });
+    expect(setRole.status).toBeGreaterThanOrEqual(400);
+
+    const user = await prisma.user.findUnique({ where: { id: staffUserId } });
+    expect(user?.role).toBe("administrador");
+  });
+
   it("staff sem membership nao acede a outra organizacao", async () => {
     const agent = await loginWithOrg(
       app,

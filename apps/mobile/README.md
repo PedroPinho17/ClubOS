@@ -38,7 +38,8 @@ npx eas-cli@latest login
 npx eas-cli@latest init
 ```
 
-Isto substitui o `projectId` placeholder em `app.json`.
+Isto substitui `REPLACE_WITH_EAS_PROJECT_ID` em `app.json` (projectId + updates.url).
+O perfil `production` em `eas.json` aponta a API para `https://socios.crcvale.pt` — ajusta se o domínio final for outro.
 
 2. Gerar APK (cloud Expo):
 

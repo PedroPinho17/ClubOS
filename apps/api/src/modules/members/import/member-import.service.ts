@@ -5,25 +5,28 @@
  *
  * @see {@link ../../../docs/API-BACKEND.md#members--members} Endpoints de import
  */
-import { Injectable } from '@nestjs/common';
-import type { Member } from '@clubos/database';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { ImportDryRunService } from './import-dry-run';
-import { ImportMemberUpsertService } from './import-member-upsert';
-import { ImportPaymentUpsertService } from './import-payment-upsert';
+import { Injectable } from "@nestjs/common";
+import type { Member } from "@clubos/database";
+import { PrismaService } from "../../../prisma/prisma.service";
+import { ImportDryRunService } from "./import-dry-run";
+import { ImportMemberUpsertService } from "./import-member-upsert";
+import { ImportPaymentUpsertService } from "./import-payment-upsert";
 import {
   columnMapHasIdentity,
   mapHeaderIndexes,
-} from './member-import-column-map';
+} from "./member-import-column-map";
 import {
   buildMemberPayload,
   extractRowData,
   isPaymentOnlyRow,
   rowIsEmpty,
-} from './import-row-validator';
-import { emptyImportResult, type MemberImportResult } from './member-import.types';
-import { nullableString } from './member-import-parse';
-import { readSpreadsheetRows } from './member-spreadsheet';
+} from "./import-row-validator";
+import {
+  emptyImportResult,
+  type MemberImportResult,
+} from "./member-import.types";
+import { nullableString } from "./member-import-parse";
+import { readSpreadsheetRows } from "./member-spreadsheet";
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
@@ -54,15 +57,20 @@ export class MemberImportService {
     if (buffer.length > MAX_IMPORT_BYTES) {
       return {
         ...emptyImportResult(),
-        errors: [{ row: 0, message: 'Ficheiro demasiado grande (max 10 MB).' }],
+        errors: [{ row: 0, message: "Ficheiro demasiado grande (max 10 MB)." }],
       };
     }
 
-    const rows = readSpreadsheetRows(buffer);
+    const rows = await readSpreadsheetRows(buffer);
     if (rows.length === 0) {
       return {
         ...emptyImportResult(),
-        errors: [{ row: 1, message: 'O ficheiro está vazio ou não tem linhas de dados.' }],
+        errors: [
+          {
+            row: 1,
+            message: "O ficheiro está vazio ou não tem linhas de dados.",
+          },
+        ],
       };
     }
 
@@ -75,13 +83,15 @@ export class MemberImportService {
           {
             row: 1,
             message:
-              'Cabeçalho inválido: falta a coluna «Nome» ou «Número». Use o modelo Excel disponível no backoffice.',
+              "Cabeçalho inválido: falta a coluna «Nome» ou «Número». Use o modelo Excel disponível no backoffice.",
           },
         ],
       };
     }
 
-    const plans = await this.prisma.quotaPlan.findMany({ where: { organizationId } });
+    const plans = await this.prisma.quotaPlan.findMany({
+      where: { organizationId },
+    });
     const membersInSession = new Map<string, Member>();
     const result = emptyImportResult();
 
@@ -100,14 +110,22 @@ export class MemberImportService {
           result,
           dryRun,
           (orgId, member, rowData, importResult) =>
-            this.dryRun.simulatePaymentForMember(orgId, member, rowData, importResult),
+            this.dryRun.simulatePaymentForMember(
+              orgId,
+              member,
+              rowData,
+              importResult,
+            ),
         );
         continue;
       }
 
       const nome = nullableString(data.nome);
       if (!nome) {
-        result.errors.push({ row: excelRow, message: 'O nome é obrigatório na primeira linha de cada sócio.' });
+        result.errors.push({
+          row: excelRow,
+          message: "O nome é obrigatório na primeira linha de cada sócio.",
+        });
         result.skipped++;
         continue;
       }
@@ -121,9 +139,9 @@ export class MemberImportService {
         continue;
       }
 
-      const numero = memberPayload.number ?? '';
+      const numero = memberPayload.number ?? "";
       const existing =
-        numero !== ''
+        numero !== ""
           ? (membersInSession.get(numero) ??
             (await this.prisma.member.findFirst({
               where: { organizationId, number: numero },
@@ -147,14 +165,25 @@ export class MemberImportService {
           );
         } else {
           await this.prisma.$transaction(async (tx) => {
-            const member = await this.memberUpsert.upsert(tx, organizationId, existing, memberPayload);
+            const member = await this.memberUpsert.upsert(
+              tx,
+              organizationId,
+              existing,
+              memberPayload,
+            );
             if (existing) {
               result.updated++;
             } else {
               result.created++;
             }
             membersInSession.set(member.number, member);
-            await this.paymentUpsert.importForMember(tx, organizationId, member, data, result);
+            await this.paymentUpsert.importForMember(
+              tx,
+              organizationId,
+              member,
+              data,
+              result,
+            );
           });
         }
       } catch (e) {

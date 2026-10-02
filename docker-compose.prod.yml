@@ -2,16 +2,32 @@
 # Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 #
 # Antes do primeiro arranque:
-#   1. Copiar .env.example para .env e preencher segredos de producao
+#   1. Copiar .env.example para .env e preencher segredos de producao (passwords fortes)
 #   2. docker compose up -d postgres redis minio
 #   3. pnpm db:deploy (primeiro arranque; NÃO correr db:seed em produção)
+#
+# API/Web não publicam portas no host — o reverse proxy (Coolify/Traefik/Caddy)
+# liga-se pela rede Docker interna.
 
 services:
   postgres:
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-clubos}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clubos}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatorio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}
       POSTGRES_DB: ${POSTGRES_DB:-clubos}
+
+  redis:
+    command:
+      [
+        "redis-server",
+        "--requirepass",
+        "${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}",
+      ]
+
+  minio:
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY obrigatorio}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY obrigatorio}
 
   api:
     build:
@@ -23,8 +39,11 @@ services:
     environment:
       NODE_ENV: production
       API_PORT: 4000
-    ports:
-      - "4000:4000"
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}
+    # Sem ports publicados — proxy na rede Docker
+    expose:
+      - "4000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,7 +60,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       - api

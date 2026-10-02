@@ -4,7 +4,8 @@
 
 - [ ] Google Play Console (US$25 unico) — preferir conta Organizacao
 - [ ] Apple Developer Program (99 USD/ano)
-- [ ] Substituir `extra.eas.projectId` e `updates.url` em `app.json` pelo projeto EAS real: `eas init`
+- [ ] Correr `eas init` e substituir `REPLACE_WITH_EAS_PROJECT_ID` em `app.json` (`extra.eas.projectId` + `updates.url`)
+- [ ] Confirmar `EXPO_PUBLIC_API_URL` de producao em `eas.json` (default: `https://socios.crcvale.pt`)
 
 ## Assets
 

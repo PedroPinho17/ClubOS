@@ -44,3 +44,6 @@ backups/
 
 # Uploads (local S3/MinIO dev)
 uploads/
+
+# Cookies / sessões capturadas localmente (nunca commitar)
+cookies.txt

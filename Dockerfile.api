@@ -3,16 +3,19 @@ RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/database/package.json ./packages/database/
+COPY packages/shared/package.json ./packages/shared/
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY apps/api ./apps/api
 COPY packages/database ./packages/database
+COPY packages/shared ./packages/shared
 RUN pnpm db:generate
 RUN pnpm --filter @clubos/database build
+RUN pnpm --filter @clubos/shared build
 RUN pnpm --filter @clubos/api build
 
 FROM node:22-alpine AS runner

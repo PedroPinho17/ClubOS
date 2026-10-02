@@ -53,8 +53,8 @@ export class MembersController {
 
   @Get("import/template")
   @AdminOnly()
-  downloadImportTemplate(@Res() res: Response) {
-    const buffer = buildImportTemplateBuffer();
+  async downloadImportTemplate(@Res() res: Response) {
+    const buffer = await buildImportTemplateBuffer();
     res.set({
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

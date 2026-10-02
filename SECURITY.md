@@ -5,7 +5,7 @@
 Se encontraste uma falha de segurança no ClubOS (auth, isolamento multi-tenant, exposição de dados, RCE, etc.):
 
 1. **Não** abras uma issue pública no GitHub com detalhes exploráveis.
-2. Contacta o maintainer por email privado: **pedropinho364@gmail.com** (assunto: `[ClubOS Security]`).
+2. Contacta o maintainer por email privado: **security@clubos.pt** (assunto: `[ClubOS Security]`).
 3. Inclui: descrição, impacto, passos de reprodução, versões/commit se possível.
 4. Dá tempo razoável para correção antes de divulgação pública.
 

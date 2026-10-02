@@ -110,3 +110,15 @@ jobs:
           E2E_USER_EMAIL: admin@crcvale.pt
           E2E_USER_PASSWORD: ${{ env.SEED_DEMO_PASSWORD }}
           CI: true
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f Dockerfile.api -t clubos-api:ci .
+
+      - name: Build Web image
+        run: docker build -f Dockerfile.web -t clubos-web:ci .

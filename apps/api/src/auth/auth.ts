@@ -32,11 +32,13 @@ async function publicOriginForUser(userId: string): Promise<string> {
 }
 
 // Access control: roles da plataforma (PDF V1).
-// imperador = super admin; administrador = admin do clube; tesoureiro = pagamentos; socio = base.
+// imperador = super admin (unico com endpoints Better Auth admin: list-users, set-role, …).
+// administrador = admin do clube via NestJS (UsersService / guards por org) — SEM user:list/set-role
+// no plugin, senao consegue promover-se a imperador e listar utilizadores de todos os clubes.
 const ac = createAccessControl(defaultStatements);
 const roles = {
   imperador: ac.newRole(adminAc.statements),
-  administrador: ac.newRole(adminAc.statements),
+  administrador: ac.newRole({}),
   tesoureiro: ac.newRole({}),
   socio: ac.newRole({}),
 };
@@ -104,7 +106,9 @@ export const auth = betterAuth({
     admin({
       ac,
       roles,
-      adminRoles: ["imperador", "administrador"],
+      // Apenas o imperador tem acesso ao plugin admin do Better Auth.
+      // Gestao de staff do clube fica no NestJS (UsersService / guards por org).
+      adminRoles: ["imperador"],
       defaultRole: "socio",
     }),
   ],

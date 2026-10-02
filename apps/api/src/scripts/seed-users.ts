@@ -93,6 +93,12 @@ async function ensureUser(opts: {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Seed de utilizadores demo bloqueado em NODE_ENV=production. Nao corras seed:users em producao.",
+    );
+  }
+
   const demoPassword = requireSeedPassword();
 
   const crcVale = await prisma.organization.findUnique({
@@ -116,7 +122,7 @@ async function main() {
     : null;
 
   await ensureUser({
-    email: "pedropinho364@gmail.com",
+    email: "pedro@clubos.pt",
     password: demoPassword,
     name: "Pedro Pinho",
     role: "imperador",
@@ -189,7 +195,7 @@ async function main() {
     "Password: valor de SEED_DEMO_PASSWORD no .env local (nao commitar).",
   );
   console.log(
-    "Contas: pedropinho364@gmail.com, joao.imperador@clubos.pt, admin@crcvale.pt,",
+    "Contas: pedro@clubos.pt, joao.imperador@clubos.pt, admin@crcvale.pt,",
   );
   console.log(
     "        tesoureiro@crcvale.pt, multirole@crcvale.pt, joao@example.com",
