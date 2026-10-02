@@ -6,6 +6,9 @@
 #   2. docker compose up -d postgres redis minio
 #   3. pnpm db:deploy (primeiro arranque; NÃO correr db:seed em produção)
 #
+# DATABASE_URL: o entrypoint da API monta a URL com encodeURIComponent da password
+# (seguro com @ / : #). Preferir passwords alfanumericas na mesma.
+#
 # API/Web não publicam portas no host — o reverse proxy (Coolify/Traefik/Caddy)
 # liga-se pela rede Docker interna.
 
@@ -39,8 +42,11 @@ services:
     environment:
       NODE_ENV: production
       API_PORT: 4000
-      # Hosts internos Docker (sobrepoe localhost do .env de desenvolvimento)
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-clubos}?schema=public
+      # Entrypoint monta DATABASE_URL com password URL-encoded → host postgres
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatorio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}
+      POSTGRES_DB: ${POSTGRES_DB:-clubos}
+      POSTGRES_HOST: postgres
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}
       S3_ENDPOINT: http://minio:9000

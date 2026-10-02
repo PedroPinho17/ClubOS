@@ -16,7 +16,14 @@ export async function createCredentialUser(opts: {
 }) {
   const email = opts.email.trim().toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return existing;
+  if (existing) {
+    // Repara contas criadas com accountId=email (login Better Auth falhava).
+    await prisma.account.updateMany({
+      where: { userId: existing.id, providerId: "credential" },
+      data: { accountId: existing.id },
+    });
+    return existing;
+  }
 
   const userId = randomUUID();
   const hashed = await hashPassword(opts.password);
@@ -32,7 +39,8 @@ export async function createCredentialUser(opts: {
       accounts: {
         create: {
           id: randomUUID(),
-          accountId: email,
+          // Better Auth credential: accountId deve ser o user.id (nao o email).
+          accountId: userId,
           providerId: "credential",
           password: hashed,
         },

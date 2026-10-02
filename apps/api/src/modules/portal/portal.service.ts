@@ -39,14 +39,14 @@ export class PortalService {
     if (account) {
       await this.prisma.account.update({
         where: { id: account.id },
-        data: { password: hashed },
+        data: { password: hashed, accountId: userId },
       });
       return;
     }
     await this.prisma.account.create({
       data: {
         id: randomUUID(),
-        accountId: email,
+        accountId: userId,
         providerId: "credential",
         userId,
         password: hashed,

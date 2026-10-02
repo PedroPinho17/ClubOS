@@ -38,14 +38,14 @@ async function syncCredentialPassword(
   if (account) {
     await prisma.account.update({
       where: { id: account.id },
-      data: { password: hashed },
+      data: { password: hashed, accountId: userId },
     });
     return;
   }
   await prisma.account.create({
     data: {
       id: randomUUID(),
-      accountId: email,
+      accountId: userId,
       providerId: "credential",
       userId,
       password: hashed,

@@ -9,9 +9,6 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.95:4000"
       }
     },
     "preview": {
@@ -19,17 +16,11 @@
       "channel": "preview",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.95:4000"
       }
     },
     "production": {
       "channel": "production",
-      "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://REPLACE_AFTER_DNS_IS_LIVE.example"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {

@@ -2,13 +2,9 @@
 
 App nativa (Expo SDK 57 + Expo Router) para socios e staff leve.
 
-## Correr localmente (agora)
+## Correr localmente
 
-IP da tua rede (Ethernet): **`192.168.1.95`**. Se mudares de Wi‑Fi/cabo, actualiza este IP em `eas.json` e nos comandos abaixo.
-
-### Opcao A — Emulador / USB (mais rapido no dia a dia)
-
-Requisito: Android Studio instalado (SDK + emulador) ou telemovel com USB debugging.
+### Opcao A — Emulador / USB
 
 ```bash
 # Terminal 1 — API (raiz do monorepo)
@@ -19,18 +15,17 @@ pnpm --filter @clubos/api dev
 # Terminal 2 — app
 cd apps/mobile
 
-# Emulador Android (API ja aponta para 10.0.2.2:4000 por default)
+# Emulador Android → API em 10.0.2.2:4000 (default em src/lib/config.ts)
 pnpm exec expo run:android
 
-# Telemovel fisico na mesma rede Wi-Fi/LAN
-# (Windows: firewall pode pedir autorizacao na porta 4000)
-$env:EXPO_PUBLIC_API_URL="http://192.168.1.95:4000"
+# Telemovel fisico na mesma LAN — passa o IP do PC:
+# $env:EXPO_PUBLIC_API_URL="http://192.168.x.x:4000"
 pnpm exec expo run:android
 ```
 
-### Opcao B — APK para instalar no telemovel
+### Opcao B — APK (EAS)
 
-1. Conta Expo (gratis) + projecto EAS uma vez:
+1. Conta Expo + projecto EAS (uma vez):
 
 ```bash
 cd apps/mobile
@@ -38,30 +33,33 @@ npx eas-cli@latest login
 npx eas-cli@latest init
 ```
 
-Isto substitui `REPLACE_WITH_EAS_PROJECT_ID` em `app.json` (projectId + updates.url).
-So define `EXPO_PUBLIC_API_URL` no perfil `production` de `eas.json` depois do DNS/HTTPS do clube estarem live.
+Isto substitui `REPLACE_WITH_EAS_PROJECT_ID` em `app.json`.
 
-2. Gerar APK (cloud Expo):
+2. Builds:
 
 ```bash
-# Dev client (hot reload com Metro no PC)
+# Dev client
 npx eas-cli@latest build --profile development --platform android
 
-# Ou APK de teste interno (sem depender do Metro)
+# Preview interno
 npx eas-cli@latest build --profile preview --platform android
 ```
 
-3. Quando o build acabar, abre o link do EAS → descarrega o `.apk` → instala no Android (permite fontes desconhecidas).
+Para telemovel fisico nos perfis EAS, define o IP na altura do build:
 
-Os perfis `development` e `preview` ja geram **APK** e usam `EXPO_PUBLIC_API_URL=http://192.168.1.95:4000`.
+```bash
+$env:EXPO_PUBLIC_API_URL="http://192.168.x.x:4000"
+npx eas-cli@latest build --profile preview --platform android
+```
 
-Garantir que:
+3. **Producao** — so depois de DNS/HTTPS live:
 
-- a API esta a correr no PC (`pnpm --filter @clubos/api dev`)
-- o telemovel esta na **mesma rede** que o PC
-- a firewall do Windows permite inbound TCP **4000**
+```bash
+$env:EXPO_PUBLIC_API_URL="https://teu-dominio.pt"
+npx eas-cli@latest build --profile production --platform android
+```
 
-### Expo Go
+## Expo Go
 
 Nao usar nesta app (camera, push, secure store, etc. exigem development build).
 

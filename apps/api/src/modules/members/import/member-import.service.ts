@@ -26,7 +26,10 @@ import {
   type MemberImportResult,
 } from "./member-import.types";
 import { nullableString } from "./member-import-parse";
-import { readSpreadsheetRows } from "./member-spreadsheet";
+import {
+  InvalidSpreadsheetError,
+  readSpreadsheetRows,
+} from "./member-spreadsheet";
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
@@ -61,7 +64,20 @@ export class MemberImportService {
       };
     }
 
-    const rows = await readSpreadsheetRows(buffer);
+    let rows: unknown[][];
+    try {
+      rows = await readSpreadsheetRows(buffer);
+    } catch (err) {
+      const message =
+        err instanceof InvalidSpreadsheetError
+          ? err.message
+          : "Ficheiro .xlsx invalido ou corrompido.";
+      return {
+        ...emptyImportResult(),
+        errors: [{ row: 0, message }],
+      };
+    }
+
     if (rows.length === 0) {
       return {
         ...emptyImportResult(),

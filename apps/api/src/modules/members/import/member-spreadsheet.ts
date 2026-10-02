@@ -4,12 +4,43 @@ import {
   TEMPLATE_HEADERS,
 } from "./member-import-column-map";
 
+/** Assinatura ZIP (ficheiro .xlsx real e um contentor ZIP). */
+function looksLikeZip(buffer: Buffer): boolean {
+  return (
+    buffer.length >= 4 &&
+    buffer[0] === 0x50 &&
+    buffer[1] === 0x4b &&
+    (buffer[2] === 0x03 || buffer[2] === 0x05 || buffer[2] === 0x07) &&
+    (buffer[3] === 0x04 || buffer[3] === 0x06 || buffer[3] === 0x08)
+  );
+}
+
+export class InvalidSpreadsheetError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidSpreadsheetError";
+  }
+}
+
 export async function readSpreadsheetRows(
   buffer: Buffer,
 ): Promise<unknown[][]> {
+  if (!looksLikeZip(buffer)) {
+    throw new InvalidSpreadsheetError(
+      "Ficheiro invalido: nao e um Excel .xlsx. Usa o modelo do backoffice.",
+    );
+  }
+
   const workbook = new ExcelJS.Workbook();
-  // exceljs tipa Buffer de forma incompatível com @types/node recentes
-  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  try {
+    // exceljs tipa Buffer de forma incompatível com @types/node recentes
+    await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  } catch {
+    throw new InvalidSpreadsheetError(
+      "Ficheiro .xlsx corrompido ou invalido. Usa o modelo do backoffice.",
+    );
+  }
+
   const sheet = workbook.worksheets[0];
   if (!sheet) return [];
 
