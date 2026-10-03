@@ -51,7 +51,23 @@ function MembersPageContent() {
   const canRecordPayment = !roleLoading && isStaffRole(effectiveRole);
 
   const list = useMembersList();
-  const importFlow = useMemberImport();
+  const {
+    importInputRef,
+    updateExisting,
+    setUpdateExisting,
+    importDryRun,
+    setImportDryRun,
+    importResult,
+    importWarningOpen,
+    setImportWarningOpen,
+    hasPendingImport,
+    importPending,
+    runImport,
+    confirmRealImport,
+    handleConfirmImport,
+    dismissResult,
+    openFilePicker,
+  } = useMemberImport();
 
   const {
     createMember,
@@ -109,35 +125,35 @@ function MembersPageContent() {
       <MembersToolsPanel
         canManage={canManage}
         canExportReports={canExportReports}
-        updateExisting={importFlow.updateExisting}
-        importDryRun={importFlow.importDryRun}
-        importPending={importFlow.importPending}
-        onUpdateExistingChange={importFlow.setUpdateExisting}
-        onImportDryRunChange={importFlow.setImportDryRun}
-        onImportClick={importFlow.openFilePicker}
+        updateExisting={updateExisting}
+        importDryRun={importDryRun}
+        importPending={importPending}
+        onUpdateExistingChange={setUpdateExisting}
+        onImportDryRunChange={setImportDryRun}
+        onImportClick={openFilePicker}
       />
 
       <input
-        ref={importFlow.importInputRef}
+        ref={importInputRef}
         type="file"
         accept=".xlsx"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) importFlow.runImport(file, importFlow.importDryRun);
+          if (file) runImport(file, importDryRun);
           e.target.value = "";
         }}
       />
 
-      {importFlow.importResult && (
+      {importResult && (
         <div className="mb-6">
           <ImportResultPanel
-            result={importFlow.importResult}
-            isConfirming={importFlow.importPending}
-            onDismiss={importFlow.dismissResult}
+            result={importResult}
+            isConfirming={importPending}
+            onDismiss={dismissResult}
             onConfirmImport={
-              importFlow.importResult.dryRun && importFlow.hasPendingImport
-                ? importFlow.handleConfirmImport
+              importResult.dryRun && hasPendingImport
+                ? handleConfirmImport
                 : undefined
             }
           />
@@ -302,7 +318,7 @@ function MembersPageContent() {
         onUploadPhoto={(memberId, file) =>
           uploadPhoto.mutate({ memberId, file })
         }
-        onImportClick={importFlow.openFilePicker}
+        onImportClick={openFilePicker}
         onCreateClick={() =>
           document
             .getElementById("create-member-form")
@@ -430,14 +446,14 @@ function MembersPageContent() {
       />
 
       <ConfirmDialog
-        open={importFlow.importWarningOpen}
-        onOpenChange={importFlow.setImportWarningOpen}
+        open={importWarningOpen}
+        onOpenChange={setImportWarningOpen}
         title="Importar com erros?"
-        description={`A simulação encontrou ${importFlow.importResult?.errors.length ?? 0} erro(s). Deseja importar mesmo assim? Linhas com erro serão ignoradas.`}
+        description={`A simulação encontrou ${importResult?.errors.length ?? 0} erro(s). Deseja importar mesmo assim? Linhas com erro serão ignoradas.`}
         confirmLabel="Importar mesmo assim"
         variant="destructive"
-        loading={importFlow.importPending}
-        onConfirm={() => importFlow.confirmRealImport()}
+        loading={importPending}
+        onConfirm={() => confirmRealImport()}
       />
     </div>
   );

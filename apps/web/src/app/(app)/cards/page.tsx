@@ -40,15 +40,19 @@ function CardsPageContent() {
   const isImperadorRole = isImperador(effectiveRole);
   const cardRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
-  const [memberId, setMemberId] = useState("");
+  const urlMemberId =
+    searchParams.get("memberId") ?? searchParams.get("member") ?? "";
+  const [memberIdPick, setMemberIdPick] = useState("");
   const [layoutDraft, setLayoutDraft] = useState<CardLayout | null>(null);
+  const [layoutSource, setLayoutSource] = useState<CardLayout | undefined>(
+    undefined,
+  );
   const [captureData, setCaptureData] = useState<CardData | null>(null);
   const [captureSide, setCaptureSide] = useState<"front" | "back">("front");
   const [cardSide, setCardSide] = useState<"front" | "back">("front");
   const [exporting, setExporting] = useState(false);
 
   const cardSettingsKey = useTenantQueryKey(["card-settings"]);
-  const cardKey = useTenantQueryKey(["card", memberId]);
 
   const {
     data: settings,
@@ -72,22 +76,17 @@ function CardsPageContent() {
     activateMembersPicker();
   }, [activateMembersPicker]);
 
-  useEffect(() => {
-    const fromUrl =
-      searchParams.get("memberId") ?? searchParams.get("member") ?? "";
-    if (fromUrl) setMemberId(fromUrl);
-  }, [searchParams]);
+  const memberId =
+    urlMemberId || memberIdPick || (members.length > 0 ? members[0].id : "");
 
-  useEffect(() => {
-    if (settings?.layout) setLayoutDraft(settings.layout);
-  }, [settings?.layout]);
+  if (settings?.layout !== layoutSource) {
+    setLayoutSource(settings?.layout);
+    setLayoutDraft(settings?.layout ?? null);
+  }
 
-  useEffect(() => {
-    if (members.length > 0 && !memberId) setMemberId(members[0].id);
-  }, [members, memberId]);
+  const layout = layoutDraft ?? settings?.layout ?? null;
 
-  const layout = layoutDraft;
-
+  const cardKey = useTenantQueryKey(["card", memberId]);
   const { data: cardData, isLoading: cardLoading } = useQuery<CardData>({
     queryKey: cardKey,
     queryFn: () => api.get<CardData>(`/cards/${memberId}`),
@@ -98,7 +97,11 @@ function CardsPageContent() {
   const { save, uploadPhoto, uploadLogo } = useCardsMutations(memberId);
 
   const set = <K extends keyof CardLayout>(key: K, value: CardLayout[K]) =>
-    setLayoutDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+    setLayoutDraft((prev) => {
+      const base = prev ?? settings?.layout;
+      if (!base) return prev;
+      return { ...base, [key]: value };
+    });
 
   const previewData: CardData | null =
     cardData && layout ? { ...cardData, layout } : null;
@@ -238,7 +241,7 @@ function CardsPageContent() {
       <div className="grid gap-6 lg:grid-cols-2">
         <CardsPreviewPanel
           memberId={memberId}
-          setMemberId={setMemberId}
+          setMemberId={setMemberIdPick}
           members={members}
           membersLoading={membersLoading}
           membersHasMore={membersHasMore}
@@ -268,8 +271,11 @@ function CardsPageContent() {
           isImperadorRole={isImperadorRole}
           savePending={save.isPending}
           onSave={() =>
-            save.mutate(layoutDraft, {
-              onSuccess: (res) => setLayoutDraft(res.layout),
+            save.mutate(layout ?? layoutDraft, {
+              onSuccess: (res) => {
+                setLayoutSource(res.layout);
+                setLayoutDraft(res.layout);
+              },
             })
           }
           set={set}

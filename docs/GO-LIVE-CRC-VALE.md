@@ -69,11 +69,14 @@ PLATFORM_HOSTS=app.clubos.cloud
 NEXT_PUBLIC_API_URL=same-origin
 PASSKEY_RP_ID=socios.crcvale.pt
 
-# SMTP real (obrigatório para lembretes e comunicações)
-SMTP_HOST=...
-SMTP_USER=...
-SMTP_PASS=...
-MAIL_FROM="CRC Vale <no-reply@crcvale.pt>"
+# SMTP real (obrigatório para lembretes, reset password e comunicações)
+# Exemplo Resend: https://resend.com/docs/send-with-smtp
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=resend
+SMTP_PASS=re_xxxxxxxx  # API key Resend
+MAIL_FROM="CRC Vale <no-reply@teu-dominio.pt>"
 
 # S3 / MinIO
 S3_ENDPOINT=...

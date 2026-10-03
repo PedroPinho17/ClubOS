@@ -1,0 +1,8 @@
+# Overlay CI: publica API/Web no host para smoke tests (nao usar em producao).
+services:
+  api:
+    ports:
+      - "127.0.0.1:4000:4000"
+  web:
+    ports:
+      - "127.0.0.1:3000:3000"

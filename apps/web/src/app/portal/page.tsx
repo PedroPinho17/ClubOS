@@ -45,11 +45,9 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
 
 export default function PortalPage() {
   const cardWidth = usePortalCardWidth();
-  const [cached, setCached] = useState<PortalMe | null>(null);
-
-  useEffect(() => {
-    setCached(enrichPortalMeCache(readPortalCache<PortalMe>()) ?? null);
-  }, []);
+  const [cached] = useState<PortalMe | null>(
+    () => enrichPortalMeCache(readPortalCache<PortalMe>()) ?? null,
+  );
 
   const { data, isLoading, isError, isFetched, refetch } = useQuery<PortalMe>({
     queryKey: [...PORTAL_ME_QUERY_KEY],

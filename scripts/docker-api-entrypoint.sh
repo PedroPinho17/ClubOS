@@ -3,7 +3,7 @@ set -e
 cd /app
 
 # Monta DATABASE_URL com password URL-encoded (evita partir com @ / : # etc.).
-if [ -n "${POSTGRES_PASSWORD:-}" ] && [ -n "${POSTGRES_USER:-}" ]; then
+if [ -z "${DATABASE_URL:-}" ] && [ -n "${POSTGRES_PASSWORD:-}" ] && [ -n "${POSTGRES_USER:-}" ]; then
   ENCODED_USER=$(node -p "encodeURIComponent(process.env.POSTGRES_USER)")
   ENCODED_PW=$(node -p "encodeURIComponent(process.env.POSTGRES_PASSWORD)")
   DB_NAME="${POSTGRES_DB:-clubos}"

@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "check:eas-env": "node scripts/check-eas-api-url.mjs"
   },
   "dependencies": {
     "@better-auth/expo": "^1.7.6",

@@ -4,7 +4,7 @@ import { getAuthenticatorName } from "@better-auth/passkey";
 import { useMutation } from "@tanstack/react-query";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -65,7 +65,13 @@ export default function AccountPage() {
     refetch: refetchPasskeys,
   } = useListPasskeys();
   const passkeys = passkeysData ?? [];
-  const [name, setName] = useState("");
+  const sessionName = session?.user?.name ?? "";
+  const [name, setName] = useState(sessionName);
+  const [prevSessionName, setPrevSessionName] = useState(sessionName);
+  if (sessionName !== prevSessionName) {
+    setPrevSessionName(sessionName);
+    setName(sessionName);
+  }
   const [newPasskeyName, setNewPasskeyName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -73,10 +79,6 @@ export default function AccountPage() {
   const [passkeyToDelete, setPasskeyToDelete] = useState<UserPasskey | null>(
     null,
   );
-
-  useEffect(() => {
-    if (session?.user?.name) setName(session.user.name);
-  }, [session?.user?.name]);
 
   const saveProfile = useMutation({
     mutationFn: async () => {

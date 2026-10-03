@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { InvitePasswordDialog } from "@/components/invite-password-dialog";
 import { SettingsBrandingForm } from "@/components/settings/settings-branding-form";
 import { SettingsRemindersSection } from "@/components/settings/settings-reminders-section";
@@ -80,7 +80,9 @@ function SettingsPageContent() {
     staleTime: 60_000,
   });
 
-  useEffect(() => {
+  const [prevOrg, setPrevOrg] = useState(org);
+  if (org !== prevOrg) {
+    setPrevOrg(org);
     if (org) {
       setName(org.name);
       setPrimaryColor(org.primaryColor);
@@ -88,15 +90,17 @@ function SettingsPageContent() {
       setTimezone(org.timezone ?? "Europe/Lisbon");
       setDomain(org.domain ?? "");
     }
-  }, [org]);
+  }
 
-  useEffect(() => {
+  const [prevOrgSettings, setPrevOrgSettings] = useState(orgSettings);
+  if (orgSettings !== prevOrgSettings) {
+    setPrevOrgSettings(orgSettings);
     if (orgSettings) {
       const dias = Number(orgSettings.dias_aviso_quota);
       setDiasAvisoQuota(Number.isFinite(dias) && dias > 0 ? dias : 7);
       setLembretesAutomaticos(orgSettings.lembretes_automaticos === true);
     }
-  }, [orgSettings]);
+  }
 
   const { saveOrg, saveReminders, uploadLogo, inviteUser } =
     useSettingsMutations();

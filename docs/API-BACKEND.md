@@ -152,12 +152,11 @@ Rotas em `/api/auth/*` — não são controllers NestJS.
 
 Configuração: `apps/api/src/auth/auth.ts`
 
-| Fluxo   | Detalhe                                                                                                              |
-| ------- | -------------------------------------------------------------------------------------------------------------------- |
-| Sign-in | Email + password; cookie de sessão no domínio da API. **Sign-up público desactivado** (contas via convite / portal). |
-
-| Reset password | `sendResetPassword` → `MailService` / SMTP; UI web `/recuperar-password` → `/reset-password` |
-| Passkey | Plugin WebAuthn (`PASSKEY_RP_ID`) |
+| Fluxo          | Detalhe                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Sign-in        | Email + password; cookie de sessão no domínio da API. **Sign-up público desactivado** (contas via convite / portal). |
+| Reset password | `sendResetPassword` → `MailService` / SMTP; UI web `/recuperar-password` → `/reset-password`                         |
+| Passkey        | Plugin WebAuthn (`PASSKEY_RP_ID`)                                                                                    |
 
 Sem `SMTP_HOST`, o reset regista o email no log (modo dev) — em produção SMTP é obrigatório.
 

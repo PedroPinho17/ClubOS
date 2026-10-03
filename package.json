@@ -5,7 +5,7 @@
   "description": "ClubOS - Plataforma SaaS modular multi-tenant para gestao de organizacoes (clubes, academias, associacoes).",
   "packageManager": "pnpm@9.15.9",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "turbo run dev",

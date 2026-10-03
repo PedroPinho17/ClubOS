@@ -15,8 +15,8 @@ export function Photo({ data, size }: { data: CardData; size: number }) {
   if (!data.layout.showFoto) return null;
 
   if (data.member.photoUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={data.member.photoUrl}
         alt={data.member.name}
@@ -102,8 +102,8 @@ export function LogoBlock({
   size?: number;
 }) {
   if (data.organization.logoUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={data.organization.logoUrl}
         alt={data.organization.name}

@@ -8,10 +8,7 @@ export function useOrgLogoBlob(logoApiPath?: string | null) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!logoApiPath) {
-      setBlobUrl(null);
-      return;
-    }
+    if (!logoApiPath) return;
 
     let cancelled = false;
     let objectUrl: string | null = null;
@@ -36,5 +33,5 @@ export function useOrgLogoBlob(logoApiPath?: string | null) {
     };
   }, [logoApiPath]);
 
-  return blobUrl;
+  return logoApiPath ? blobUrl : null;
 }

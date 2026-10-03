@@ -1,6 +1,5 @@
 import type {
   CardData,
-  PaginatedResult,
   QuotaSituation,
   QuotaStatus,
   StaffRole,

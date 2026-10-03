@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText, Printer } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { MemberCard } from "@/components/cards/member-card";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -72,7 +72,7 @@ function MemberCardPrintContent() {
     return hiddenRef.current;
   };
 
-  const downloadPdf = async () => {
+  const downloadPdf = useCallback(async () => {
     if (!cardData) return;
     setDownloading(true);
     try {
@@ -88,7 +88,7 @@ function MemberCardPrintContent() {
       });
       setDownloading(false);
     }
-  };
+  }, [cardData]);
 
   useEffect(() => {
     if (searchParams.get("pdf") !== "1" || !cardData || autoPdfDone.current) {
@@ -96,7 +96,7 @@ function MemberCardPrintContent() {
     }
     autoPdfDone.current = true;
     void downloadPdf();
-  }, [searchParams, cardData]);
+  }, [searchParams, cardData, downloadPdf]);
 
   if (authLoading || !session) {
     return (

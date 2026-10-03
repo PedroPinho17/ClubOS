@@ -4,8 +4,9 @@
 
 - [ ] Google Play Console (US$25 unico) — preferir conta Organizacao
 - [ ] Apple Developer Program (99 USD/ano)
-- [ ] Correr `eas init` e substituir `REPLACE_WITH_EAS_PROJECT_ID` em `app.json` (`extra.eas.projectId` + `updates.url`)
-- [ ] Antes do build production: `EXPO_PUBLIC_API_URL=https://teu-dominio` (DNS/HTTPS live; nao hardcodes em eas.json)
+- [ ] Correr `eas init` (cria projectId real) e substituir `REPLACE_WITH_EAS_PROJECT_ID` em `app.json`
+- [ ] Antes de qualquer build EAS: `EXPO_PUBLIC_API_URL=https://…` — sem isto o build **falha** (`app.config.ts` + `check:eas-env`)
+- [ ] CI: job `test` corre `typecheck` mobile + `check:eas-env`; o projecto EAS em si continua manual (`eas init`)
 
 ## Assets
 

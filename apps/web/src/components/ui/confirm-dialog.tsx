@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -42,9 +42,10 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const [checked, setChecked] = useState(false);
 
-  useEffect(() => {
-    if (!open) setChecked(false);
-  }, [open]);
+  function handleOpenChange(next: boolean) {
+    if (!next) setChecked(false);
+    onOpenChange(next);
+  }
 
   async function handleConfirm() {
     await onConfirm();
@@ -53,7 +54,7 @@ export function ConfirmDialog({
   const confirmDisabled = loading || (requireCheckbox && !checked);
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

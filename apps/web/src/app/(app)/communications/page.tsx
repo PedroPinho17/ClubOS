@@ -63,6 +63,16 @@ function CommunicationsPageContent() {
     enabled: audience === "PLAN",
   });
 
+  const previewScopeKey = `${channel}:${audience}:${planId}`;
+  const [prevPreviewScopeKey, setPrevPreviewScopeKey] =
+    useState(previewScopeKey);
+  if (previewScopeKey !== prevPreviewScopeKey) {
+    setPrevPreviewScopeKey(previewScopeKey);
+    setWhatsappLinks([]);
+    setWhatsappGenerated(false);
+    setEmailPreviewHtml(null);
+  }
+
   useEffect(() => {
     const params = new URLSearchParams({ audience });
     if (audience === "PLAN" && planId) params.set("planId", planId);
@@ -71,7 +81,6 @@ function CommunicationsPageContent() {
         ? `/communications/preview/whatsapp?${params}`
         : `/communications/preview?${params}`;
 
-    setPreviewCount(null);
     const timer = window.setTimeout(() => {
       api
         .get<{ count: number }>(previewPath)
@@ -86,9 +95,6 @@ function CommunicationsPageContent() {
         });
     }, 300);
 
-    setWhatsappLinks([]);
-    setWhatsappGenerated(false);
-    setEmailPreviewHtml(null);
     return () => window.clearTimeout(timer);
   }, [audience, planId, channel]);
 

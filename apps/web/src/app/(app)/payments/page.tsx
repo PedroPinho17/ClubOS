@@ -42,6 +42,12 @@ function PaymentsPageContent() {
   const prefillMemberId = searchParams.get("memberId") ?? "";
 
   const [memberId, setMemberId] = useState(prefillMemberId);
+  const [prevPrefillMemberId, setPrevPrefillMemberId] =
+    useState(prefillMemberId);
+  if (prefillMemberId !== prevPrefillMemberId) {
+    setPrevPrefillMemberId(prefillMemberId);
+    setMemberId(prefillMemberId);
+  }
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [paidAt, setPaidAt] = useState(todayDateInput);
@@ -92,7 +98,6 @@ function PaymentsPageContent() {
 
   useEffect(() => {
     if (!prefillMemberId) return;
-    setMemberId(prefillMemberId);
     activateMembersPicker();
     requestAnimationFrame(() => {
       document

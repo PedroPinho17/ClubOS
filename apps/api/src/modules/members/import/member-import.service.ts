@@ -83,7 +83,7 @@ export class MemberImportService {
         ...emptyImportResult(),
         errors: [
           {
-            row: 1,
+            row: 0,
             message: "O ficheiro está vazio ou não tem linhas de dados.",
           },
         ],

@@ -65,6 +65,9 @@ Redis down também afecta **rate limit** (fallback memória) e filas BullMQ.
 
 - Confirmar `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` no `.env`
 - Reset password: `/recuperar-password` → email com link; sem SMTP = só log da API
+- **Resend (recomendado):** `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER=resend`, `SMTP_PASS=<API key>`
+- Prova rápida: `REMINDERS_ENABLED=true` + `pnpm --filter @clubos/api reminders:run` e verificar inbox / dashboard Resend
+- RGPD (export + erase): no backoffice, sócio → exportar JSON → apagar dados pessoais (E2E: `member-gdpr.e2e-spec.ts`)
 - Teste manual lembretes: `pnpm --filter @clubos/api reminders:run`
 - Healthchecks.io: confirmar ping em `HEALTHCHECK_QUOTA_REMINDERS_URL`
 

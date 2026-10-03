@@ -109,6 +109,10 @@ export class MembersController {
       updateExisting !== "false",
       dryRun === "true",
     );
+    const fileLevelError = result.errors.find((e) => e.row === 0);
+    if (fileLevelError) {
+      throw new BadRequestException(fileLevelError.message);
+    }
     await this.audit.log({
       organizationId,
       userId: user.id,
