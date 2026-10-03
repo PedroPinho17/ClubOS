@@ -42,9 +42,9 @@ services:
     environment:
       NODE_ENV: production
       API_PORT: 4000
-      # Forca o entrypoint a remontar o URL com host "postgres"
-      # (ignora DATABASE_URL=@localhost do .env.example).
-      DATABASE_URL: ""
+      # POSTGRES_HOST faz o entrypoint remontar DATABASE_URL (encode + host postgres).
+      # Nao esvaziar DATABASE_URL aqui: `docker compose exec` nao corre o entrypoint
+      # e precisa do URL do env_file (ou o passo de seed reconstrói-o).
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatorio}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}
       POSTGRES_DB: ${POSTGRES_DB:-clubos}

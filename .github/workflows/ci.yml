@@ -9,6 +9,30 @@ env:
   NODE_VERSION: "22"
 
 jobs:
+  # Job leve: pnpm audit OOM no job `test` (Postgres+Redis + heap 4GB → exit 134).
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies (high+)
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: pnpm audit --prod --audit-level=high
+
   test:
     runs-on: ubuntu-latest
 
@@ -64,11 +88,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Audit dependencies (high+)
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
-        run: pnpm audit --prod --audit-level=high
 
       - name: Generate Prisma client
         run: pnpm db:generate
@@ -230,13 +249,24 @@ jobs:
 
       - name: Seed demo users (NODE_ENV=development)
         run: |
-          # Imagem de producao nao tem apps/api/src; seed:users usa dist via run-seed-users.mjs
+          # exec nao corre o entrypoint: reconstruir DATABASE_URL a partir de POSTGRES_*
           docker compose \
             -f docker-compose.yml \
             -f docker-compose.prod.yml \
             -f docker-compose.ci-smoke.yml \
-            exec -T -e NODE_ENV=development -e SEED_DEMO_PASSWORD=CiSeedPass1! api \
-            sh -c 'cd /app && pnpm --filter @clubos/database seed && pnpm --filter @clubos/api seed:users'
+            exec -T \
+            -e NODE_ENV=development \
+            -e SEED_DEMO_PASSWORD=CiSeedPass1! \
+            api \
+            sh -c '
+              set -e
+              ENCODED_USER=$(node -p "encodeURIComponent(process.env.POSTGRES_USER)")
+              ENCODED_PW=$(node -p "encodeURIComponent(process.env.POSTGRES_PASSWORD)")
+              export DATABASE_URL="postgresql://${ENCODED_USER}:${ENCODED_PW}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-clubos}?schema=public"
+              cd /app
+              pnpm --filter @clubos/database seed
+              pnpm --filter @clubos/api seed:users
+            '
 
       - name: Login smoke test
         run: |
