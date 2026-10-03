@@ -26,7 +26,7 @@
     "better-auth": "^1.7.6",
     "expo": "~57.0.26",
     "expo-brightness": "~14.0.7",
-    "expo-camera": "~17.0.8",
+    "expo-camera": "~57.0.6",
     "expo-constants": "~57.0.20",
     "expo-dev-client": "~6.0.16",
     "expo-device": "~57.0.2",
