@@ -6,8 +6,8 @@
 #   2. docker compose up -d postgres redis minio
 #   3. pnpm db:deploy (primeiro arranque; NÃO correr db:seed em produção)
 #
-# DATABASE_URL: o entrypoint da API monta a URL com encodeURIComponent da password
-# (seguro com @ / : #). Preferir passwords alfanumericas na mesma.
+# DATABASE_URL: com POSTGRES_HOST o entrypoint remonta sempre o URL interno
+# (ignora @localhost do .env). Password com encodeURIComponent.
 #
 # API/Web não publicam portas no host — o reverse proxy (Coolify/Traefik/Caddy)
 # liga-se pela rede Docker interna.
@@ -29,8 +29,8 @@ services:
 
   minio:
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY obrigatorio}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY obrigatorio}
+      initialBuckets: ${S3_BUCKET:-clubos}
+      COM_ADOBE_TESTING_S3MOCK_STORE_REGION: ${S3_REGION:-eu-west-1}
 
   api:
     build:
@@ -42,14 +42,16 @@ services:
     environment:
       NODE_ENV: production
       API_PORT: 4000
-      # Entrypoint monta DATABASE_URL com password URL-encoded → host postgres
+      # Forca o entrypoint a remontar o URL com host "postgres"
+      # (ignora DATABASE_URL=@localhost do .env.example).
+      DATABASE_URL: ""
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatorio}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}
       POSTGRES_DB: ${POSTGRES_DB:-clubos}
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}
-      S3_ENDPOINT: http://minio:9000
+      S3_ENDPOINT: http://minio:9090
     # Sem ports publicados — proxy na rede Docker
     expose:
       - "4000"

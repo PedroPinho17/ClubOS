@@ -1,6 +1,7 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
@@ -83,6 +84,21 @@ export class StorageService implements OnModuleInit {
         expiresIn,
       },
     );
+  }
+
+  /** Remove um objeto (ex.: foto de socio no erase RGPD). Ignora key vazia. */
+  async deleteObject(key: string | null | undefined): Promise<void> {
+    if (!key) return;
+    try {
+      await this.client.send(
+        new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Falha ao apagar objeto "${key}": ${(err as Error).message}`,
+      );
+      throw err;
+    }
   }
 
   /** Leitura direta do objeto (ex.: favicon via API autenticada). */

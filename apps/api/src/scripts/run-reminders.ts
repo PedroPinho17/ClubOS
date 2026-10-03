@@ -1,11 +1,13 @@
-import '../env';
-import { prisma } from '@clubos/database';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
-import { RemindersService } from '../modules/reminders/reminders.service';
+import "../env";
+import { prisma } from "@clubos/database";
+import { NestFactory } from "@nestjs/core";
+import { RemindersCliModule } from "../modules/reminders-cli.module";
+import { RemindersService } from "../modules/reminders/reminders.service";
 
 async function main() {
-  const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn', 'log'] });
+  const app = await NestFactory.createApplicationContext(RemindersCliModule, {
+    logger: ["error", "warn", "log"],
+  });
   const reminders = app.get(RemindersService);
   const results = await reminders.runForAllOrganizations();
   for (const r of results) {

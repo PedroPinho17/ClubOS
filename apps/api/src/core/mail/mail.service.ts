@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Injectable, Logger } from "@nestjs/common";
+import * as nodemailer from "nodemailer";
 
 export interface MailAttachment {
   filename: string;
@@ -23,22 +23,28 @@ export class MailService {
   private readonly devMode: boolean;
 
   constructor() {
-    this.from = process.env.MAIL_FROM ?? 'ClubOS <no-reply@clubos.local>';
-    const host = process.env.SMTP_HOST;
+    this.from = process.env.MAIL_FROM ?? "ClubOS <no-reply@clubos.local>";
+    const host = process.env.SMTP_HOST?.trim();
+    const isProd = process.env.NODE_ENV === "production";
+
+    if (isProd && !host) {
+      throw new Error(
+        "SMTP_HOST e obrigatorio em producao (convites, reset password, lembretes). Configura Resend ou outro SMTP no .env.",
+      );
+    }
 
     if (host) {
       this.devMode = false;
       this.transporter = nodemailer.createTransport({
         host,
         port: Number(process.env.SMTP_PORT ?? 587),
-        secure: process.env.SMTP_SECURE === 'true',
+        secure: process.env.SMTP_SECURE === "true",
         auth: process.env.SMTP_USER
           ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
           : undefined,
       });
     } else {
-      // Sem SMTP configurado: transporte "json" (nao envia, apenas serializa).
-      // Util em desenvolvimento para nao bloquear o fluxo.
+      // Sem SMTP em development/test: transporte json (nao envia).
       this.devMode = true;
       this.transporter = nodemailer.createTransport({ jsonTransport: true });
     }
@@ -57,10 +63,14 @@ export class MailService {
     if (this.devMode) {
       this.logger.log(
         `[DEV] Email simulado para ${options.to} | assunto: "${options.subject}"` +
-          (options.attachments?.length ? ` | anexos: ${options.attachments.length}` : ''),
+          (options.attachments?.length
+            ? ` | anexos: ${options.attachments.length}`
+            : ""),
       );
     } else {
-      this.logger.log(`Email enviado para ${options.to} (id: ${info.messageId})`);
+      this.logger.log(
+        `Email enviado para ${options.to} (id: ${info.messageId})`,
+      );
     }
   }
 }

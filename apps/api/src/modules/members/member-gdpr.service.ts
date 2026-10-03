@@ -1,8 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@clubos/database';
-import { PrismaService } from '../../prisma/prisma.service';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
+import { Prisma } from "@clubos/database";
+import { PrismaService } from "../../prisma/prisma.service";
+import { StorageService } from "../../storage/storage.service";
 
-export const GDPR_ERASED_NAME = 'Apagado RGPD';
+export const GDPR_ERASED_NAME = "Apagado RGPD";
 
 export function isGdprErased(member: { name: string }): boolean {
   return member.name === GDPR_ERASED_NAME;
@@ -26,34 +32,43 @@ function serializePayment(p: {
     reference: p.reference,
     paidAt: p.paidAt?.toISOString() ?? null,
     createdAt: p.createdAt.toISOString(),
-    quotaPlan: p.quotaPlan ? { id: p.quotaPlan.id, name: p.quotaPlan.name } : null,
+    quotaPlan: p.quotaPlan
+      ? { id: p.quotaPlan.id, name: p.quotaPlan.name }
+      : null,
   };
 }
 
 @Injectable()
 export class MemberGdprService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(MemberGdprService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   async buildExport(organizationId: string, memberId: string) {
     const member = await this.prisma.member.findFirst({
       where: { id: memberId, organizationId },
       include: {
         organization: { select: { id: true, name: true, slug: true } },
-        quotaPlan: { select: { id: true, name: true, amount: true, periodicity: true } },
+        quotaPlan: {
+          select: { id: true, name: true, amount: true, periodicity: true },
+        },
         payments: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           include: { quotaPlan: { select: { id: true, name: true } } },
         },
       },
     });
     if (!member) {
-      throw new NotFoundException('Membro nao encontrado.');
+      throw new NotFoundException("Membro nao encontrado.");
     }
 
     const { organization, quotaPlan, payments, ...memberFields } = member;
 
     return {
-      format: 'clubos-gdpr-v1',
+      format: "clubos-gdpr-v1",
       exportedAt: new Date().toISOString(),
       organization,
       member: {
@@ -88,13 +103,16 @@ export class MemberGdprService {
       select: { id: true, name: true, userId: true, photoKey: true },
     });
     if (!member) {
-      throw new NotFoundException('Membro nao encontrado.');
+      throw new NotFoundException("Membro nao encontrado.");
     }
     if (isGdprErased(member)) {
-      throw new BadRequestException('Os dados pessoais deste membro ja foram apagados (RGPD).');
+      throw new BadRequestException(
+        "Os dados pessoais deste membro ja foram apagados (RGPD).",
+      );
     }
 
     const portalUserId = member.userId;
+    const photoKey = member.photoKey;
 
     await this.prisma.$transaction(async (tx) => {
       if (portalUserId) {
@@ -104,11 +122,11 @@ export class MemberGdprService {
         await tx.user.update({
           where: { id: portalUserId },
           data: {
-            name: 'Conta apagada',
+            name: "Conta apagada",
             email: `gdpr-erased-${portalUserId}@anon.clubos`,
             image: null,
             banned: true,
-            banReason: 'RGPD erase',
+            banReason: "RGPD erase",
           },
         });
       }
@@ -125,12 +143,28 @@ export class MemberGdprService {
           cardRole: null,
           cardValidUntil: null,
           photoKey: null,
-          status: 'INACTIVE',
+          status: "INACTIVE",
           userId: null,
         },
       });
     });
 
-    return { success: true, memberId, portalUserAnonymized: Boolean(portalUserId) };
+    if (photoKey) {
+      try {
+        await this.storage.deleteObject(photoKey);
+      } catch (err) {
+        // Dados pessoais na BD ja anonimizados; logar falha de storage sem reverter.
+        this.logger.warn(
+          `RGPD: membro ${memberId} anonimizado mas foto "${photoKey}" nao foi apagada: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    return {
+      success: true,
+      memberId,
+      portalUserAnonymized: Boolean(portalUserId),
+      photoDeleted: Boolean(photoKey),
+    };
   }
 }

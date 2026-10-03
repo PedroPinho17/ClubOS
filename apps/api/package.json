@@ -8,7 +8,7 @@
     "predev": "pnpm --filter @clubos/database build && pnpm --filter @clubos/shared build",
     "start": "node dist/main.js",
     "seed:users": "node scripts/run-seed-users.mjs",
-    "reminders:run": "tsx src/scripts/run-reminders.ts",
+    "reminders:run": "node scripts/run-reminders.mjs",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage && vitest run --config vitest.e2e.config.ts",

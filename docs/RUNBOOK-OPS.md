@@ -63,12 +63,12 @@ Redis down também afecta **rate limit** (fallback memória) e filas BullMQ.
 
 ## 4. SMTP / lembretes / reset password
 
+- Em **producao** `SMTP_HOST` e obrigatorio — a API nao arranca sem ele
 - Confirmar `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` no `.env`
-- Reset password: `/recuperar-password` → email com link; sem SMTP = só log da API
+- Reset password: `/recuperar-password` → email com link; em development sem SMTP = so log da API
 - **Resend (recomendado):** `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER=resend`, `SMTP_PASS=<API key>`
-- Prova rápida: `REMINDERS_ENABLED=true` + `pnpm --filter @clubos/api reminders:run` e verificar inbox / dashboard Resend
-- RGPD (export + erase): no backoffice, sócio → exportar JSON → apagar dados pessoais (E2E: `member-gdpr.e2e-spec.ts`)
-- Teste manual lembretes: `pnpm --filter @clubos/api reminders:run`
+- Prova rapida: `REMINDERS_ENABLED=true` + `pnpm --filter @clubos/api build` + `pnpm --filter @clubos/api reminders:run` (usa `dist/scripts/run-reminders.js`) e verificar inbox / dashboard Resend
+- RGPD (export + erase): no backoffice, socio → exportar JSON → apagar dados pessoais (apaga tambem a foto no S3; E2E: `member-gdpr.e2e-spec.ts`)
 - Healthchecks.io: confirmar ping em `HEALTHCHECK_QUOTA_REMINDERS_URL`
 
 ---

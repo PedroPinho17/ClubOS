@@ -66,8 +66,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies (high+)
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: pnpm audit --prod --audit-level=high
-        continue-on-error: true
 
       - name: Generate Prisma client
         run: pnpm db:generate
@@ -108,13 +109,16 @@ jobs:
           fi
           EAS_BUILD=true EXPO_PUBLIC_API_URL=https://api.example.com pnpm --filter @clubos/mobile check:eas-env
 
+      - name: Test Mobile (Jest)
+        run: pnpm --filter @clubos/mobile test
+
       - name: Build Web
         run: pnpm --filter @clubos/web build
 
       - name: Build API
         run: pnpm --filter @clubos/api build
 
-      - name: Test API (unit + coverage >=80% common + E2E)
+      - name: Test API (unit + coverage gate + E2E)
         run: pnpm --filter @clubos/api test
 
       - name: Test Web (unit)
@@ -165,30 +169,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Write CI .env for compose
+      - name: Write CI .env from .env.example
         run: |
-          printf '%s\n' \
-            'POSTGRES_USER=clubos' \
-            'POSTGRES_PASSWORD=CiComposePgPass32charsXX' \
-            'POSTGRES_DB=clubos' \
-            'DATABASE_URL=postgresql://clubos:CiComposePgPass32charsXX@postgres:5432/clubos?schema=public' \
-            'REDIS_PASSWORD=CiComposeRedisPass32charsXX' \
-            'REDIS_HOST=redis' \
-            'REDIS_PORT=6379' \
-            'S3_ACCESS_KEY=clubos' \
-            'S3_SECRET_KEY=CiComposeMinioPass32charsXX' \
-            'S3_ENDPOINT=http://minio:9000' \
-            'S3_BUCKET=clubos' \
-            'S3_FORCE_PATH_STYLE=true' \
-            'BETTER_AUTH_SECRET=ci-compose-secret-with-at-least-32-chars' \
-            'BETTER_AUTH_URL=http://localhost:4000' \
-            'WEB_ORIGIN=http://localhost:3000' \
-            'NEXT_PUBLIC_API_URL=same-origin' \
-            'NODE_ENV=production' \
-            'API_PORT=4000' \
-            'SEED_DEMO_PASSWORD=CiSeedPass1!' \
-            'RATE_LIMIT_STORE=memory' \
-            > .env
+          set -euo pipefail
+          cp .env.example .env
+          # Segredos CI (hosts do example: DATABASE_URL=@postgres — regressao localhost).
+          # SMTP fake so a API em NODE_ENV=production arranca (MailService exige SMTP_HOST).
+          python3 - <<'PY'
+          from pathlib import Path
+          repl = {
+            "TrocaIstoPorPasswordPgForte32chars": "CiComposePgPass32charsXX",
+            "TrocaIstoPorPasswordRedisForte32ch": "CiComposeRedisPass32charsXX",
+            "TrocaIstoPorPasswordMinIOForte32ch": "CiComposeMinioPass32charsXX",
+            "troca-isto-por-um-segredo-forte-de-32+chars": "ci-compose-secret-with-at-least-32-chars",
+            "altera-isto-no-teu-env-local": "CiSeedPass1!",
+            'SMTP_HOST=': 'SMTP_HOST=smtp.example.invalid',
+            'SMTP_USER=': 'SMTP_USER=ci',
+            'SMTP_PASS=': 'SMTP_PASS=ci-not-used',
+            'NODE_ENV=development': 'NODE_ENV=production',
+            'NEXT_PUBLIC_API_URL="http://localhost:4000"': 'NEXT_PUBLIC_API_URL="same-origin"',
+            'RATE_LIMIT_STORE=redis': 'RATE_LIMIT_STORE=memory',
+            'BETTER_AUTH_URL="http://localhost:4000"': 'BETTER_AUTH_URL="http://localhost:4000"',
+            'WEB_ORIGIN="http://localhost:3000"': 'WEB_ORIGIN="http://localhost:3000"',
+          }
+          text = Path(".env").read_text(encoding="utf-8")
+          for a, b in repl.items():
+            text = text.replace(a, b)
+          # Garantir que o example ainda aponta a postgres (apanhar regressao localhost)
+          if "@postgres:5432" not in text:
+            raise SystemExit("DATABASE_URL no .env.example deve usar host postgres")
+          if "@localhost:5432" in text.split("DATABASE_URL", 1)[-1].split("\n", 1)[0]:
+            raise SystemExit("DATABASE_URL nao deve usar localhost no smoke (copia do example)")
+          Path(".env").write_text(text, encoding="utf-8")
+          print("CI .env derived from .env.example OK")
+          PY
 
       - name: Build and start stack
         run: |

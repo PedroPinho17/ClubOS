@@ -6,13 +6,13 @@ Guia rápido para arrancar, testar e operar o ambiente local (Windows / PowerShe
 
 ## URLs
 
-| Serviço       | URL                              |
-| ------------- | -------------------------------- |
-| Frontend      | http://localhost:3000            |
-| API           | http://localhost:4000/api        |
-| Health        | http://localhost:4000/api/health |
-| Swagger       | http://localhost:4000/api/docs   |
-| MinIO console | http://localhost:9001            |
+| Serviço     | URL                              |
+| ----------- | -------------------------------- |
+| Frontend    | http://localhost:3000            |
+| API         | http://localhost:4000/api        |
+| Health      | http://localhost:4000/api/health |
+| Swagger     | http://localhost:4000/api/docs   |
+| S3 (S3Mock) | http://localhost:9000            |
 
 ---
 
@@ -23,10 +23,13 @@ cd C:\Projetos_WEB\ClubOS
 
 pnpm install
 Copy-Item .env.example .env
-# Editar .env: POSTGRES_PASSWORD, REDIS_PASSWORD, S3_SECRET_KEY, DATABASE_URL,
-# BETTER_AUTH_SECRET, SEED_DEMO_PASSWORD (alinhados — docker-compose exige passwords)
+# Editar .env: POSTGRES_PASSWORD, REDIS_PASSWORD, S3_SECRET_KEY, BETTER_AUTH_SECRET,
+# SEED_DEMO_PASSWORD. Para `pnpm dev` sem Docker na BD: em DATABASE_URL troca
+# @postgres por @localhost (e REDIS_HOST=localhost). Com `pnpm docker:up`,
+# podes deixar @postgres se usares so a API/Web no host… na pratica, com
+# Postgres no Docker e apps no host, usa @localhost.
 
-pnpm docker:up          # Postgres + Redis + MinIO (portas só em 127.0.0.1)
+pnpm docker:up          # Postgres + Redis + S3Mock (portas só em 127.0.0.1)
 pnpm db:generate
 pnpm db:migrate         # aplicar migrations (caminho canónico)
 pnpm db:seed            # catálogo + orgs + pnpm --filter @clubos/api seed:users
@@ -35,7 +38,7 @@ pnpm dev                # API :4000 + Web :3000
 ```
 
 > **BD:** usa `pnpm db:migrate` no dia a dia e em PRs. `pnpm db:push` só para protótipos locais descartáveis (não cria migration). Produção: `pnpm db:deploy`.  
-> **Infra:** só precisas de `pnpm docker:up` se Postgres, Redis ou MinIO não estiverem a correr.
+> **Infra:** só precisas de `pnpm docker:up` se Postgres, Redis ou S3Mock não estiverem a correr.
 
 ---
 
@@ -44,7 +47,7 @@ pnpm dev                # API :4000 + Web :3000
 ```powershell
 cd C:\Projetos_WEB\ClubOS
 
-# 1. Infra (só se Redis/MinIO/Postgres não estiverem a correr)
+# 1. Infra (só se Redis/S3Mock/Postgres não estiverem a correr)
 pnpm docker:up
 
 # 2. Arrancar API + Web
@@ -160,7 +163,7 @@ pnpm --filter @clubos/web test:e2e
 | Comando                                   | Descrição                             |
 | ----------------------------------------- | ------------------------------------- |
 | `pnpm dev`                                | API + Web em modo desenvolvimento     |
-| `pnpm docker:up`                          | Postgres, Redis, MinIO                |
+| `pnpm docker:up`                          | Postgres, Redis, S3Mock               |
 | `pnpm db:migrate`                         | Aplicar / criar migrations (canónico) |
 | `pnpm db:seed`                            | Dados demo + utilizadores             |
 | `pnpm db:backup`                          | Dump PostgreSQL                       |

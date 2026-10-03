@@ -8,8 +8,8 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov"],
       /**
-       * Gate >= 80% nos módulos common já cobertos por unit tests.
-       * Controllers/serviços Nest medem-se nos E2E; o include alarga-se com novos specs.
+       * Gate >= 80% nos modulos com unit tests solidificados.
+       * Alargar este include quando novos specs cobrirem o ficheiro.
        */
       include: [
         "src/common/effective-role.ts",
@@ -23,6 +23,16 @@ export default defineConfig({
         "src/common/rate-limit.ts",
         "src/common/roles.ts",
         "src/common/guards/**/*.ts",
+        "src/core/mail/templates/**/*.ts",
+        "src/modules/members/quota.util.ts",
+        "src/modules/members/member-gdpr.service.ts",
+        "src/modules/members/import/member-import-column-map.ts",
+        "src/modules/members/import/member-export-rows.ts",
+        "src/modules/members/import/member-import-parse.ts",
+        "src/modules/reminders/org-reminder-settings.ts",
+        "src/modules/reports/member-quota-report.util.ts",
+        "src/modules/communications/whatsapp.util.ts",
+        "src/modules/communications/communications.processor.ts",
       ],
       exclude: ["src/**/*.spec.ts"],
       thresholds: {
