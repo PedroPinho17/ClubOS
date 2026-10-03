@@ -216,12 +216,13 @@ jobs:
 
       - name: Seed demo users (NODE_ENV=development)
         run: |
+          # Imagem de producao nao tem apps/api/src; seed:users usa dist via run-seed-users.mjs
           docker compose \
             -f docker-compose.yml \
             -f docker-compose.prod.yml \
             -f docker-compose.ci-smoke.yml \
             exec -T -e NODE_ENV=development -e SEED_DEMO_PASSWORD=CiSeedPass1! api \
-            sh -c 'cd /app && pnpm db:seed'
+            sh -c 'cd /app && pnpm --filter @clubos/database seed && pnpm --filter @clubos/api seed:users'
 
       - name: Login smoke test
         run: |

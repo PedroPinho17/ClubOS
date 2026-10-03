@@ -7,7 +7,7 @@
     "dev": "nest start --watch",
     "predev": "pnpm --filter @clubos/database build && pnpm --filter @clubos/shared build",
     "start": "node dist/main.js",
-    "seed:users": "tsx src/scripts/seed-users.ts",
+    "seed:users": "node scripts/run-seed-users.mjs",
     "reminders:run": "tsx src/scripts/run-reminders.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
