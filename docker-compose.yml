@@ -37,8 +37,9 @@ services:
       - clubos-redis:/data
 
   # S3-compatible storage for local dev (files, fotos, documentos)
+  # Docker Hub removeu minio/minio (set/2026); imagens públicas em quay.io
   minio:
-    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: clubos-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"

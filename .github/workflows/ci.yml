@@ -127,10 +127,12 @@ jobs:
           sudo apt-get install -y -qq postgresql-client
           mkdir -p backups
           DUMP="backups/ci-clubos.dump"
-          pg_dump "$DATABASE_URL" -Fc --no-owner --no-acl -f "$DUMP"
+          # libpq rejeita ?schema=public (só Prisma); strip query string
+          PG_URL="${DATABASE_URL%%\?*}"
+          pg_dump "$PG_URL" -Fc --no-owner --no-acl -f "$DUMP"
           test -s "$DUMP"
-          pg_restore -d "$DATABASE_URL" --clean --if-exists --no-owner --no-acl "$DUMP"
-          COUNT=$(psql "$DATABASE_URL" -tAc 'SELECT count(*) FROM "Organization"')
+          pg_restore -d "$PG_URL" --clean --if-exists --no-owner --no-acl "$DUMP"
+          COUNT=$(psql "$PG_URL" -tAc 'SELECT count(*) FROM "Organization"')
           test "${COUNT}" -ge 1
           echo "Backup/restore OK ($COUNT orgs)"
 
