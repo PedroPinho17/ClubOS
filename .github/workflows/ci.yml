@@ -9,29 +9,22 @@ env:
   NODE_VERSION: "22"
 
 jobs:
-  # Job leve: pnpm audit OOM no job `test` (Postgres+Redis + heap 4GB → exit 134).
+  # pnpm audit OOM (exit 134) mesmo com 8GB — usar scanner de lockfile leve.
   audit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Dependency vuln scan (Trivy HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.30.0
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Audit dependencies (high+)
-        env:
-          NODE_OPTIONS: --max-old-space-size=8192
-        run: pnpm audit --prod --audit-level=high
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          skip-dirs: node_modules,.git
 
   test:
     runs-on: ubuntu-latest
