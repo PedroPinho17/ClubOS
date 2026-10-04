@@ -25,6 +25,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           skip-dirs: node_modules,.git
+          trivyignores: .trivyignore
 
   test:
     runs-on: ubuntu-latest
