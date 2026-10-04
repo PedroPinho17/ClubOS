@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Building2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,7 @@ export function CreateOrganizationDialog({
   onClose,
   onCreated,
 }: CreateOrganizationDialogProps) {
+  const router = useRouter();
   const a11y = useDialogA11y(open, onClose, "create-org-title");
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
@@ -46,7 +48,7 @@ export function CreateOrganizationDialog({
       setSlug("");
       onCreated?.(org);
       onClose();
-      window.location.assign("/dashboard");
+      router.push("/dashboard");
     },
     onError: (err: Error) => toast.error(err.message),
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/auth-client";
 
@@ -10,6 +11,7 @@ type HostOrgMismatchProps = {
 
 /** Conta autenticada que nao pertence ao clube deste dominio. */
 export function HostOrgMismatch({ clubName }: HostOrgMismatchProps) {
+  const router = useRouter();
   const label = clubName?.trim() || "este clube";
 
   return (
@@ -24,7 +26,9 @@ export function HostOrgMismatch({ clubName }: HostOrgMismatchProps) {
           variant="outline"
           size="sm"
           onClick={() =>
-            void signOut().then(() => window.location.assign("/login"))
+            void signOut().then(() => {
+              router.push("/login");
+            })
           }
         >
           Terminar sessão
