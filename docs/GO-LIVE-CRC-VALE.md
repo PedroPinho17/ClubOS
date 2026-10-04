@@ -47,8 +47,9 @@ O proxy deve servir o **mesmo** stack em cada hostname (`/` → web, `/api` → 
 ### Primeiro arranque
 
 ```bash
-# Infra (Postgres, Redis, MinIO com volume — ou so Postgres/Redis se usares R2)
-docker compose up -d postgres redis minio
+# Infra (Postgres, Redis; Garage so se NAO usares R2)
+docker compose up -d postgres redis
+# Self-host S3 local-like: docker compose up -d garage
 
 # App
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
@@ -78,11 +79,13 @@ SMTP_USER=resend
 SMTP_PASS=re_xxxxxxxx  # API key Resend
 MAIL_FROM="CRC Vale <no-reply@teu-dominio.pt>"
 
-# S3 / object storage
-# Opcao A — Cloudflare R2 (recomendado em producao):
+# S3 / object storage (fotos e logotipos)
+# Recomendado — Cloudflare R2 (plano free 10 GB chega):
 # S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
-# S3_FORCE_PATH_STYLE=false   # tipico em R2; testa com o SDK
-# Opcao B — MinIO no compose: S3_ENDPOINT=http://minio:9000 (vem do .env; o compose NAO forca)
+# S3_REGION=auto
+# S3_FORCE_PATH_STYLE=true
+# S3_ACCESS_KEY=...  S3_SECRET_KEY=...  (API token R2)
+# Alternativa self-host: Garage no compose → S3_ENDPOINT=http://garage:3900 S3_REGION=garage
 S3_ENDPOINT=...
 S3_BUCKET=clubos-crcvale
 

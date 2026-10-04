@@ -7,30 +7,26 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const distEntry = join(root, "dist", "scripts", "run-reminders.js");
 const srcEntry = join(root, "src", "scripts", "run-reminders.ts");
 
-function canRunTsx() {
-  if (process.env.CLUBOS_REMINDERS_FORCE_DIST === "1") return false;
-  if (!existsSync(srcEntry)) return false;
-  // Preferir src+tsx em local (evita dist desatualizado / TypeError).
-  return true;
-}
+/** Preferir dist (build/imagem Docker); tsx+src so como fallback local. */
+const useDist =
+  process.env.CLUBOS_REMINDERS_FORCE_TSX !== "1" && existsSync(distEntry);
 
-const useTsx = canRunTsx();
-const result = useTsx
-  ? spawnSync("tsx", [srcEntry], {
+const result = useDist
+  ? spawnSync(process.execPath, [distEntry], {
+      stdio: "inherit",
+      cwd: root,
+      env: process.env,
+    })
+  : spawnSync("tsx", [srcEntry], {
       stdio: "inherit",
       cwd: root,
       env: process.env,
       shell: true,
-    })
-  : spawnSync(process.execPath, [distEntry], {
-      stdio: "inherit",
-      cwd: root,
-      env: process.env,
     });
 
-if (!useTsx && !existsSync(distEntry)) {
+if (!useDist && !existsSync(srcEntry)) {
   console.error(
-    "reminders:run: falta dist/scripts/run-reminders.js. Corre `pnpm --filter @clubos/api build` ou instala tsx.",
+    "reminders:run: falta dist/ e src/. Corre `pnpm --filter @clubos/api build`.",
   );
   process.exit(1);
 }

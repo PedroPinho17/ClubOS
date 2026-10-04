@@ -194,7 +194,6 @@ jobs:
           repl = {
             "TrocaIstoPorPasswordPgForte32chars": "CiComposePgPass32charsXX",
             "TrocaIstoPorPasswordRedisForte32ch": "CiComposeRedisPass32charsXX",
-            "TrocaIstoPorPasswordMinIOForte32ch": "CiComposeMinioPass32charsXX",
             "troca-isto-por-um-segredo-forte-de-32+chars": "ci-compose-secret-with-at-least-32-chars",
             "altera-isto-no-teu-env-local": "CiSeedPass1!",
             'SMTP_HOST=': 'SMTP_HOST=smtp.example.invalid',
@@ -214,6 +213,8 @@ jobs:
             raise SystemExit("DATABASE_URL no .env.example deve usar host postgres")
           if "@localhost:5432" in text.split("DATABASE_URL", 1)[-1].split("\n", 1)[0]:
             raise SystemExit("DATABASE_URL nao deve usar localhost no smoke (copia do example)")
+          if "S3_ENDPOINT=\"http://garage:3900\"" not in text and "S3_ENDPOINT=http://garage:3900" not in text:
+            raise SystemExit("S3_ENDPOINT no .env.example deve usar host garage:3900 para compose")
           Path(".env").write_text(text, encoding="utf-8")
           print("CI .env derived from .env.example OK")
           PY
@@ -239,7 +240,7 @@ jobs:
             -f docker-compose.yml \
             -f docker-compose.prod.yml \
             -f docker-compose.ci-smoke.yml \
-            logs api web postgres redis || true
+            logs api web postgres redis garage || true
           exit 1
 
       - name: Seed demo users (NODE_ENV=development)
@@ -272,6 +273,21 @@ jobs:
           grep -q 'admin@crcvale.pt' /tmp/signin.json || grep -qi 'user' /tmp/signin.json
           curl -sf -b /tmp/clubos-cookies.txt http://127.0.0.1:4000/api/me/organizations >/dev/null
           echo "Login + /api/me/organizations OK"
+
+      - name: Storage upload smoke (logo → Garage)
+        run: |
+          set -euo pipefail
+          # PNG 1x1 — falha se S3/Garage estiver partido (ex.: AIStor sem license)
+          printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' \
+            | base64 -d > /tmp/clubos-logo.png
+          curl -sS -b /tmp/clubos-cookies.txt -f \
+            -F "file=@/tmp/clubos-logo.png;type=image/png" \
+            http://127.0.0.1:4000/api/organization/logo | tee /tmp/logo-upload.json
+          curl -sS -b /tmp/clubos-cookies.txt -f \
+            -o /tmp/clubos-logo-out.png \
+            http://127.0.0.1:4000/api/organization/logo
+          test -s /tmp/clubos-logo-out.png
+          echo "Logo upload + download OK ($(wc -c </tmp/clubos-logo-out.png) bytes)"
 
       - name: Teardown
         if: always()

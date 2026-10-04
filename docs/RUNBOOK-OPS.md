@@ -67,7 +67,7 @@ Redis down também afecta **rate limit** (fallback memória) e filas BullMQ.
 - Confirmar `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` no `.env`
 - Reset password: `/recuperar-password` → email com link; em development sem SMTP = so log da API
 - **Resend (recomendado):** `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER=resend`, `SMTP_PASS=<API key>`
-- Prova rapida: `REMINDERS_ENABLED=true` + `pnpm --filter @clubos/api reminders:run` (em local usa `tsx`+src; na imagem Docker usa `dist`) e verificar inbox / dashboard Resend
+- Prova rapida: `REMINDERS_ENABLED=true` + `pnpm --filter @clubos/api reminders:run` (usa `dist/` se existir; senao `tsx`+src) e verificar inbox / dashboard Resend
 - RGPD (export + erase): no backoffice, socio → exportar JSON → apagar dados pessoais (apaga tambem a foto no S3; E2E: `member-gdpr.e2e-spec.ts`)
 - Healthchecks.io: confirmar ping em `HEALTHCHECK_QUOTA_REMINDERS_URL`
 
@@ -100,7 +100,7 @@ Confirmar tamanho do ficheiro (> poucos KB). Dump quase vazio = BD errada ou vaz
 ```bash
 cd /caminho/ClubOS
 docker compose -f docker-compose.yml -f docker-compose.prod.yml down
-docker compose up -d postgres redis minio
+docker compose up -d postgres redis garage
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 

@@ -3,7 +3,8 @@
 #
 # Antes do primeiro arranque:
 #   1. Copiar .env.example para .env e preencher segredos de producao (passwords fortes)
-#   2. docker compose up -d postgres redis minio
+#   2. Preferir Cloudflare R2 em S3_* (nao precisas do contentor garage)
+#      Alternativa self-host: docker compose up -d postgres redis garage
 #   3. pnpm db:deploy (primeiro arranque; NÃO correr db:seed em produção)
 #
 # DATABASE_URL: com POSTGRES_HOST o entrypoint remonta sempre o URL interno
@@ -27,11 +28,6 @@ services:
         "${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}",
       ]
 
-  minio:
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY obrigatorio}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY obrigatorio}
-
   api:
     build:
       context: .
@@ -43,17 +39,13 @@ services:
       NODE_ENV: production
       API_PORT: 4000
       # POSTGRES_HOST faz o entrypoint remontar DATABASE_URL (encode + host postgres).
-      # Nao esvaziar DATABASE_URL aqui: `docker compose exec` nao corre o entrypoint
-      # e precisa do URL do env_file (ou o passo de seed reconstrói-o).
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatorio}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}
       POSTGRES_DB: ${POSTGRES_DB:-clubos}
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}
-      # S3_ENDPOINT vem so do .env (MinIO interno: http://minio:9000; R2/S3 gerido: URL do provider).
-      # Nao forcar aqui — senao o R2 do GO-LIVE fica ignorado.
-    # Sem ports publicados — proxy na rede Docker
+      # S3_ENDPOINT so do .env (Garage: http://garage:3900; R2: URL do Cloudflare).
     expose:
       - "4000"
     depends_on:

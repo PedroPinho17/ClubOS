@@ -8,7 +8,7 @@ Isto **não** é produção. Para piloto real: [GO-LIVE-CRC-VALE.md](GO-LIVE-CRC
 
 ## Pré-requisitos
 
-- `pnpm docker:up` (Postgres + Redis + MinIO)
+- `pnpm docker:up` (Postgres + Redis + Garage)
 - `pnpm db:migrate && pnpm db:seed` (ou BD local já pronta)
 - [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) instalado
 

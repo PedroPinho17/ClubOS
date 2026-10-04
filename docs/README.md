@@ -31,7 +31,7 @@ Guia para desenvolvedores — equivalente ao **Javadoc** neste stack TypeScript/
 ```bash
 pnpm install
 cp .env.example .env          # editar segredos locais
-pnpm docker:up                # Postgres + Redis + MinIO
+pnpm docker:up                # Postgres + Redis + Garage (S3)
 pnpm db:migrate && pnpm db:seed
 pnpm dev                      # API :4000 + Web :3000
 ```

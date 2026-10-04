@@ -1,4 +1,4 @@
-# Infra local (Postgres, Redis, MinIO).
+# Infra local (Postgres, Redis, Garage S3).
 # Portas só em 127.0.0.1 — não expor à rede/LAN.
 # Passwords: definir no .env (ver .env.example). Defaults abaixo são só para dev local.
 
@@ -36,25 +36,36 @@ services:
     volumes:
       - clubos-redis:/data
 
-  # S3-compatible storage (files, fotos, recibos) — volume persistente.
-  # minio/minio saiu do Docker Hub; Quay clássico exige auth. AIStor no Quay
-  # continua com pull anónimo (tag fixa). Em producao podes omitir este serviço
-  # e apontar S3_ENDPOINT para Cloudflare R2 / AWS S3 no .env.
-  minio:
-    image: quay.io/minio/aistor/minio:RELEASE.2026-09-19T17-05-25Z
-    container_name: clubos-minio
+  # S3-compatible (fotos, logotipos) — volume persistente, sem licença.
+  # MinIO community/AIStor: Hub arquivado / AIStor comercial exige license.
+  # Producao: preferir Cloudflare R2 (omitir este serviço; S3_* no .env).
+  garage:
+    image: dxflrs/garage:v2.3.0
+    container_name: clubos-garage
     restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
+    command:
+      [
+        "/garage",
+        "-c",
+        "/etc/garage/garage.toml",
+        "server",
+        "--single-node",
+        "--default-bucket",
+      ]
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?Defina S3_ACCESS_KEY no .env}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Defina S3_SECRET_KEY no .env}
+      GARAGE_DEFAULT_BUCKET: ${S3_BUCKET:-clubos}
+      # Access key: "GK" + 30 hex. Secret: 64 hex.
+      GARAGE_DEFAULT_ACCESS_KEY: ${S3_ACCESS_KEY:?Defina S3_ACCESS_KEY no .env}
+      GARAGE_DEFAULT_SECRET_KEY: ${S3_SECRET_KEY:?Defina S3_SECRET_KEY no .env}
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:3900:3900"
     volumes:
-      - clubos-minio:/data
+      - ./docker/garage.toml:/etc/garage/garage.toml:ro
+      - clubos-garage-meta:/var/lib/garage/meta
+      - clubos-garage-data:/var/lib/garage/data
 
 volumes:
   clubos-postgres:
   clubos-redis:
-  clubos-minio:
+  clubos-garage-meta:
+  clubos-garage-data:

@@ -6,13 +6,13 @@ Guia rápido para arrancar, testar e operar o ambiente local (Windows / PowerShe
 
 ## URLs
 
-| Serviço    | URL                                   |
-| ---------- | ------------------------------------- |
-| Frontend   | http://localhost:3000                 |
-| API        | http://localhost:4000/api             |
-| Health     | http://localhost:4000/api/health      |
-| Swagger    | http://localhost:4000/api/docs        |
-| S3 / MinIO | http://localhost:9000 · consola :9001 |
+| Serviço     | URL                              |
+| ----------- | -------------------------------- |
+| Frontend    | http://localhost:3000            |
+| API         | http://localhost:4000/api        |
+| Health      | http://localhost:4000/api/health |
+| Swagger     | http://localhost:4000/api/docs   |
+| S3 / Garage | http://localhost:3900            |
 
 ---
 
@@ -23,13 +23,14 @@ cd C:\Projetos_WEB\ClubOS
 
 pnpm install
 Copy-Item .env.example .env
-# Editar .env: POSTGRES_PASSWORD, REDIS_PASSWORD, S3_SECRET_KEY, BETTER_AUTH_SECRET,
-# SEED_DEMO_PASSWORD. Para `pnpm dev` (apps no host) com Postgres/MinIO no Docker:
-#   DATABASE_URL → @localhost  |  REDIS_HOST=localhost  |  S3_ENDPOINT=http://localhost:9000
-# Para stack completa em compose (API no contentor): deixa @postgres e S3_ENDPOINT=http://minio:9000.
-# Producao com R2: define S3_ENDPOINT/S3_* do Cloudflare — o compose NAO forca o endpoint.
+# Editar .env: POSTGRES_PASSWORD, REDIS_PASSWORD, BETTER_AUTH_SECRET,
+# SEED_DEMO_PASSWORD. Credenciais S3 do example ja servem para o Garage local.
+# Para `pnpm dev` (apps no host) com Postgres/Garage no Docker:
+#   DATABASE_URL → @localhost  |  REDIS_HOST=localhost  |  S3_ENDPOINT=http://localhost:3900
+# Para stack completa em compose (API no contentor): deixa @postgres e S3_ENDPOINT=http://garage:3900.
+# Producao: Cloudflare R2 em S3_* — podes nao arrancar o contentor garage.
 
-pnpm docker:up          # Postgres + Redis + MinIO (volume persistente)
+pnpm docker:up          # Postgres + Redis + Garage (S3 persistente)
 pnpm db:generate
 pnpm db:migrate         # aplicar migrations (caminho canónico)
 pnpm db:seed            # catálogo + orgs + pnpm --filter @clubos/api seed:users
@@ -38,7 +39,7 @@ pnpm dev                # API :4000 + Web :3000
 ```
 
 > **BD:** usa `pnpm db:migrate` no dia a dia e em PRs. `pnpm db:push` só para protótipos locais descartáveis (não cria migration). Produção: `pnpm db:deploy`.  
-> **Infra:** só precisas de `pnpm docker:up` se Postgres, Redis ou MinIO não estiverem a correr.
+> **Infra:** só precisas de `pnpm docker:up` se Postgres, Redis ou Garage não estiverem a correr.
 
 ---
 
@@ -47,7 +48,7 @@ pnpm dev                # API :4000 + Web :3000
 ```powershell
 cd C:\Projetos_WEB\ClubOS
 
-# 1. Infra (só se Redis/MinIO/Postgres não estiverem a correr)
+# 1. Infra (só se Redis/Garage/Postgres não estiverem a correr)
 pnpm docker:up
 
 # 2. Arrancar API + Web
@@ -163,7 +164,7 @@ pnpm --filter @clubos/web test:e2e
 | Comando                                   | Descrição                             |
 | ----------------------------------------- | ------------------------------------- |
 | `pnpm dev`                                | API + Web em modo desenvolvimento     |
-| `pnpm docker:up`                          | Postgres, Redis, MinIO                |
+| `pnpm docker:up`                          | Postgres, Redis, Garage (S3)          |
 | `pnpm db:migrate`                         | Aplicar / criar migrations (canónico) |
 | `pnpm db:seed`                            | Dados demo + utilizadores             |
 | `pnpm db:backup`                          | Dump PostgreSQL                       |
