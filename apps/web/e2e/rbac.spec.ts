@@ -30,10 +30,24 @@ test.describe("RBAC no frontend", () => {
     await expect(page.getByPlaceholder("Pesquisar sócios...")).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByRole("button", { name: "Acções" })).toHaveCount(0);
+    // Tesoureiro e staff: pode registar pagamento → menu Acções visivel
+    await expect(
+      page.getByRole("button", { name: "Acções" }).first(),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Adicionar sócio" }),
     ).not.toBeVisible();
     await expect(page.locator('label:has(input[type="file"])')).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Acções" }).first().click();
+    await expect(
+      page.getByRole("menuitem", { name: "Registar pagamento" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Editar sócio" }),
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Apagar sócio" }),
+    ).not.toBeVisible();
   });
 });
