@@ -36,21 +36,23 @@ services:
     volumes:
       - clubos-redis:/data
 
-  # S3-compatible storage (files, fotos, documentos).
-  # MinIO community saiu do Docker Hub / Quay anonimo; bitnamilegacy esta congelado.
-  # adobe/s3mock e mantido e suficiente para local/CI. Em producao preferir R2/S3 gerido.
+  # S3-compatible storage (files, fotos, recibos) — volume persistente.
+  # minio/minio saiu do Docker Hub; Quay clássico exige auth. AIStor no Quay
+  # continua com pull anónimo (tag fixa). Em producao podes omitir este serviço
+  # e apontar S3_ENDPOINT para Cloudflare R2 / AWS S3 no .env.
   minio:
-    image: adobe/s3mock:3.12.0
+    image: quay.io/minio/aistor/minio:RELEASE.2026-09-19T17-05-25Z
     container_name: clubos-minio
     restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
     environment:
-      initialBuckets: ${S3_BUCKET:-clubos}
-      COM_ADOBE_TESTING_S3MOCK_STORE_REGION: ${S3_REGION:-eu-west-1}
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?Defina S3_ACCESS_KEY no .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Defina S3_SECRET_KEY no .env}
     ports:
-      # Host 9000 → API S3Mock 9090 (mantém S3_ENDPOINT=http://localhost:9000 no .env local)
-      - "127.0.0.1:9000:9090"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
-      - clubos-minio:/tmp/s3mock
+      - clubos-minio:/data
 
 volumes:
   clubos-postgres:

@@ -155,12 +155,23 @@ export class OrganizationsService {
     if (file.size > MAX_IMAGE_BYTES) {
       throw new BadRequestException("Imagem demasiado grande (max 5MB).");
     }
+    const previous = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { logoKey: true },
+    });
     const key = `${organizationId}/branding/logo-${Date.now()}.${ext}`;
     await this.storage.upload(key, file.buffer, file.mimetype);
     await this.prisma.organization.update({
       where: { id: organizationId },
       data: { logoKey: key },
     });
+    if (previous?.logoKey && previous.logoKey !== key) {
+      try {
+        await this.storage.deleteObject(previous.logoKey);
+      } catch {
+        // Novo logo ja gravado; limpeza best-effort.
+      }
+    }
     return this.findById(organizationId);
   }
 

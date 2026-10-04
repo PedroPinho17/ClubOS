@@ -27,8 +27,8 @@ describe("MembersService (org scoping)", () => {
   };
   const storage = {
     getUrl: vi.fn().mockResolvedValue(null),
-    putObject: vi.fn(),
-    deleteObject: vi.fn(),
+    upload: vi.fn().mockResolvedValue("key"),
+    deleteObject: vi.fn().mockResolvedValue(undefined),
   };
 
   const service = new MembersService(prisma as never, storage as never);
@@ -146,6 +146,36 @@ describe("MembersService (org scoping)", () => {
       expect(prisma.member.deleteMany).toHaveBeenCalledWith({
         where: { id: "m1", organizationId: "org-1" },
       });
+    });
+  });
+
+  describe("setPhoto", () => {
+    it("apaga a foto anterior no storage apos substituicao", async () => {
+      const memberRow = {
+        id: "m1",
+        organizationId: "org-1",
+        photoKey: "org-1/members/m1/photo-old.jpg",
+        quotaPlan: null,
+        payments: [],
+        joinedAt: new Date(),
+        cardValidUntil: null,
+      };
+      prisma.member.findFirst
+        .mockResolvedValueOnce(memberRow)
+        .mockResolvedValueOnce({ ...memberRow, photoKey: "new-key" });
+      prisma.member.updateMany.mockResolvedValue({ count: 1 });
+      storage.upload.mockResolvedValue("new-key");
+
+      await service.setPhoto("org-1", "m1", {
+        buffer: Buffer.from("img"),
+        mimetype: "image/jpeg",
+        size: 12,
+      });
+
+      expect(storage.upload).toHaveBeenCalled();
+      expect(storage.deleteObject).toHaveBeenCalledWith(
+        "org-1/members/m1/photo-old.jpg",
+      );
     });
   });
 });

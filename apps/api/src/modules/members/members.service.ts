@@ -219,7 +219,8 @@ export class MembersService {
     if (file.size > MAX_IMAGE_BYTES) {
       throw new BadRequestException("Imagem demasiado grande (max 5MB).");
     }
-    await this.findOne(organizationId, id);
+    const existing = await this.findOne(organizationId, id);
+    const previousKey = existing.photoKey;
     const key = `${organizationId}/members/${id}/photo-${Date.now()}.${ext}`;
     await this.storage.upload(key, file.buffer, file.mimetype);
     const updated = await this.prisma.member.updateMany({
@@ -228,6 +229,13 @@ export class MembersService {
     });
     if (updated.count === 0) {
       throw new NotFoundException("Membro nao encontrado.");
+    }
+    if (previousKey && previousKey !== key) {
+      try {
+        await this.storage.deleteObject(previousKey);
+      } catch {
+        // Nova foto ja gravada; falha a limpar a antiga nao deve reverter o upload.
+      }
     }
     return this.findOne(organizationId, id);
   }
