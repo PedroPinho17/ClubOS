@@ -11,6 +11,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),
 ];
-config.resolver.disableHierarchicalLookup = true;
+// pnpm: permitir subir a arvore de node_modules (sem isto o export web falha)
+config.resolver.disableHierarchicalLookup = false;
+config.resolver.unstable_enableSymlinks = true;
 
 module.exports = config;

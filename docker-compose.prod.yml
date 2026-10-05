@@ -3,8 +3,8 @@
 #
 # Antes do primeiro arranque:
 #   1. Copiar .env.example para .env e preencher segredos de producao (passwords fortes)
-#   2. Preferir Cloudflare R2 em S3_* (nao precisas do contentor garage)
-#      Alternativa self-host: docker compose up -d postgres redis garage
+#   2. Preferir Cloudflare R2 em S3_* (Garage tem profiles: [local] — nao arranca sem perfil)
+#      Alternativa self-host: docker compose --profile local up -d postgres redis garage
 #   3. pnpm db:deploy (primeiro arranque; NÃO correr db:seed em produção)
 #
 # DATABASE_URL: com POSTGRES_HOST o entrypoint remonta sempre o URL interno

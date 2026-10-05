@@ -126,6 +126,12 @@ jobs:
       - name: Test Mobile (Jest)
         run: pnpm --filter @clubos/mobile test
 
+      - name: Mobile — expo export (web static)
+        run: pnpm --filter @clubos/mobile export:web
+        env:
+          EXPO_PUBLIC_API_URL: https://api.example.com
+          CI: true
+
       - name: Build Web
         run: pnpm --filter @clubos/web build
 
@@ -220,6 +226,8 @@ jobs:
           PY
 
       - name: Build and start stack
+        env:
+          COMPOSE_PROFILES: local
         run: |
           docker compose \
             -f docker-compose.yml \
@@ -228,6 +236,8 @@ jobs:
             up -d --build
 
       - name: Wait for Garage S3
+        env:
+          COMPOSE_PROFILES: local
         run: |
           for i in $(seq 1 40); do
             # Qualquer codigo HTTP = porta a responder (Garage sem auth tipicamente 403)
@@ -246,6 +256,8 @@ jobs:
           exit 1
 
       - name: Wait for API health
+        env:
+          COMPOSE_PROFILES: local
         run: |
           for i in $(seq 1 60); do
             if curl -sf http://127.0.0.1:4000/api/health >/dev/null; then
@@ -262,6 +274,8 @@ jobs:
           exit 1
 
       - name: Seed demo users (NODE_ENV=development)
+        env:
+          COMPOSE_PROFILES: local
         run: |
           # exec nao corre o entrypoint: reconstruir DATABASE_URL a partir de POSTGRES_*
           docker compose \
@@ -283,6 +297,8 @@ jobs:
             '
 
       - name: Login smoke test
+        env:
+          COMPOSE_PROFILES: local
         run: |
           set -euo pipefail
           curl -sS -c /tmp/clubos-cookies.txt -X POST http://127.0.0.1:4000/api/auth/sign-in/email \
@@ -293,6 +309,8 @@ jobs:
           echo "Login + /api/me/organizations OK"
 
       - name: Storage upload smoke (logo → Garage)
+        env:
+          COMPOSE_PROFILES: local
         run: |
           set -euo pipefail
           # PNG 1x1 — falha se S3/Garage estiver partido (ex.: AIStor sem license)
@@ -313,6 +331,8 @@ jobs:
 
       - name: Teardown
         if: always()
+        env:
+          COMPOSE_PROFILES: local
         run: |
           docker compose \
             -f docker-compose.yml \

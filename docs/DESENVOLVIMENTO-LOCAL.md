@@ -28,9 +28,9 @@ Copy-Item .env.example .env
 # Para `pnpm dev` (apps no host) com Postgres/Garage no Docker:
 #   DATABASE_URL → @localhost  |  REDIS_HOST=localhost  |  S3_ENDPOINT=http://localhost:3900
 # Para stack completa em compose (API no contentor): deixa @postgres e S3_ENDPOINT=http://garage:3900.
-# Producao: Cloudflare R2 em S3_* — podes nao arrancar o contentor garage.
+# Producao com R2: nao uses --profile local — o Garage fica parado.
 
-pnpm docker:up          # Postgres + Redis + Garage (S3 persistente)
+pnpm docker:up          # Postgres + Redis + Garage (perfil local)
 pnpm db:generate
 pnpm db:migrate         # aplicar migrations (caminho canónico)
 pnpm db:seed            # catálogo + orgs + pnpm --filter @clubos/api seed:users

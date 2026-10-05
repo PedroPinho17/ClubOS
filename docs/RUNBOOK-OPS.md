@@ -100,7 +100,9 @@ Confirmar tamanho do ficheiro (> poucos KB). Dump quase vazio = BD errada ou vaz
 ```bash
 cd /caminho/ClubOS
 docker compose -f docker-compose.yml -f docker-compose.prod.yml down
-docker compose up -d postgres redis garage
+docker compose up -d postgres redis
+# So se usares Garage em vez de R2:
+docker compose --profile local up -d garage
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 

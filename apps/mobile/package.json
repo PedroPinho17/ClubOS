@@ -11,12 +11,14 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
+    "export:web": "expo export --platform web --output-dir dist-ci",
     "check:eas-env": "node scripts/check-eas-api-url.mjs"
   },
   "dependencies": {
     "@better-auth/expo": "^1.7.6",
     "@better-auth/passkey": "1.7.6",
     "@clubos/shared": "workspace:*",
+    "@expo/metro-runtime": "^57.0.16",
     "@expo/ui": "~57.0.21",
     "@hookform/resolvers": "^5.0.1",
     "@react-native-async-storage/async-storage": "^2.2.0",

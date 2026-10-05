@@ -440,21 +440,21 @@ Dashboard · Membros · Planos · Pagamentos · Cartoes · Comunicacoes · Relat
 
 ## Como correr (desenvolvimento)
 
-Pre-requisitos: Node 20+, pnpm 9+, Docker (Postgres + Redis + MinIO).
+Pre-requisitos: Node 22+, pnpm 9+, Docker (Postgres + Redis + Garage S3).
 
 Guia completo com comandos do dia a dia, testes, backups e credenciais demo: **[docs/DESENVOLVIMENTO-LOCAL.md](docs/DESENVOLVIMENTO-LOCAL.md)**.
 
 ```powershell
 pnpm install
 Copy-Item .env.example .env   # SEED_DEMO_PASSWORD, BETTER_AUTH_SECRET, …
-pnpm docker:up
+pnpm docker:up                # perfil local: Postgres + Redis + Garage
 pnpm db:generate && pnpm db:push && pnpm db:seed
 pnpm dev
 ```
 
 - API: http://localhost:4000/api — Swagger: http://localhost:4000/api/docs
 - Web: http://localhost:3000
-- MinIO console: http://localhost:9001
+- Garage S3: http://localhost:3900
 
 ---
 

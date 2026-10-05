@@ -37,11 +37,12 @@ services:
       - clubos-redis:/data
 
   # S3-compatible (fotos, logotipos) — volume persistente, sem licença.
-  # MinIO community/AIStor: Hub arquivado / AIStor comercial exige license.
-  # Producao: preferir Cloudflare R2 (omitir este serviço; S3_* no .env).
+  # Perfil `local`: nao arranca em `docker compose up` sem --profile (ex.: prod com R2).
+  # Local/CI: pnpm docker:up ou COMPOSE_PROFILES=local / --profile local.
   garage:
     image: dxflrs/garage:v2.3.0
     container_name: clubos-garage
+    profiles: ["local"]
     restart: unless-stopped
     command:
       [

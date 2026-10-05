@@ -6,6 +6,12 @@
 
 > Este documento regista URLs finais, contactos de alerta e datas — **sem passwords**. Preencher após deploy.
 
+### GitHub (antes do go-live)
+
+- [ ] **Proteger `main`:** Settings → Branches → Add rule → Require status checks to pass (`CI` / job `test`) antes do merge; opcional: Require a pull request.
+- [ ] **Mobile EAS:** em `apps/mobile`, `eas init` e substituir `REPLACE_WITH_EAS_PROJECT_ID` em `app.json` (o CI já corre `expo export` web).
+- [ ] **SMTP Resend** com domínio verificado (ver checklist `.env` abaixo).
+
 ---
 
 ## URLs de produção
@@ -49,7 +55,7 @@ O proxy deve servir o **mesmo** stack em cada hostname (`/` → web, `/api` → 
 ```bash
 # Infra (Postgres, Redis; Garage so se NAO usares R2)
 docker compose up -d postgres redis
-# Self-host S3 local-like: docker compose up -d garage
+# Self-host S3: docker compose --profile local up -d garage
 
 # App
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
