@@ -227,6 +227,24 @@ jobs:
             -f docker-compose.ci-smoke.yml \
             up -d --build
 
+      - name: Wait for Garage S3
+        run: |
+          for i in $(seq 1 40); do
+            # Qualquer codigo HTTP = porta a responder (Garage sem auth tipicamente 403)
+            code=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3900/ || echo 000)
+            if echo "$code" | grep -Eq '^[12345][0-9][0-9]$'; then
+              echo "Garage S3 port open (HTTP $code)"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.ci-smoke.yml \
+            logs garage || true
+          exit 1
+
       - name: Wait for API health
         run: |
           for i in $(seq 1 60); do
@@ -280,9 +298,13 @@ jobs:
           # PNG 1x1 — falha se S3/Garage estiver partido (ex.: AIStor sem license)
           printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' \
             | base64 -d > /tmp/clubos-logo.png
-          curl -sS -b /tmp/clubos-cookies.txt -f \
+          HTTP=$(curl -sS -b /tmp/clubos-cookies.txt \
+            -o /tmp/logo-upload.json -w '%{http_code}' \
             -F "file=@/tmp/clubos-logo.png;type=image/png" \
-            http://127.0.0.1:4000/api/organization/logo | tee /tmp/logo-upload.json
+            http://127.0.0.1:4000/api/organization/logo || true)
+          echo "upload HTTP=$HTTP"
+          cat /tmp/logo-upload.json || true
+          test "$HTTP" = "201" -o "$HTTP" = "200"
           curl -sS -b /tmp/clubos-cookies.txt -f \
             -o /tmp/clubos-logo-out.png \
             http://127.0.0.1:4000/api/organization/logo
