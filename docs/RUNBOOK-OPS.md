@@ -44,17 +44,21 @@ Verificar migrações: `pnpm db:deploy` (no host com `DATABASE_URL` de prod)
 
 ## 3. Ready falha (`/api/ready` ≠ 200)
 
-```bash
-docker ps | grep -E 'postgres|redis'
-docker compose up -d postgres redis
-docker restart clubos-api
-```
-
-Testar manualmente:
+Verifica Postgres, Redis **e S3** (`db` / `redis` / `s3` no JSON).
 
 ```bash
 curl -s https://TEU-DOMINIO/api/ready
-# Esperado: {"status":"ready","db":"ok","redis":"ok",...}
+# Esperado: {"status":"ready","db":"ok","redis":"ok","s3":"ok",...}
+```
+
+Se `s3` falhar com `S3_ENDPOINT=http://garage:3900`: arranca o Garage (`docker compose --profile local up -d garage`) ou configura R2.
+
+```bash
+docker ps | grep -E 'postgres|redis|garage'
+docker compose up -d postgres redis
+# Se usas Garage local:
+docker compose --profile local up -d garage
+docker restart clubos-api
 ```
 
 Redis down também afecta **rate limit** (fallback memória) e filas BullMQ.
