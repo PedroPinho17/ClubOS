@@ -1,3 +1,4 @@
+import { MemberStatus } from "@clubos/database";
 import { describe, expect, it, vi } from "vitest";
 import { ImportMemberUpsertService } from "./import-member-upsert";
 
@@ -41,7 +42,7 @@ describe("ImportMemberUpsertService", () => {
       joinedAt: new Date(),
       cardRole: null,
       cardValidUntil: null,
-      status: "ACTIVE",
+      status: MemberStatus.ACTIVE,
       notes: null,
       quotaPlanId: null,
       number: "5",
@@ -74,7 +75,7 @@ describe("ImportMemberUpsertService", () => {
       joinedAt: new Date(),
       cardRole: null,
       cardValidUntil: null,
-      status: "ACTIVE",
+      status: MemberStatus.ACTIVE,
       notes: null,
       quotaPlanId: "plan-1",
       number: undefined,
