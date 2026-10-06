@@ -5,30 +5,22 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const distEntry = join(root, "dist", "scripts", "run-reminders.js");
-const srcEntry = join(root, "src", "scripts", "run-reminders.ts");
 
-/** Preferir dist (build/imagem Docker); tsx+src so como fallback local. */
-const useDist =
-  process.env.CLUBOS_REMINDERS_FORCE_TSX !== "1" && existsSync(distEntry);
-
-const result = useDist
-  ? spawnSync(process.execPath, [distEntry], {
-      stdio: "inherit",
-      cwd: root,
-      env: process.env,
-    })
-  : spawnSync("tsx", [srcEntry], {
-      stdio: "inherit",
-      cwd: root,
-      env: process.env,
-      shell: true,
-    });
-
-if (!useDist && !existsSync(srcEntry)) {
+/**
+ * Sempre a API compilada (dist/). O fallback tsx+src falhava com TypeError
+ * (Nest/decorators). Em local: `pnpm --filter @clubos/api build` antes.
+ */
+if (!existsSync(distEntry)) {
   console.error(
-    "reminders:run: falta dist/ e src/. Corre `pnpm --filter @clubos/api build`.",
+    "reminders:run: falta dist/scripts/run-reminders.js. Corre `pnpm --filter @clubos/api build`.",
   );
   process.exit(1);
 }
+
+const result = spawnSync(process.execPath, [distEntry], {
+  stdio: "inherit",
+  cwd: root,
+  env: process.env,
+});
 
 process.exit(result.status ?? 1);
