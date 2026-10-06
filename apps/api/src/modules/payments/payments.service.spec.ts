@@ -13,6 +13,7 @@ describe("PaymentsService (org scoping)", () => {
     },
     member: { findFirst: vi.fn() },
     quotaPlan: { findFirst: vi.fn() },
+    organization: { findUnique: vi.fn() },
   };
   const receipts = { generate: vi.fn() };
   const receiptQueue = {
@@ -30,6 +31,19 @@ describe("PaymentsService (org scoping)", () => {
     receiptQueue as never,
     redis as never,
   );
+
+  const paidPayment = {
+    id: "pay-abcdef12",
+    organizationId: "org-1",
+    reference: "2026-01",
+    paidAt: new Date("2026-01-15"),
+    createdAt: new Date("2026-01-14"),
+    amount: 15,
+    method: "CASH",
+    status: PaymentStatus.PAID,
+    member: { name: "Ana", number: "1" },
+    quotaPlan: { name: "Mensal" },
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -122,6 +136,128 @@ describe("PaymentsService (org scoping)", () => {
             memberId: "m1",
             amount: 15,
           }),
+        }),
+      );
+    });
+
+    it("resolve valor a partir do plano quando amount falta", async () => {
+      prisma.member.findFirst.mockResolvedValue({
+        id: "m1",
+        quotaPlanId: "plan-1",
+      });
+      prisma.quotaPlan.findFirst.mockResolvedValue({
+        id: "plan-1",
+        amount: 25,
+      });
+      prisma.payment.create.mockResolvedValue({
+        id: "p2",
+        status: PaymentStatus.PAID,
+      });
+
+      await service.create("org-1", {
+        memberId: "m1",
+        method: "TRANSFER",
+      } as never);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ amount: 25 }),
+        }),
+      );
+    });
+
+    it("rejeita quando nao ha valor nem plano", async () => {
+      prisma.member.findFirst.mockResolvedValue({
+        id: "m1",
+        quotaPlanId: null,
+      });
+
+      await expect(
+        service.create("org-1", {
+          memberId: "m1",
+          method: "CASH",
+        } as never),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("nao enfileira recibo quando status nao e PAID", async () => {
+      prisma.member.findFirst.mockResolvedValue({
+        id: "m1",
+        quotaPlanId: null,
+      });
+      prisma.payment.create.mockResolvedValue({
+        id: "p3",
+        status: PaymentStatus.PENDING,
+      });
+
+      await service.create("org-1", {
+        memberId: "m1",
+        amount: 10,
+        method: "CASH",
+        status: PaymentStatus.PENDING,
+      } as never);
+
+      expect(receiptQueue.enqueue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("receipt cache", () => {
+    it("getCachedReceipt e cacheReceipt usam Redis", async () => {
+      redis.getBuffer.mockResolvedValue(Buffer.from("%PDF"));
+      const buf = await service.getCachedReceipt("p1");
+      expect(buf?.toString()).toBe("%PDF");
+
+      await service.cacheReceipt("p1", Buffer.from("x"));
+      expect(redis.set).toHaveBeenCalled();
+    });
+
+    it("getReceiptStatus delega na queue", async () => {
+      receiptQueue.getStatus.mockResolvedValue("completed");
+      await expect(service.getReceiptStatus("p1")).resolves.toBe("completed");
+    });
+
+    it("getReceipt serve do cache quando existe", async () => {
+      prisma.payment.findFirst.mockResolvedValue(paidPayment);
+      redis.getBuffer.mockResolvedValue(Buffer.from("%PDF-cached"));
+
+      const out = await service.getReceipt("org-1", paidPayment.id);
+      expect(out.filename).toBe("recibo-2026-01.pdf");
+      expect(out.buffer.toString()).toBe("%PDF-cached");
+      expect(receipts.generate).not.toHaveBeenCalled();
+    });
+
+    it("getReceipt gera e faz cache quando miss", async () => {
+      prisma.payment.findFirst.mockResolvedValue(paidPayment);
+      prisma.organization.findUnique.mockResolvedValue({
+        name: "CRC",
+        primaryColor: "#123",
+      });
+      redis.getBuffer.mockResolvedValue(null);
+      receipts.generate.mockResolvedValue(Buffer.from("%PDF-new"));
+      redis.set.mockResolvedValue("OK");
+
+      const out = await service.getReceipt("org-1", paidPayment.id);
+      expect(out.buffer.toString()).toBe("%PDF-new");
+      expect(receipts.generate).toHaveBeenCalled();
+      expect(redis.set).toHaveBeenCalled();
+    });
+
+    it("generateReceipt usa fallback de org e reference", async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        ...paidPayment,
+        reference: null,
+        id: "abcdefgh",
+        quotaPlan: null,
+      });
+      prisma.organization.findUnique.mockResolvedValue(null);
+      receipts.generate.mockResolvedValue(Buffer.from("%PDF"));
+
+      const out = await service.generateReceipt("org-1", "abcdefgh");
+      expect(out.filename).toMatch(/^recibo-/);
+      expect(receipts.generate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organizationName: "Organizacao",
+          planName: undefined,
         }),
       );
     });

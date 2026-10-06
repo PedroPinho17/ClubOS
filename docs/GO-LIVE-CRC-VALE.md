@@ -88,6 +88,7 @@ MAIL_FROM="CRC Vale <no-reply@teu-dominio.pt>"
 # S3 / object storage (fotos e logotipos)
 # Recomendado — Cloudflare R2 (plano free 10 GB chega):
 # S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+# (obrigatorio em producao — sem S3_ENDPOINT a API nao arranca)
 # S3_REGION=auto
 # S3_FORCE_PATH_STYLE=true
 # S3_ACCESS_KEY=...  S3_SECRET_KEY=...  (API token R2)
