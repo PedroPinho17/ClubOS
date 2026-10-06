@@ -25,10 +25,10 @@ Contratos partilhados com o web: pacote `@clubos/shared` (`packages/shared` — 
 
 ### Health — `HealthController`
 
-| Método | Rota          | Auth    | Descrição                    |
-| ------ | ------------- | ------- | ---------------------------- |
-| GET    | `/api/health` | Público | Liveness                     |
-| GET    | `/api/ready`  | Público | Readiness (Postgres + Redis) |
+| Método | Rota          | Auth    | Descrição                         |
+| ------ | ------------- | ------- | --------------------------------- |
+| GET    | `/api/health` | Público | Liveness                          |
+| GET    | `/api/ready`  | Público | Readiness (Postgres + Redis + S3) |
 
 ### Organizations — `OrganizationsController` (`/api/organization`)
 

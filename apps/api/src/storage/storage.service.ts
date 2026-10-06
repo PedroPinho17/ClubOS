@@ -61,6 +61,33 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  /** HeadBucket (cria o bucket se faltar). Falha se o endpoint S3 estiver inacessivel. */
+  async ping(timeoutMs = 2_500): Promise<"ok"> {
+    const head = () =>
+      this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+
+    try {
+      await Promise.race([
+        head(),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("S3 timeout")), timeoutMs);
+        }),
+      ]);
+      return "ok";
+    } catch (headErr) {
+      try {
+        await this.client.send(
+          new CreateBucketCommand({ Bucket: this.bucket }),
+        );
+        return "ok";
+      } catch {
+        throw headErr instanceof Error
+          ? headErr
+          : new Error("S3 indisponivel.");
+      }
+    }
+  }
+
   async upload(
     key: string,
     body: Buffer,

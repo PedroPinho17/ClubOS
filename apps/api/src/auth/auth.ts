@@ -9,28 +9,12 @@ import { prisma } from "@clubos/database";
 import { MailService } from "../core/mail/mail.service";
 import { passwordResetEmail } from "../core/mail/templates/password-reset";
 import { getTrustedOrigins } from "../common/host-origins";
-import { publicOriginForOrg, replaceUrlOrigin } from "../common/public-origin";
+import { replaceUrlOrigin } from "../common/public-origin";
 import { resolveAuthSecret } from "../env";
+import { publicOriginForUser } from "./auth-origin";
 
 const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 const mail = new MailService();
-
-async function publicOriginForUser(userId: string): Promise<string> {
-  const member = await prisma.member.findFirst({
-    where: { userId },
-    select: { organization: { select: { domain: true } } },
-  });
-  if (member?.organization) {
-    return publicOriginForOrg(member.organization);
-  }
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-    select: { organization: { select: { domain: true } } },
-  });
-  return publicOriginForOrg(membership?.organization ?? {});
-}
 
 // Access control: roles da plataforma (PDF V1).
 // imperador = super admin (unico com endpoints Better Auth admin: list-users, set-role, …).

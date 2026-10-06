@@ -93,11 +93,11 @@ O Sentry deteta **erros de aplicação**. Um monitor externo deteta **site/API c
 
 ### Endpoints públicos (sem auth)
 
-| Endpoint          | Função                          |
-| ----------------- | ------------------------------- |
-| `GET /api/health` | Liveness — processo a responder |
-| `GET /api/ready`  | Readiness — PostgreSQL + Redis  |
-| `GET /login`      | Frontend activo                 |
+| Endpoint          | Função                              |
+| ----------------- | ----------------------------------- |
+| `GET /api/health` | Liveness — processo a responder     |
+| `GET /api/ready`  | Readiness — PostgreSQL + Redis + S3 |
+| `GET /login`      | Frontend activo                     |
 
 ### A) UptimeRobot — 3 monitores
 
