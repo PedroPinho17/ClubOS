@@ -82,7 +82,8 @@ Não uses passwords conhecidas (ex. `Admin123!`). Em `NODE_ENV=production` o see
 Requer **Redis** a correr (`pnpm docker:up`).
 
 ```powershell
-# Manual (fora do cron)
+# Manual (fora do cron) — requer build (so usa dist/)
+pnpm --filter @clubos/api build
 pnpm --filter @clubos/api reminders:run
 
 # Cron automático: REMINDERS_ENABLED=true no .env (09:00 diário)
@@ -161,13 +162,13 @@ pnpm --filter @clubos/web test:e2e
 
 ## Referência rápida
 
-| Comando                                   | Descrição                             |
-| ----------------------------------------- | ------------------------------------- |
-| `pnpm dev`                                | API + Web em modo desenvolvimento     |
-| `pnpm docker:up`                          | Postgres, Redis, Garage (S3)          |
-| `pnpm db:migrate`                         | Aplicar / criar migrations (canónico) |
-| `pnpm db:seed`                            | Dados demo + utilizadores             |
-| `pnpm db:backup`                          | Dump PostgreSQL                       |
-| `pnpm --filter @clubos/api reminders:run` | Lembretes manuais                     |
-| `pnpm --filter @clubos/api test`          | Testes API                            |
-| `pnpm --filter @clubos/web test:e2e`      | Testes Playwright                     |
+| Comando                                   | Descrição                                  |
+| ----------------------------------------- | ------------------------------------------ |
+| `pnpm dev`                                | API + Web em modo desenvolvimento          |
+| `pnpm docker:up`                          | Postgres, Redis, Garage (S3)               |
+| `pnpm db:migrate`                         | Aplicar / criar migrations (canónico)      |
+| `pnpm db:seed`                            | Dados demo + utilizadores                  |
+| `pnpm db:backup`                          | Dump PostgreSQL                            |
+| `pnpm --filter @clubos/api reminders:run` | Lembretes manuais (requer `build` → dist/) |
+| `pnpm --filter @clubos/api test`          | Testes API                                 |
+| `pnpm --filter @clubos/web test:e2e`      | Testes Playwright                          |
