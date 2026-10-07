@@ -1,6 +1,42 @@
 import { CommunicationStatus } from "@clubos/database";
-import { describe, expect, it, vi } from "vitest";
-import { processCommunicationsWorkerJob } from "./communications.worker";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { FakeWorker, workerInstances } = vi.hoisted(() => {
+  const workerInstances: Array<{
+    close: ReturnType<typeof vi.fn>;
+    handlers: Map<string, (...args: unknown[]) => void>;
+    processor: (job: { data: unknown }) => Promise<void>;
+  }> = [];
+
+  class FakeWorker {
+    close = vi.fn().mockResolvedValue(undefined);
+    handlers = new Map<string, (...args: unknown[]) => void>();
+    processor: (job: { data: unknown }) => Promise<void>;
+
+    constructor(
+      _name: string,
+      processor: (job: { data: unknown }) => Promise<void>,
+      _opts: unknown,
+    ) {
+      this.processor = processor;
+      workerInstances.push(this);
+    }
+
+    on(event: string, handler: (...args: unknown[]) => void): this {
+      this.handlers.set(event, handler);
+      return this;
+    }
+  }
+
+  return { FakeWorker, workerInstances };
+});
+
+vi.mock("bullmq", () => ({ Worker: FakeWorker }));
+
+import {
+  CommunicationsWorker,
+  processCommunicationsWorkerJob,
+} from "./communications.worker";
 
 describe("processCommunicationsWorkerJob", () => {
   it("carrega branding e envia email", async () => {
@@ -75,5 +111,53 @@ describe("processCommunicationsWorkerJob", () => {
     );
 
     expect(send).toHaveBeenCalled();
+  });
+});
+
+describe("CommunicationsWorker", () => {
+  beforeEach(() => {
+    workerInstances.length = 0;
+  });
+
+  it("liga worker, processa job e fecha", async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const communication = {
+      findUnique: vi.fn().mockResolvedValue({
+        organization: { name: "CRC", primaryColor: "#000" },
+      }),
+      update: vi.fn().mockResolvedValue({
+        id: "c3",
+        sentCount: 1,
+        failedCount: 0,
+        totalRecipients: 1,
+      }),
+    };
+
+    const worker = new CommunicationsWorker(
+      { send } as never,
+      { communication } as never,
+    );
+    worker.onModuleInit();
+    expect(workerInstances).toHaveLength(1);
+
+    const fake = workerInstances[0]!;
+    await fake.processor({
+      data: {
+        communicationId: "c3",
+        organizationId: "o1",
+        email: "c@x.pt",
+        memberName: "C",
+        subject: "S",
+        body: "Body",
+      },
+    });
+    expect(send).toHaveBeenCalled();
+
+    const failed = fake.handlers.get("failed");
+    expect(failed).toBeTypeOf("function");
+    failed?.({ data: { communicationId: "c3" } }, new Error("smtp down"));
+
+    await worker.onModuleDestroy();
+    expect(fake.close).toHaveBeenCalled();
   });
 });
