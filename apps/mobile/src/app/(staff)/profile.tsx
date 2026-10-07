@@ -4,7 +4,6 @@ import { authClient } from "@/lib/auth-client";
 import { apiFetch } from "@/lib/api";
 import { Button, Screen, Title } from "@/components/ui";
 import { t } from "@/i18n/pt";
-import { spacing } from "@/lib/theme";
 
 export default function StaffProfileScreen() {
   async function onLogout() {

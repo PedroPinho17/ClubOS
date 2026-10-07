@@ -100,6 +100,9 @@ pnpm db:seed
 # Só utilizadores (após seed do catálogo)
 pnpm --filter @clubos/api seed:users
 
+# Reparar contas credential partidas (accountId=email → userId; login Better Auth)
+pnpm --filter @clubos/api repair:credentials
+
 # Backup
 pnpm db:backup
 # -> backups/clubos-YYYYMMDD-HHMMSS.dump

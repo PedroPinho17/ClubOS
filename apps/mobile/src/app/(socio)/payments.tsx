@@ -13,7 +13,7 @@ import {
   Caption,
 } from "@/components/ui";
 import { t } from "@/i18n/pt";
-import { colors, typography } from "@/lib/theme";
+import { typography } from "@/lib/theme";
 
 type Payment = {
   id: string;

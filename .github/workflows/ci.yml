@@ -114,6 +114,9 @@ jobs:
       - name: Lint Web (max-warnings 0)
         run: pnpm --filter @clubos/web lint
 
+      - name: Lint Mobile (max-warnings 0)
+        run: pnpm --filter @clubos/mobile lint
+
       - name: Mobile — fail without EXPO_PUBLIC_API_URL on EAS
         run: |
           set -e
@@ -221,6 +224,8 @@ jobs:
             raise SystemExit("DATABASE_URL nao deve usar localhost no smoke (copia do example)")
           if "S3_ENDPOINT=\"http://garage:3900\"" not in text and "S3_ENDPOINT=http://garage:3900" not in text:
             raise SystemExit("S3_ENDPOINT no .env.example deve usar host garage:3900 para compose")
+          if "GARAGE_RPC_SECRET=" not in text:
+            raise SystemExit("GARAGE_RPC_SECRET em falta no .env.example (Garage RPC)")
           Path(".env").write_text(text, encoding="utf-8")
           print("CI .env derived from .env.example OK")
           PY

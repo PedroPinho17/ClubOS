@@ -63,7 +63,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+        "projectId": "9025d813-cb75-4930-93f9-4e3ea328909b"
       },
       "apiUrl": "http://localhost:4000"
     },
@@ -71,7 +71,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/REPLACE_WITH_EAS_PROJECT_ID"
+      "url": "https://u.expo.dev/9025d813-cb75-4930-93f9-4e3ea328909b"
     }
   }
 }
