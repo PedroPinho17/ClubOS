@@ -1,5 +1,37 @@
-import { describe, expect, it, vi } from "vitest";
-import { processReceiptJob } from "./receipt.worker";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { FakeWorker, workerInstances } = vi.hoisted(() => {
+  const workerInstances: Array<{
+    close: ReturnType<typeof vi.fn>;
+    handlers: Map<string, (...args: unknown[]) => void>;
+    processor: (job: { data: unknown }) => Promise<void>;
+  }> = [];
+
+  class FakeWorker {
+    close = vi.fn().mockResolvedValue(undefined);
+    handlers = new Map<string, (...args: unknown[]) => void>();
+    processor: (job: { data: unknown }) => Promise<void>;
+
+    constructor(
+      _name: string,
+      processor: (job: { data: unknown }) => Promise<void>,
+    ) {
+      this.processor = processor;
+      workerInstances.push(this);
+    }
+
+    on(event: string, handler: (...args: unknown[]) => void): this {
+      this.handlers.set(event, handler);
+      return this;
+    }
+  }
+
+  return { FakeWorker, workerInstances };
+});
+
+vi.mock("bullmq", () => ({ Worker: FakeWorker }));
+
+import { processReceiptJob, ReceiptWorker } from "./receipt.worker";
 
 describe("processReceiptJob", () => {
   it("gera PDF, cacheia e envia email quando socio tem email", async () => {
@@ -127,5 +159,51 @@ describe("processReceiptJob", () => {
       } as never,
     );
     expect(findOne).not.toHaveBeenCalled();
+  });
+});
+
+describe("ReceiptWorker", () => {
+  beforeEach(() => {
+    workerInstances.length = 0;
+  });
+
+  it("liga worker, processa job e fecha", async () => {
+    const buffer = Buffer.from("pdf");
+    const generateReceipt = vi
+      .fn()
+      .mockResolvedValue({ filename: "recibo.pdf", buffer });
+    const cacheReceipt = vi.fn().mockResolvedValue(undefined);
+    const findOne = vi.fn().mockResolvedValue({
+      amount: 10,
+      member: { name: "Joao", email: "j@x.pt", userId: "u1" },
+      organization: { name: "CRC", primaryColor: "#111" },
+    });
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notifyUser = vi.fn().mockResolvedValue({ enqueued: 1 });
+
+    const worker = new ReceiptWorker(
+      { generateReceipt, cacheReceipt, findOne } as never,
+      { send } as never,
+      { notifyUser } as never,
+    );
+    worker.onModuleInit();
+    expect(workerInstances).toHaveLength(1);
+
+    const fake = workerInstances[0]!;
+    await fake.processor({
+      data: { organizationId: "org-1", paymentId: "pay-w" },
+    });
+    expect(generateReceipt).toHaveBeenCalledWith("org-1", "pay-w");
+    expect(send).toHaveBeenCalled();
+    expect(notifyUser).toHaveBeenCalled();
+
+    expect(fake.handlers.get("completed")).toBeTypeOf("function");
+    fake.handlers.get("completed")?.({ data: { paymentId: "pay-w" } });
+    const failed = fake.handlers.get("failed");
+    expect(failed).toBeTypeOf("function");
+    failed?.({ data: { paymentId: "pay-w" } }, new Error("pdf fail"));
+
+    await worker.onModuleDestroy();
+    expect(fake.close).toHaveBeenCalled();
   });
 });

@@ -273,6 +273,24 @@ jobs:
             logs api web postgres redis garage || true
           exit 1
 
+      - name: Wait for Web
+        env:
+          COMPOSE_PROFILES: local
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3000/login >/dev/null; then
+              echo "Web healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            -f docker-compose.ci-smoke.yml \
+            logs web api || true
+          exit 1
+
       - name: Seed demo users (NODE_ENV=development)
         env:
           COMPOSE_PROFILES: local
@@ -328,6 +346,18 @@ jobs:
             http://127.0.0.1:4000/api/organization/logo
           test -s /tmp/clubos-logo-out.png
           echo "Logo upload + download OK ($(wc -c </tmp/clubos-logo-out.png) bytes)"
+
+      - name: Web smoke (login page)
+        env:
+          COMPOSE_PROFILES: local
+        run: |
+          set -euo pipefail
+          # / redireciona para /login; validar HTML publico da Web
+          code=$(curl -sS -o /tmp/web-home.html -w '%{http_code}' -L http://127.0.0.1:3000/)
+          test "$code" = "200"
+          grep -qiE 'Entrar|ClubOS|password|email' /tmp/web-home.html
+          curl -sf http://127.0.0.1:3000/login >/dev/null
+          echo "Web / + /login OK"
 
       - name: Teardown
         if: always()
