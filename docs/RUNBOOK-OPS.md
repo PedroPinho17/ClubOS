@@ -56,9 +56,15 @@ Se `s3` falhar com `S3_ENDPOINT=http://garage:3900`: arranca o Garage (`docker c
 ```bash
 docker ps | grep -E 'postgres|redis|garage'
 docker compose up -d postgres redis
-# Se usas Garage local:
+# Se usas Garage local (requer GARAGE_RPC_SECRET no .env):
 docker compose --profile local up -d garage
 docker restart clubos-api
+```
+
+Login falha com password correcta? Contas credential com `accountId=email` (legado):
+
+```powershell
+pnpm --filter @clubos/api repair:credentials
 ```
 
 Redis down também afecta **rate limit** (fallback memória) e filas BullMQ.

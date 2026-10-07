@@ -4,7 +4,10 @@ import {
   ForbiddenException,
   Injectable,
 } from "@nestjs/common";
-import { createCredentialUser } from "../../auth/create-credential-user";
+import {
+  createCredentialUser,
+  repairCredentialAccountIds,
+} from "../../auth/create-credential-user";
 import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -119,6 +122,10 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       throw new BadRequestException("Nao foi possivel criar a conta.");
+    }
+
+    if (existing) {
+      await repairCredentialAccountIds({ userId: user.id });
     }
 
     const hasOtherMemberships =

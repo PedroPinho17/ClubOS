@@ -3,6 +3,34 @@ import { hashPassword } from "better-auth/crypto";
 import { prisma } from "@clubos/database";
 
 /**
+ * Better Auth credential exige accountId = user.id.
+ * Contas legadas com accountId=email falham em POST /api/auth/sign-in/email.
+ */
+export async function repairCredentialAccountIds(opts?: {
+  userId?: string;
+}): Promise<{ repaired: number }> {
+  const accounts = await prisma.account.findMany({
+    where: {
+      providerId: "credential",
+      ...(opts?.userId ? { userId: opts.userId } : {}),
+    },
+    select: { id: true, accountId: true, userId: true },
+  });
+  const broken = accounts.filter((a) => a.accountId !== a.userId);
+  if (broken.length === 0) return { repaired: 0 };
+
+  await prisma.$transaction(
+    broken.map((a) =>
+      prisma.account.update({
+        where: { id: a.id },
+        data: { accountId: a.userId },
+      }),
+    ),
+  );
+  return { repaired: broken.length };
+}
+
+/**
  * Cria utilizador + conta credential sem passar pelo endpoint publico de sign-up.
  * Usar para convites, portal e seeds — o registo publico fica desactivado.
  */
@@ -17,11 +45,7 @@ export async function createCredentialUser(opts: {
   const email = opts.email.trim().toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    // Repara contas criadas com accountId=email (login Better Auth falhava).
-    await prisma.account.updateMany({
-      where: { userId: existing.id, providerId: "credential" },
-      data: { accountId: existing.id },
-    });
+    await repairCredentialAccountIds({ userId: existing.id });
     return existing;
   }
 
