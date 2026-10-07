@@ -15,7 +15,6 @@ const { FakeWorker, workerInstances } = vi.hoisted(() => {
     constructor(
       _name: string,
       processor: (job: { data: unknown }) => Promise<void>,
-      _opts: unknown,
     ) {
       this.processor = processor;
       workerInstances.push(this);
