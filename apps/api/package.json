@@ -41,7 +41,7 @@
     "expo-server-sdk": "^7.2.0",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.0.0",
-    "ioredis": "^5.11.1",
+    "ioredis": "^6.0.0",
     "multer": "^2.3.0",
     "nodemailer": "^10.0.6",
     "pdf-lib": "^1.17.1",
